@@ -1,0 +1,63 @@
+import type { TenantContext } from "@/types/tenant";
+import { env } from "@/lib/env";
+import { prisma } from "@/lib/db/prisma";
+
+export async function resolveTenantFromHost(host: string): Promise<TenantContext | null> {
+  const rootDomain = env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const normalizedHost = host.toLowerCase();
+
+  if (normalizedHost === rootDomain) {
+    return null;
+  }
+
+  const slug = normalizedHost.endsWith(`.${rootDomain}`)
+    ? normalizedHost.replace(`.${rootDomain}`, "")
+    : normalizedHost;
+
+  if (!env.DATABASE_URL) {
+    return {
+      tenantId: "demo-tenant",
+      slug,
+      status: "ACTIVE",
+      locale: "en",
+      domain: normalizedHost,
+      planKey: "free"
+    };
+  }
+
+  const tenant = await prisma.tenant.findFirst({
+    where: {
+      OR: [
+        { slug },
+        {
+          domains: {
+            some: {
+              hostname: normalizedHost,
+              status: "VERIFIED"
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      subscription: {
+        include: {
+          plan: true
+        }
+      }
+    }
+  });
+
+  if (!tenant || tenant.status === "DELETED") {
+    return null;
+  }
+
+  return {
+    tenantId: tenant.id,
+    slug: tenant.slug,
+    status: tenant.status,
+    locale: tenant.defaultLocale === "ur" ? "ur" : "en",
+    domain: normalizedHost,
+    planKey: tenant.subscription?.plan.key ?? "free"
+  };
+}

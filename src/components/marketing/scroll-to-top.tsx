@@ -1,0 +1,32 @@
+﻿"use client";
+
+import { useEffect, useState } from "react";
+import { ArrowUp } from "lucide-react";
+
+export function ScrollToTop() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    function handleScroll() {
+      setIsVisible(window.scrollY > 720);
+    }
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className={`fixed bottom-6 right-6 z-50 flex size-12 items-center justify-center border border-teal-300 bg-[#101418] text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] transition duration-300 hover:bg-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-300 ${
+        isVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
+      }`}
+      aria-label="Scroll to top"
+    >
+      <ArrowUp className="size-5 stroke-[2.4]" aria-hidden="true" />
+    </button>
+  );
+}

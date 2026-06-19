@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "themes": "Themes",
+    "features": "Features",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "signIn": "Sign in",
+    "start": "Start"
+  },
+  "home": {
+    "steps": ["Pick design", "Upload photos", "Publish website"],
+    "stepNote": "Simple launch path",
+    "themesEyebrow": "Theme showcase",
+    "themesTitle": "Choose the design your portfolio starts with.",
+    "themesBody": "Each theme is a real portfolio experience with a preview, screenshots, and a live demo. Photography type comes later during onboarding.",
+    "viewAllThemes": "View all themes",
+    "themeDetails": "Theme details",
+    "liveDemo": "Live demo",
+    "flow": ["Pick design", "Choose photography type", "Publish website"],
+    "flowNote": "The product stays simple: select the look, add the work, and go live.",
+    "featuresEyebrow": "What photographers can publish",
+    "featuresTitle": "Everything needed for a clean public portfolio.",
+    "pricingEyebrow": "Pricing",
+    "pricingTitle": "Start free, upgrade when you need more room.",
+    "perMonth": "/mo",
+    "faqEyebrow": "FAQ",
+    "faqTitle": "Common questions before you publish.",
+    "faqBody": "Short answers for photographers setting up a public portfolio for the first time.",
+    "contactSuccess": "Question saved. It will appear inside the admin support inbox.",
+    "contactError": "Could not save this yet. Check your local database connection and try again.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Your name",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "Message",
+    "messagePlaceholder": "I shoot weddings and want a portfolio with galleries, blog posts, and a custom domain.",
+    "launchEyebrow": "Launch today",
+    "launchTitle": "Start building your photography website."
+  },
+  "language": {
+    "select": "Select language",
+    "english": "English",
+    "urdu": "Urdu"
+  }
+}
