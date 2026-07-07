@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, LogIn } from "lucide-react";
+import type { Route } from "next";
+import { ArrowRight, LogIn, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { onboardingPath, signInPath } from "@/config/routes";
 import { MarketingContainer } from "@/components/layout/marketing-container";
@@ -24,6 +25,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
   const homePath = localizePath(locale, "/");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [announcementOffset, setAnnouncementOffset] = useState(hasAnnouncement ? 40 : 0);
 
   useEffect(() => {
@@ -52,6 +54,15 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
   const transformClass = !isSolid && isHidden && !stacked ? "-translate-y-full" : "translate-y-0";
   const navTone = shouldUseSolidStyle ? "text-[#101418]" : "text-white";
   const hoverTone = shouldUseSolidStyle ? "transition hover:text-teal-700" : "transition hover:text-teal-200";
+  const mobileMenuTone = shouldUseSolidStyle ? "border-[#d7dedb] bg-[#f7f8f6] text-[#101418]" : "border-white/14 bg-[#101418]/96 text-white";
+  const mobileLinkTone = shouldUseSolidStyle ? "border-[#101418]/10 hover:bg-[#101418]/5" : "border-white/10 hover:bg-white/10";
+  const navItems = [
+    { label: copy.themes, href: `${homePath}#themes` },
+    { label: copy.features, href: `${homePath}#features` },
+    { label: "blog" in copy ? copy.blog : "Blog", href: localizePath(locale, "/blog") },
+    { label: copy.pricing, href: `${homePath}#pricing` },
+    { label: copy.contact, href: `${homePath}#contact` }
+  ];
 
   return (
     <header
@@ -61,27 +72,31 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
       }`}
     >
       <MarketingContainer className="flex h-16 items-center justify-between gap-3 md:grid md:h-[76px] md:grid-cols-[1fr_auto_1fr]">
-        <nav className={`hidden items-center gap-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:gap-8 md:flex ${navTone}`}>
-          <Link className={hoverTone} href={`${homePath}#themes`}>
-            {copy.themes}
-          </Link>
-          <Link className={hoverTone} href={`${homePath}#features`}>
-            {copy.features}
-          </Link>
-          <Link className={hoverTone} href={`${homePath}#pricing`}>
-            {copy.pricing}
-          </Link>
-          <Link className={hoverTone} href={`${homePath}#contact`}>
-            {copy.contact}
-          </Link>
+        <nav className={`hidden items-center gap-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:flex lg:gap-8 ${navTone}`}>
+          {navItems.map((item) => (
+            <Link key={item.href} className={hoverTone} href={item.href as Route}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         <Link href={homePath} className={`focus-ring min-w-0 shrink-0 justify-self-center rounded-md ${navTone}`}>
-          <span className="font-brand text-2xl font-semibold leading-none tracking-[-0.04em] sm:text-3xl md:text-4xl">PhotoFolio</span>
+          <span className="font-brand text-2xl font-semibold leading-none tracking-[-0.04em] sm:text-3xl md:text-4xl">Photaaz</span>
         </Link>
 
-        <nav className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
+        <nav className="flex shrink-0 items-center justify-end gap-3 sm:gap-3">
           <MarketingControls locale={locale} messages={messages} variant={isTransparentOverlay ? "overlay" : "solid"} enabledLocales={enabledLocales} />
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((value) => !value)}
+            className={`inline-flex size-10 items-center justify-center border transition lg:hidden ${
+              shouldUseSolidStyle ? "border-[#101418]/18 text-[#101418] hover:bg-[#101418]/6" : "border-white/32 text-white hover:bg-white/10"
+            }`}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+          >
+            {isMenuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
+          </button>
           <Button
             asChild
             variant="ghost"
@@ -98,7 +113,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
           <Button
             asChild
             size="sm"
-            className={`h-10 w-10 rounded-none px-0 font-nav text-xs font-semibold uppercase tracking-[0.22em] sm:w-auto sm:px-5 ${
+            className={`hidden h-10 rounded-none px-5 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:inline-flex ${
               shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-teal-800" : "bg-white text-[#101418] hover:bg-white/90"
             }`}
           >
@@ -109,6 +124,24 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
           </Button>
         </nav>
       </MarketingContainer>
+      {isMenuOpen ? (
+        <div className={`mx-4 mb-4 border p-2 shadow-[0_18px_60px_rgba(16,20,24,0.18)] backdrop-blur lg:hidden ${mobileMenuTone}`}>
+          <nav className="grid">
+            {navItems.map((item) => (
+              <Link key={item.href} href={item.href as Route} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition last:border-b-0 ${mobileLinkTone}`}>
+                {item.label}
+              </Link>
+            ))}
+            <Link href={localizePath(locale, signInPath())} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${mobileLinkTone}`}>
+              {copy.signIn}
+            </Link>
+            <Link href={localizePath(locale, onboardingPath())} onClick={() => setIsMenuOpen(false)} className={`mt-2 inline-flex items-center justify-center gap-2 px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-teal-800" : "bg-white text-[#101418] hover:bg-white/90"}`}>
+              {copy.start}
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }

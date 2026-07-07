@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -17,6 +17,8 @@ import {
   UserRound
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { MarketingControls } from "@/components/layout/marketing-controls";
 import { publishOnboardingDraft } from "@/actions/onboarding-actions";
 import { themeShowcases } from "@/data/marketing";
@@ -104,16 +106,19 @@ export default function GetStartedPage() {
     .map((slug) => photographyTypes.find((item) => item.slug === slug))
     .filter((item): item is (typeof photographyTypes)[number] => Boolean(item));
   const cleanSubdomain = normalizeSubdomain(subdomain);
-  const publicUrl = cleanSubdomain ? `${cleanSubdomain}.photofolio.com` : "your-name.photofolio.com";
-  const draft = {
-    theme: selectedTheme,
-    primaryType,
-    categories: selectedTypes,
-    subdomain: cleanSubdomain,
-    photoMode,
-    studioName,
-    email
-  };
+  const publicUrl = cleanSubdomain ? `${cleanSubdomain}.photaaz.com` : "your-name.photaaz.com";
+  const draft = useMemo(
+    () => ({
+      theme: selectedTheme,
+      primaryType,
+      categories: selectedTypes,
+      subdomain: cleanSubdomain,
+      photoMode,
+      studioName,
+      email
+    }),
+    [cleanSubdomain, email, photoMode, primaryType, selectedTheme, selectedTypes, studioName]
+  );
   const stepErrors = getOnboardingStepErrors(step, draft);
   const canContinue = stepErrors.length === 0;
   const canPublish = validateOnboardingDraft(draft).success;
@@ -229,7 +234,7 @@ export default function GetStartedPage() {
       <header className="sticky top-0 z-40 border-b border-[#d7dedb] bg-[#f7f8f6] shadow-[0_12px_40px_rgba(16,20,24,0.08)] sm:bg-[#f7f8f6]/94 sm:backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:h-[76px] sm:px-6 lg:px-8">
           <Link href={localizePath(locale, "/")} className="focus-ring min-w-0 shrink-0 rounded-md text-[#101418]">
-            <span className="font-brand text-2xl font-semibold leading-none tracking-[-0.04em] sm:text-3xl md:text-4xl">PhotoFolio</span>
+            <span className="font-brand text-2xl font-semibold leading-none tracking-[-0.04em] sm:text-3xl md:text-4xl">Photaaz</span>
           </Link>
           <div className="hidden items-center gap-3 text-sm text-[#59636b] sm:flex">
             <span className="font-nav text-xs font-semibold uppercase tracking-[0.18em]">Draft setup</span>
@@ -253,7 +258,7 @@ export default function GetStartedPage() {
             <section className="border border-[#d7dedb] bg-white shadow-[0_20px_70px_rgba(16,20,24,0.08)]">
               <div className="border-b border-[#d7dedb] p-6 md:p-8">
                 <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-teal-700">Get started</p>
-                <h1 className="mt-4 max-w-3xl font-display text-5xl font-light leading-none tracking-[-0.055em] md:text-7xl">
+                <h1 className="pf-fluid-title-page mt-4 max-w-3xl font-display font-light leading-none tracking-[-0.055em] md:text-7xl">
                   Create your portfolio in six simple steps.
                 </h1>
                 <p className="mt-5 max-w-2xl text-base leading-7 text-[#59636b]">
@@ -265,7 +270,7 @@ export default function GetStartedPage() {
                 <div className="h-1 overflow-hidden bg-[#e4d9ca]">
                   <div className="h-full bg-[#101418] transition-all duration-300" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
                 </div>
-                <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
+                <div className="no-scrollbar mt-5 flex gap-3 overflow-x-auto pb-1">
                   {steps.map(({ label, icon: Icon }, index) => {
                     const isActive = index === step;
                     const isDone = index < step;
@@ -400,21 +405,21 @@ export default function GetStartedPage() {
 
                 {step === 2 ? (
                   <div>
-                    <SectionHeading eyebrow="Step 3" title="Claim your free address." body="Start with a PhotoFolio subdomain. You can connect a custom domain later from the dashboard." />
+                    <SectionHeading eyebrow="Step 3" title="Claim your free address." body="Start with a Photaaz subdomain. You can connect a custom domain later from the dashboard." />
                     <div className="mt-8 max-w-2xl border border-[#d7dedb] bg-[#ffffff] p-5">
-                      <label className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700" htmlFor="subdomain">
+                      <Label className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700" htmlFor="subdomain">
                         Subdomain
-                      </label>
+                      </Label>
                       <div className="mt-3 flex flex-col border border-[#d7dedb] bg-white sm:flex-row">
-                        <input
+                        <Input
                           id="subdomain"
                           value={subdomain}
                           onChange={(event) => setSubdomain(normalizeSubdomain(event.target.value))}
-                          className="h-14 flex-1 bg-transparent px-4 text-lg outline-none"
+                          className="h-14 flex-1 rounded-none border-0 bg-transparent px-4 text-lg shadow-none focus-visible:ring-0"
                           placeholder="your-name"
                         />
                         <span className="flex h-14 items-center border-t border-[#d7dedb] px-4 text-[#59636b] sm:border-l sm:border-t-0">
-                          .photofolio.com
+                          .photaaz.com
                         </span>
                       </div>
                       <p className="mt-4 text-sm leading-6 text-[#59636b]">
@@ -460,20 +465,20 @@ export default function GetStartedPage() {
                   <div>
                     <SectionHeading eyebrow="Step 5" title="Create your account." body="This saves the draft and prepares the customer dashboard. Real auth can be wired after the flow is approved." />
                     <div id="account-errors" className="mt-8 grid max-w-2xl gap-4">
-                      <label className="block">
+                      <Label className="block">
                         <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">Studio name</span>
                         <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-white px-4">
                           <UserRound className="mr-3 size-5 text-teal-700" />
-                          <input value={studioName} onChange={(event) => setStudioName(event.target.value)} className="h-full flex-1 bg-transparent outline-none" />
+                          <Input value={studioName} onChange={(event) => setStudioName(event.target.value)} className="h-full flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
                         </span>
-                      </label>
-                      <label className="block">
+                      </Label>
+                      <Label className="block">
                         <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">Email</span>
                         <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-white px-4">
                           <Mail className="mr-3 size-5 text-teal-700" />
-                          <input value={email} onChange={(event) => setEmail(event.target.value)} className="h-full flex-1 bg-transparent outline-none" placeholder="you@example.com" />
+                          <Input value={email} onChange={(event) => setEmail(event.target.value)} className="h-full flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder="you@example.com" />
                         </span>
-                      </label>
+                      </Label>
                       <ValidationMessages messages={stepErrors} />
                     </div>
                   </div>
@@ -554,7 +559,7 @@ function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: stri
   return (
     <div>
       <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-teal-700">{eyebrow}</p>
-      <h2 className="mt-3 font-display text-5xl font-light leading-none tracking-[-0.055em]">{title}</h2>
+      <h2 className="pf-fluid-title-page mt-3 font-display font-light leading-none tracking-[-0.055em]">{title}</h2>
       <p className="mt-4 max-w-2xl text-sm leading-6 text-[#59636b]">{body}</p>
     </div>
   );

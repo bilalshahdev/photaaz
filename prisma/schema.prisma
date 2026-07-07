@@ -44,6 +44,37 @@ enum NotificationStatus {
   READ
 }
 
+enum CategoryRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PhotoModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum BlogModerationStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ConversationSenderRole {
+  ADMIN
+  CLIENT
+  SYSTEM
+}
+
+enum ConversationStatus {
+  OPEN
+  CLOSED
+}
+
 model Tenant {
   id            String         @id @default(cuid())
   ownerUserId   String?
@@ -56,12 +87,16 @@ model Tenant {
   albums        Album[]
   photos        Photo[]
   blogs         BlogPost[]
+  blogCategories BlogCategory[]
   categories    Category[]
   pages         Page[]
   settings      TenantSetting?
   domains       Domain[]
   subscription  Subscription?
   notifications ClientNotification[]
+  conversations ConversationThread[]
+  visitorInquiries TenantInquiry[]
+  categoryRequests PlatformCategoryRequest[]
   owner         User?          @relation("TenantOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   @@index([ownerUserId])
@@ -137,6 +172,7 @@ model TenantSetting {
   galleryStyle    String   @default("grid")
   cardStyle       String   @default("minimal")
   footerStyle     String   @default("simple")
+  themeChangedAt  DateTime?
   socialLinks     Json     @default("{}")
   businessDetails Json     @default("{}")
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -175,6 +211,12 @@ model Photo {
   width           Int?
   height          Int?
   dominantColor   String?
+  moderationStatus PhotoModerationStatus @default(APPROVED)
+  moderationNote   String?
+  rightsConfirmed  Boolean  @default(false)
+  rightsAcceptedAt DateTime?
+  uploadIp         String?
+  uploadUserAgent  String?
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   album           Album?   @relation(fields: [albumId], references: [id], onDelete: SetNull)
   category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -183,6 +225,7 @@ model Photo {
 
   @@index([tenantId, albumId])
   @@index([tenantId, categoryId])
+  @@index([moderationStatus, createdAt])
 }
 
 model Category {
@@ -191,6 +234,7 @@ model Category {
   parentId  String?
   name      String
   slug      String
+  image     String     @default("")
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parent    Category?  @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children  Category[] @relation("CategoryChildren")
@@ -204,10 +248,27 @@ model Category {
   @@index([tenantId, parentId])
 }
 
+model BlogCategory {
+  id        String     @id @default(cuid())
+  tenantId  String
+  name      String
+  slug      String
+  description String?
+  displayOrder Int     @default(0)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  posts     BlogPost[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, displayOrder])
+}
+
 model BlogPost {
   id              String    @id @default(cuid())
   tenantId        String
   categoryId      String?
+  blogCategoryId  String?
   title           String
   slug            String
   excerpt         String?
@@ -218,13 +279,18 @@ model BlogPost {
   tags            String[]  @default([])
   featured        Boolean   @default(false)
   publishedAt     DateTime?
+  moderationStatus BlogModerationStatus @default(DRAFT)
+  moderationNote   String?
   tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  blogCategory    BlogCategory? @relation(fields: [blogCategoryId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@unique([tenantId, slug])
   @@index([tenantId, publishedAt])
+  @@index([tenantId, blogCategoryId])
+  @@index([moderationStatus, createdAt])
 }
 
 model Page {
@@ -254,16 +320,22 @@ model Domain {
   tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@unique([tenantId])
 }
 
 model Plan {
   id             String         @id @default(cuid())
   key            String         @unique
   name           String
+  description    String         @default("")
   monthlyPrice   Int?
   annualPrice    Int?
   lifetimePrice  Int?
+  gracePeriodDays Int            @default(0)
   enabled        Boolean        @default(true)
+  featured       Boolean        @default(false)
+  displayOrder   Int            @default(0)
   features       PlanFeature[]
   subscriptions  Subscription[]
   createdAt      DateTime       @default(now())
@@ -351,11 +423,60 @@ model ClientNotification {
   @@index([tenantId, status, createdAt])
 }
 
+model ConversationThread {
+  id        String             @id @default(cuid())
+  tenantId  String
+  subject   String
+  status    ConversationStatus @default(OPEN)
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages  ConversationMessage[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([tenantId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model ConversationMessage {
+  id             String                 @id @default(cuid())
+  threadId       String
+  senderRole     ConversationSenderRole
+  body           String
+  readByAdminAt  DateTime?
+  readByClientAt DateTime?
+  thread         ConversationThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  createdAt      DateTime               @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([senderRole, createdAt])
+}
+
+model TenantInquiry {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  status    String   @default("Open")
+  source    String   @default("contact_form")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status, createdAt])
+  @@index([status, createdAt])
+}
+
 model Announcement {
   id           String   @id @default(cuid())
   title        String
+  titleI18n    Json?
   body         String
+  bodyI18n     Json?
   linkLabel    String?
+  linkLabelI18n Json?
   linkHref     String?
   enabled      Boolean  @default(false)
   marquee      Boolean  @default(false)
@@ -386,17 +507,23 @@ model PlatformSetting {
 model PlatformTheme {
   id              String   @id @default(cuid())
   name            String
+  nameI18n        Json?
   slug            String   @unique
   description     String
+  descriptionI18n Json?
   image           String
   features        String[] @default([])
+  featuresI18n    Json?
   iconKey         String   @default("camera")
   enabled         Boolean  @default(true)
   premium         Boolean  @default(false)
   demoPath        String
   displayOrder    Int      @default(0)
+  customization   Json     @default("{}")
   seoTitle        String?
+  seoTitleI18n    Json?
   seoDescription  String?
+  seoDescriptionI18n Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -407,12 +534,15 @@ model PlatformPhotographyType {
   id           String   @id @default(cuid())
   parentId     String?
   name         String
+  nameI18n     Json?
   slug         String   @unique
+  image        String   @default("")
   enabled      Boolean  @default(true)
   categorySeed Boolean  @default(true)
   displayOrder Int      @default(0)
   parent       PlatformPhotographyType? @relation("PlatformPhotographyTypeChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children     PlatformPhotographyType[] @relation("PlatformPhotographyTypeChildren")
+  categoryRequests PlatformCategoryRequest[] @relation("CategoryRequestParentType")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -420,13 +550,37 @@ model PlatformPhotographyType {
   @@index([parentId])
 }
 
+model PlatformCategoryRequest {
+  id           String                @id @default(cuid())
+  tenantId     String
+  parentTypeId String?
+  name         String
+  slug         String
+  image        String        @default("")
+  note         String?
+  status       CategoryRequestStatus @default(PENDING)
+  adminNote    String?
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentType   PlatformPhotographyType? @relation("CategoryRequestParentType", fields: [parentTypeId], references: [id], onDelete: SetNull)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@index([status, createdAt])
+  @@index([tenantId, status])
+  @@index([parentTypeId])
+}
+
 model PlatformPricingPlan {
   id             String   @id @default(cuid())
   key            String   @unique
   name           String
+  nameI18n       Json?
   price          String
+  priceI18n      Json?
   description    String
+  descriptionI18n Json?
   features       String[] @default([])
+  featuresI18n   Json?
   enabled        Boolean  @default(true)
   featured       Boolean  @default(false)
   displayOrder   Int      @default(0)

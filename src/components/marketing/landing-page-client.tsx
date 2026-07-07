@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Facebook, Instagram, Linkedin, Mail, MessageCircle, MessageSquareText, Phone, UserRound, Youtube } from "lucide-react";
 import { createSupportRequest } from "@/actions/support-actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
 import { AnnouncementBar } from "@/components/marketing/announcement-bar";
 import { MarketingContainer } from "@/components/layout/marketing-container";
 import { MarketingHeader } from "@/components/layout/marketing-header";
@@ -13,9 +17,10 @@ import { ScrollToTop } from "@/components/marketing/scroll-to-top";
 import { JsonLd } from "@/components/seo/json-ld";
 import { benefitFeatures } from "@/data/marketing";
 import { getThemeIcon } from "@/components/themes/theme-icon";
+import { legalLinks, legalPath } from "@/config/legal";
 import { onboardingPath, themeDemoPath, themePath, themesPath } from "@/config/routes";
 import { getTextDirection, localizePath, resolveLocalizedString, type AppLocale, type MarketingMessages } from "@/i18n/locales";
-import { organizationJsonLd, softwareApplicationJsonLd } from "@/lib/seo";
+import { faqJsonLd, softwareApplicationJsonLd } from "@/lib/seo";
 import type { PlatformAppConfig } from "@/services/admin/admin-data";
 import type { PlatformAnnouncementView, PlatformLandingSettings, PlatformPricingPlanView, PlatformThemeView } from "@/services/platform/platform-data";
 
@@ -80,6 +85,8 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
   const sectionOrder = (key: keyof typeof settings.sections) => settings.sections[key]?.displayOrder ?? 99;
   const PreviousThemeIcon = isRtl ? ChevronRight : ChevronLeft;
   const NextThemeIcon = isRtl ? ChevronLeft : ChevronRight;
+  const ownershipPlan = pricingPlans.find((plan) => plan.key === "ownership");
+  const subscriptionPlans = pricingPlans.filter((plan) => plan.key !== "ownership");
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -123,9 +130,11 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
 
     if (!target) return;
 
+    const targetLeft = target.offsetLeft - carousel.offsetLeft;
+
     setActiveThemeIndex(index);
     programmaticThemeScrollRef.current = true;
-    carousel.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
+    carousel.scrollTo({ left: targetLeft, behavior: "smooth" });
 
     if (themeScrollSyncTimeoutRef.current) {
       window.clearTimeout(themeScrollSyncTimeoutRef.current);
@@ -166,7 +175,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
 
   return (
     <main dir={isRtl ? "rtl" : "ltr"} className="flex flex-col bg-[#f7f8f6] text-[#101418]">
-      <JsonLd data={[organizationJsonLd(), softwareApplicationJsonLd()]} />
+      <JsonLd data={[softwareApplicationJsonLd(appConfig, pricingPlans), ...(activeFaqs.length ? [faqJsonLd(activeFaqs)] : [])]} />
       <MarketingHeaderStack announcement={activeAnnouncement} locale={locale} messages={messages} enabledLocales={enabledLocales} />
       <ScrollToTop />
 
@@ -179,6 +188,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
             alt={image.alt}
             fill
             priority={index === 0}
+            unoptimized
             className={`object-cover transition-opacity duration-1000 ${index === heroImageIndex ? "opacity-100" : "opacity-0"}`}
           />
         ))}
@@ -201,7 +211,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
             <p className="inline-flex rounded-full border border-white/18 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/76">
               {hero.eyebrow}
             </p>
-            <h1 className="mt-7 font-display text-5xl font-light leading-[1.02] tracking-[-0.055em] sm:text-6xl lg:text-7xl xl:text-8xl">
+            <h1 className="pf-fluid-title-page mt-7 max-w-4xl font-display font-light leading-[1.02] tracking-[-0.055em] sm:text-6xl lg:text-7xl xl:text-8xl">
               {hero.headline}
             </h1>
             <p className="mt-7 max-w-2xl text-xl leading-9 text-white/82">
@@ -235,17 +245,22 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       {isSectionVisible("themes") ? (
       <section id="themes" className="py-20" style={{ order: sectionOrder("themes") }}>
         <MarketingContainer>
-          <div className="flex flex-col justify-between gap-6 border-b border-[#d7dedb] pb-8 lg:flex-row lg:items-end">
+          <div className="border-b border-[#d7dedb] pb-5 lg:pb-8">
             <div className="max-w-4xl">
               <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.themesEyebrow}</p>
-              <h2 className="mt-3 font-display text-6xl font-light leading-none tracking-[-0.05em]">
+              <h2 className="pf-fluid-title-page mt-3 font-display font-light leading-none tracking-[-0.05em]">
                 {copy.themesTitle}
               </h2>
               <p className="mt-4 max-w-2xl text-base leading-7 text-[#59636b]">
                 {copy.themesBody}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+          </div>
+        </MarketingContainer>
+
+        <div className="border-b border-[#d7dedb] bg-[#f7f8f6]">
+          <MarketingContainer className="flex items-center gap-2 py-3 lg:justify-end">
+            <div className="flex shrink-0 gap-2">
               <Button type="button" variant="outline" onClick={() => scrollThemeCarousel("previous")} className="size-11 rounded-none border-[#101418] bg-transparent p-0">
                 <PreviousThemeIcon className="size-4" aria-hidden="true" />
                 <span className="sr-only">Previous themes</span>
@@ -254,15 +269,17 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                 <NextThemeIcon className="size-4" aria-hidden="true" />
                 <span className="sr-only">Next themes</span>
               </Button>
-              <Button asChild variant="outline" className="rounded-none border-[#101418] bg-transparent font-nav text-xs font-semibold uppercase tracking-[0.22em]">
-                <Link href={localizePath(locale, themesPath())}>
-                  {copy.viewAllThemes}
-                  <ExternalLink className="size-4" aria-hidden="true" />
-                </Link>
-              </Button>
             </div>
+            <Button asChild variant="outline" className="h-11 min-w-0 flex-1 rounded-none border-[#101418] bg-transparent px-3 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.14em] sm:text-xs sm:tracking-[0.18em] lg:max-w-xs lg:flex-none lg:px-4 lg:tracking-[0.22em]">
+              <Link href={localizePath(locale, themesPath())}>
+                <span className="truncate">{copy.viewAllThemes}</span>
+                <ExternalLink className="size-4" aria-hidden="true" />
+              </Link>
+            </Button>
+          </MarketingContainer>
           </div>
 
+        <MarketingContainer>
           <div className="relative mt-10 overflow-hidden">
             <div
               ref={themeCarouselRef}
@@ -275,11 +292,14 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
             >
               {themes.map(({ name, slug, image, description, features, iconKey }) => {
                 const Icon = getThemeIcon(iconKey);
+                const themeName = resolveLocalizedString(name, locale);
+                const themeDescription = resolveLocalizedString(description, locale);
+                const themeFeatures = features.map((feature) => resolveLocalizedString(feature, locale));
 
                 return (
                 <article key={slug} className="group relative grid min-w-[88vw] snap-start overflow-hidden border border-[#d7dedb]/80 bg-white shadow-[0_18px_55px_rgba(16,20,24,0.08)] transition-shadow duration-300 hover:shadow-[0_28px_80px_rgba(16,20,24,0.14)] sm:min-w-[620px] xl:min-w-[760px] md:grid-cols-[1.12fr_0.88fr]">
                   <div className="relative m-3 min-h-[280px] overflow-hidden bg-[#101418] md:mr-0 md:min-h-[360px]">
-                    <Image src={image} alt={`${name} theme preview`} fill className="object-cover transition duration-500 group-hover:scale-105" />
+                    <Image src={image} alt={`${themeName} theme preview`} fill unoptimized className="object-cover transition duration-500 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/5" />
                   </div>
                   <div className="flex min-h-[360px] flex-col p-7">
@@ -291,10 +311,10 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                         UI theme
                       </p>
                     </div>
-                    <h3 className="mt-8 font-display text-5xl font-light leading-none tracking-[-0.055em]">{name}</h3>
-                    <p className="text-sm leading-6 text-[#59636b]">{description}</p>
+                    <h3 className="mt-8 font-display text-5xl font-light leading-none tracking-[-0.055em] break-words">{themeName}</h3>
+                    <p className="text-sm leading-6 text-[#59636b]">{themeDescription}</p>
                     <ul className="mt-5 space-y-2 text-sm text-[#101418]">
-                      {features.map((feature) => (
+                      {themeFeatures.map((feature) => (
                         <li key={feature} className="flex items-center gap-2">
                           <CheckCircle2 className="size-4 shrink-0 text-teal-700" aria-hidden="true" />
                           <span>{feature}</span>
@@ -331,7 +351,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                   type="button"
                   onClick={() => scrollThemeCarouselTo(index)}
                     className="relative z-20 flex h-4 w-6 items-center justify-center"
-                  aria-label={`Show ${theme.name} theme`}
+                  aria-label={`Show ${resolveLocalizedString(theme.name, locale)} theme`}
                   aria-current={index === activeThemeIndex ? "true" : undefined}
                 >
                     <span className="h-1.5 w-4 rounded-full bg-[#cbd5d1] transition-colors duration-300 hover:bg-teal-700" aria-hidden="true" />
@@ -340,17 +360,6 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
               </div>
             </div>
           ) : null}
-
-          <div className="mt-8 grid gap-4 border-y border-[#d7dedb] py-6 md:grid-cols-3">
-            {copy.flow.map((item) => (
-              <div key={item}>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{item}</p>
-                <p className="mt-2 text-sm leading-6 text-[#59636b]">
-                  {copy.flowNote}
-                </p>
-              </div>
-            ))}
-          </div>
         </MarketingContainer>
       </section>
       ) : null}
@@ -360,7 +369,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
             <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.featuresEyebrow}</p>
-            <h2 className="mt-3 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.05em]">
+            <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.featuresTitle}
             </h2>
           </div>
@@ -371,12 +380,14 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
               .sort((a, b) => a.displayOrder - b.displayOrder)
               .map(({ title, body }, index) => {
                 const Icon = benefitFeatures[index % benefitFeatures.length]?.icon ?? CheckCircle2;
+                const featureTitle = resolveLocalizedString(title, locale);
+                const featureBody = resolveLocalizedString(body, locale);
 
                 return (
-                  <article key={`${title}-${index}`} className="border border-[#d7dedb] bg-[#f7f8f6] p-5">
+                  <article key={`${featureTitle}-${index}`} className="border border-[#d7dedb] bg-[#f7f8f6] p-5">
                     <Icon className="size-6 text-teal-700" aria-hidden="true" />
-                    <h3 className="mt-8 text-lg font-semibold">{title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-[#59636b]">{body}</p>
+                    <h3 className="mt-8 text-lg font-semibold">{featureTitle}</h3>
+                    <p className="mt-3 text-sm leading-6 text-[#59636b]">{featureBody}</p>
                   </article>
                 );
               })}
@@ -390,21 +401,28 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
             <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.pricingEyebrow}</p>
-            <h2 className="mt-3 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.05em]">
+            <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.pricingTitle}
             </h2>
           </div>
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
-            {pricingPlans.map((plan) => (
-              <article key={plan.name} className={plan.featured ? "border-2 border-[#101418] bg-[#101418] p-6 text-white" : "border border-[#d7dedb] bg-white p-6"}>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-500">{plan.name}</p>
-                <div className="mt-5 flex items-end gap-2">
-                  <span className="font-display text-6xl font-light tracking-[-0.06em]">{plan.price}</span>
-                  <span className={plan.featured ? "mb-2 text-sm text-white/58" : "mb-2 text-sm text-[#59636b]"}>{copy.perMonth}</span>
-                </div>
-                <p className={plan.featured ? "mt-4 text-sm leading-6 text-white/68" : "mt-4 text-sm leading-6 text-[#59636b]"}>{plan.description}</p>
+            {subscriptionPlans.map((plan) => {
+              const planName = resolveLocalizedString(plan.name, locale);
+              const planDescription = resolveLocalizedString(plan.description, locale);
+              const planFeatures = plan.features.map((feature) => resolveLocalizedString(feature, locale));
+
+              return (
+              <article key={plan.key} className={plan.featured ? "border-2 border-[#101418] bg-[#101418] p-6 text-white" : "border border-[#d7dedb] bg-white p-6"}>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-500">{planName}</p>
+                <MarketingPrice
+                  monthlyPrice={plan.monthlyPrice}
+                  annualPrice={plan.annualPrice}
+                  lifetimePrice={plan.lifetimePrice}
+                  featured={plan.featured}
+                />
+                <p className={plan.featured ? "mt-4 text-sm leading-6 text-white/68" : "mt-4 text-sm leading-6 text-[#59636b]"}>{planDescription}</p>
                 <ul className="mt-6 space-y-3">
-                  {plan.features.map((feature) => (
+                  {planFeatures.map((feature) => (
                     <li key={feature} className="flex gap-3 text-sm">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-teal-500" aria-hidden="true" />
                       <span>{feature}</span>
@@ -412,7 +430,11 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                   ))}
                 </ul>
               </article>
-            ))}
+              );
+            })}
+            {ownershipPlan ? (
+              <OwnershipPricingCard plan={ownershipPlan} locale={locale} />
+            ) : null}
           </div>
         </div>
       </section>
@@ -423,7 +445,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
             <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.faqEyebrow}</p>
-            <h2 className="mt-3 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.05em]">
+            <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.faqTitle}
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-[#59636b]">
@@ -445,7 +467,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
             <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{contact.eyebrow}</p>
-            <h2 className="mt-3 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.05em]">
+            <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {contact.title}
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-[#59636b]">
@@ -484,35 +506,35 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
             ) : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
+              <Label className="block">
                 <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{copy.nameLabel}</span>
                 <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-[#ffffff] px-4">
                   <UserRound className="mr-3 size-5 shrink-0 text-teal-700" aria-hidden="true" />
-                  <input required name="name" className="h-full min-w-0 flex-1 bg-transparent outline-none" placeholder={copy.namePlaceholder} />
+                  <Input required name="name" className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder={copy.namePlaceholder} />
                 </span>
-              </label>
+              </Label>
 
-              <label className="block">
+              <Label className="block">
                 <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{copy.emailLabel}</span>
                 <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-[#ffffff] px-4">
                   <Mail className="mr-3 size-5 shrink-0 text-teal-700" aria-hidden="true" />
-                  <input required name="email" type="email" className="h-full min-w-0 flex-1 bg-transparent outline-none" placeholder={copy.emailPlaceholder} />
+                  <Input required name="email" type="email" className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder={copy.emailPlaceholder} />
                 </span>
-              </label>
+              </Label>
             </div>
 
-            <label className="mt-4 block">
+            <Label className="mt-4 block">
               <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{copy.messageLabel}</span>
               <span className="mt-2 flex min-h-40 items-start border border-[#d7dedb] bg-[#ffffff] px-4 py-4">
                 <MessageSquareText className="mr-3 mt-1 size-5 shrink-0 text-teal-700" aria-hidden="true" />
-                <textarea
+                <Textarea
                   required
                   name="message"
-                  className="min-h-32 min-w-0 flex-1 resize-none bg-transparent outline-none"
+                  className="min-h-32 min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   placeholder={copy.messagePlaceholder}
                 />
               </span>
-            </label>
+            </Label>
 
             <Button type="submit" className="mt-5 h-11 rounded-none bg-[#101418] px-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white hover:bg-teal-800">
               {contact.submitLabel}
@@ -523,11 +545,11 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       ) : null}
 
       {isSectionVisible("finalCta") ? (
-      <section className="bg-[#101418] px-4 py-20 text-white sm:px-6 lg:px-8" style={{ order: sectionOrder("finalCta") }}>
+      <section className="bg-[#101418] px-4 py-14 text-white sm:px-6 lg:px-8" style={{ order: sectionOrder("finalCta") }}>
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 md:flex-row md:items-end">
           <div>
             <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-300">{copy.launchEyebrow}</p>
-            <h2 className="mt-3 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.05em]">
+            <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.launchTitle}
             </h2>
           </div>
@@ -596,45 +618,58 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
   const copyrightText = config.copyrightText.replace(/\{year\}/g, String(new Date().getFullYear()));
 
   return (
-    <footer className="border-t border-[#20272b] bg-[#101418] px-4 py-12 text-white sm:px-6 lg:px-8" style={{ order: 1000 }}>
+    <footer className="border-t border-[#20272b] bg-[#101418] text-white" style={{ order: 1000 }}>
+
+      <div className="px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-start">
-          <div className="max-w-md">
-            <Link href={localizePath(locale, "/")} className="font-brand text-4xl font-semibold tracking-[-0.04em] text-white">
-              PhotoFolio
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(180px,0.45fr)_minmax(230px,0.65fr)] lg:items-start">
+          <div className="max-w-xl">
+            <Link href={localizePath(locale, "/")} className="font-brand text-5xl font-semibold tracking-[-0.05em] text-white">
+              Photaaz
             </Link>
-            {config.footerText ? <p className="mt-4 text-sm leading-7 text-white/70">{config.footerText}</p> : null}
-            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm text-white/75">
+            {config.footerText ? <p className="mt-3 max-w-xl truncate text-xs leading-6 text-white/62">{config.footerText}</p> : null}
+            <div className="mt-5 flex flex-wrap gap-3 text-sm text-white/75">
               {showSupportEmail ? (
-                <a href={`mailto:${config.supportEmail}`} className="inline-flex items-center gap-2 transition hover:text-teal-300">
+                <a href={`mailto:${config.supportEmail}`} className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2 transition hover:border-teal-300/60 hover:text-teal-300">
                   <Mail className="size-4" aria-hidden="true" />
                   <span>{config.supportEmail}</span>
                 </a>
               ) : null}
-              {config.companyAddress ? <span>{config.companyAddress}</span> : null}
+              {config.companyAddress ? <span className="inline-flex items-center border border-white/10 bg-white/[0.03] px-3 py-2">{config.companyAddress}</span> : null}
             </div>
           </div>
 
-          <div className="space-y-5 justify-self-start lg:justify-self-end lg:text-right">
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-300">Social</p>
+          <div>
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-300">{locale === "ur" ? "\u0642\u0627\u0646\u0648\u0646\u06cc" : "Legal"}</p>
+            <nav className="mt-4 grid gap-2.5 text-sm text-white/72">
+              {legalLinks.map((link) => (
+                <Link key={link.slug} href={localizePath(locale, legalPath(link.slug))} className="w-fit transition hover:translate-x-1 hover:text-teal-300">
+                  {resolveLocalizedString(link.label, locale)}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div className="space-y-4">
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-300">{locale === "ur" ? "\u0633\u0648\u0634\u0644" : "Social"}</p>
             {socialLinks.length ? (
-              <div className="grid grid-cols-5 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {socialLinks.map(({ key, icon: Icon, href, label }) => (
-                  <a
-                    key={key}
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={label}
-                    title={label}
-                    className="inline-flex size-11 items-center justify-center border border-white/20 bg-white/[0.03] text-white transition hover:border-teal-300 hover:bg-teal-300 hover:text-[#101418]"
-                  >
-                    <Icon className="size-4" aria-hidden="true" />
-                  </a>
+                  <Tooltip key={key} content={label}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={label}
+                      className="inline-flex size-11 items-center justify-center border border-white/14 bg-white/[0.04] text-white transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-300 hover:text-[#101418]"
+                    >
+                      <Icon className="size-4" aria-hidden="true" />
+                    </a>
+                  </Tooltip>
                 ))}
               </div>
             ) : null}
-            <div className="flex flex-col gap-3 text-sm text-white/75 lg:items-end">
+            <div className="flex flex-col gap-3 text-sm text-white/72">
               {showPhone ? (
                 <a href={`tel:${config.phone.value.replace(/\s+/g, "")}`} className="inline-flex items-center gap-2 transition hover:text-teal-300">
                   <Phone className="size-4" aria-hidden="true" />
@@ -645,7 +680,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
               ) : null}
             </div>
             {showSalesEmail ? (
-              <a href={`mailto:${config.salesEmail}`} className="inline-flex items-center gap-2 text-sm text-white/75 transition hover:text-teal-300">
+              <a href={`mailto:${config.salesEmail}`} className="inline-flex items-center gap-2 text-sm text-white/72 transition hover:text-teal-300">
                 <Mail className="size-4" aria-hidden="true" />
                 <span>{config.salesEmail}</span>
               </a>
@@ -653,15 +688,17 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-5 text-center text-xs font-medium uppercase tracking-[0.16em] text-white/50 sm:flex-row sm:text-left">
+        <div className="mt-9 grid gap-4 border-t border-white/10 pt-5 text-center text-xs font-medium uppercase tracking-[0.16em] text-white/48 sm:grid-cols-3 sm:items-center">
+          <span aria-hidden="true" className="hidden sm:block" />
           <p>{copyrightText}</p>
           {showCreator && creatorLabel ? (
-            <a href={config.creatorLink.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-white/70 transition hover:text-teal-300">
+            <a href={config.creatorLink.href} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 text-teal-300 transition hover:text-white sm:justify-self-end">
               Made by {creatorLabel}
               <ExternalLink className="size-3.5" aria-hidden="true" />
             </a>
           ) : null}
         </div>
+      </div>
       </div>
     </footer>
   );
@@ -669,6 +706,93 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
 
 function isHttpUrl(value: string) {
   return /^https?:\/\//i.test(value);
+}
+
+function OwnershipPricingCard({ plan, locale }: { plan: PlatformPricingPlanView; locale: AppLocale }) {
+  const planName = resolveLocalizedString(plan.name, locale);
+  const planDescription = resolveLocalizedString(plan.description, locale);
+  const planFeatures = plan.features.map((feature) => resolveLocalizedString(feature, locale));
+
+  return (
+    <article className="border border-teal-800/30 bg-[#f3f7f3] p-6 text-[#101418] shadow-[0_24px_70px_rgba(16,20,24,0.10)] lg:col-span-3">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
+        <div>
+          <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-700">Permanent ownership</p>
+          <h3 className="mt-4 font-display text-5xl font-light leading-none tracking-[-0.06em]">{planName}</h3>
+          <MarketingPrice
+            monthlyPrice={plan.monthlyPrice}
+            annualPrice={plan.annualPrice}
+            lifetimePrice={plan.lifetimePrice}
+            featured={false}
+          />
+          <p className="mt-5 max-w-xl text-sm leading-7 text-[#59636b]">{planDescription}</p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {planFeatures.slice(0, 8).map((feature) => (
+            <div key={feature} className="flex gap-3 border border-teal-900/15 bg-white/75 p-4 text-sm text-[#334155]">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-teal-700" aria-hidden="true" />
+              <span>{feature}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function MarketingPrice({
+  monthlyPrice,
+  annualPrice,
+  lifetimePrice,
+  featured
+}: {
+  monthlyPrice: number | null;
+  annualPrice: number | null;
+  lifetimePrice: number | null;
+  featured: boolean;
+}) {
+  const price = getMarketingPrice({ monthlyPrice, annualPrice, lifetimePrice });
+
+  return (
+    <div className="mt-6 flex items-end gap-2">
+      <span className={featured ? "pb-2 text-sm font-semibold text-white/48" : "pb-2 text-sm font-semibold text-[#59636b]"}>
+        Rs
+      </span>
+      <span className="font-display text-6xl font-light leading-none tracking-[-0.06em]">{price.amount}</span>
+      <span className={featured ? "pb-2 text-sm text-white/58" : "pb-2 text-sm text-[#59636b]"}>
+        {price.suffix}
+      </span>
+    </div>
+  );
+}
+
+function getMarketingPrice(plan: { monthlyPrice: number | null; annualPrice: number | null; lifetimePrice: number | null }) {
+  if (plan.monthlyPrice && plan.monthlyPrice > 0) {
+    return {
+      amount: Math.round(plan.monthlyPrice).toLocaleString("en-PK"),
+      suffix: "/ month"
+    };
+  }
+
+  if (plan.annualPrice && plan.annualPrice > 0) {
+    return {
+      amount: Math.round(plan.annualPrice).toLocaleString("en-PK"),
+      suffix: "/ year"
+    };
+  }
+
+  if (plan.lifetimePrice && plan.lifetimePrice > 0) {
+    return {
+      amount: Math.round(plan.lifetimePrice).toLocaleString("en-PK"),
+      suffix: "one time"
+    };
+  }
+
+  return {
+    amount: "0",
+    suffix: "/ month"
+  };
 }
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
@@ -693,3 +817,4 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
     </article>
   );
 }
+

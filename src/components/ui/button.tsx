@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "focus-ring inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50",
+  "focus-ring inline-flex h-10 touch-manipulation items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -32,7 +32,10 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
-export function Button({ className, variant, size, asChild = false, ...props }: ButtonProps) {
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant, size, asChild = false, ...props },
+  ref
+) {
   const Comp = asChild ? Slot : "button";
-  return <Comp className={cn(buttonVariants({ variant, size, className }))} {...props} />;
-}
+  return <Comp ref={ref} className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+});

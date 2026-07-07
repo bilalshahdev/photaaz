@@ -1,4 +1,4 @@
-# PhotoFolio SaaS Platform
+# Photaaz SaaS Platform
 
 Modern multi-tenant SaaS foundation for photographers to publish SEO-friendly portfolio websites.
 
@@ -20,6 +20,22 @@ Modern multi-tenant SaaS foundation for photographers to publish SEO-friendly po
 - Public pages are SSR/ISR friendly and include sitemap and robots metadata routes.
 - Dashboard modules are organized for profile, galleries, pages, blogs, themes, domains, and subscriptions.
 - Platform, super admin, customer public site, and customer dashboard now use separate route trees and layouts.
+
+## Product Rules
+
+Full product direction is preserved in `PROJECT_CONTEXT.md`.
+
+Key decisions:
+
+- Themes are coded layouts built by the developer, then enabled/configured from super admin.
+- Super admin manages theme catalog fields such as preview image, copy, enabled state, premium state, display order, demo path, and SEO.
+- Each theme should have a live demo with sample tenant data/images.
+- Theme customization should use controlled tokens such as colors, fonts, navbar style, gallery style, card style, and footer style.
+- Customization access must depend on theme support plus tenant plan permissions.
+- Future component presets can include curated navbars, heroes, galleries, cards, footers, and layout grids, but Photaaz should not become a free-form page builder.
+- Categories/subcategories should come from a global approved library managed by super admin.
+- Clients may request missing categories only if their plan allows it; approved requests become globally available.
+- Premium clients can be served as normal tenants, separate deployments from the same codebase, or custom forks depending on contract size and maintenance needs.
 
 ## Routes
 

@@ -1,18 +1,21 @@
 import { LandingPage } from "@/components/marketing/landing-page";
-import { resolveLocalizedString } from "@/i18n/locales";
+import { resolveLocalizedString, resolveLocalizedStringList } from "@/i18n/locales";
 import { getRequestLocale } from "@/i18n/server";
 import { createMetadata } from "@/lib/seo";
+import { getPlatformAppConfig } from "@/services/admin/admin-data";
 import { getPlatformLandingSettings } from "@/services/platform/platform-data";
 
 export const revalidate = 300;
 
 export async function generateMetadata() {
-  const settings = await getPlatformLandingSettings();
+  const [settings, appConfig, locale] = await Promise.all([getPlatformLandingSettings(), getPlatformAppConfig(), getRequestLocale()]);
 
   return createMetadata({
-    title: resolveLocalizedString(settings.seo.title, "en"),
-    description: resolveLocalizedString(settings.seo.description, "en"),
-    path: "/"
+    title: resolveLocalizedString(settings.seo.title, locale),
+    description: resolveLocalizedString(settings.seo.description, locale),
+    path: "/",
+    locale,
+    keywords: [...resolveLocalizedStringList(settings.seo.keywords, locale), ...resolveLocalizedStringList(appConfig.seoKeywords, locale)]
   });
 }
 

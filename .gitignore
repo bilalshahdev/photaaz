@@ -6,3 +6,5 @@ dist
 .env*.local
 *.tsbuildinfo
 prisma/dev.db
+.tmp
+public/uploads

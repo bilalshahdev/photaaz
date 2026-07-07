@@ -1,6 +1,7 @@
 import type { TenantContext } from "@/types/tenant";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db/prisma";
+import { getEffectivePlanKey, syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
 
 export async function resolveTenantFromHost(host: string): Promise<TenantContext | null> {
   const rootDomain = env.NEXT_PUBLIC_ROOT_DOMAIN;
@@ -24,6 +25,8 @@ export async function resolveTenantFromHost(host: string): Promise<TenantContext
       planKey: "free"
     };
   }
+
+  await syncSubscriptionLifecycle();
 
   const tenant = await prisma.tenant.findFirst({
     where: {
@@ -58,6 +61,6 @@ export async function resolveTenantFromHost(host: string): Promise<TenantContext
     status: tenant.status,
     locale: tenant.defaultLocale === "ur" ? "ur" : "en",
     domain: normalizedHost,
-    planKey: tenant.subscription?.plan.key ?? "free"
+    planKey: getEffectivePlanKey(tenant.subscription)
   };
 }

@@ -1,11 +1,13 @@
-import { Camera, Feather, Gem, Grid3X3, Layers3 } from "lucide-react";
+import { Aperture, Camera, Feather, Gem, Grid3X3, Layers3, Mountain } from "lucide-react";
 
 const themeIcons = {
   minimal: Feather,
   editorial: Layers3,
   cinematic: Camera,
   masonry: Grid3X3,
-  luxury: Gem
+  luxury: Gem,
+  monochrome: Aperture,
+  panorama: Mountain
 } as const;
 
 export function getThemeIcon(iconKey: string) {

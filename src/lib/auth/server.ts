@@ -4,7 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db/prisma";
 
-const devSecret = "photofolio-local-development-secret";
+const devSecret = "photaaz-local-development-secret";
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL ?? env.NEXT_PUBLIC_APP_URL,

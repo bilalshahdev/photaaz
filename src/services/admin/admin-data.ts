@@ -1,11 +1,28 @@
 import { prisma } from "@/lib/db/prisma";
+import { getPublicEmailDeliverySettings } from "@/services/email/email-service";
 import type { AppLocale } from "@/i18n/locales";
+import { syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
+import type { LocalizedStringList } from "@/services/platform/platform-data";
+import { defaultPlatformMediaPolicy, type PlatformMediaPolicy } from "@/services/platform/media-policy";
 
 export async function getAdminDashboardStats() {
-  const [tenants, users, activeSubscriptions, supportOpen, coupons, notifications, revenue] = await Promise.all([
+  await syncSubscriptionLifecycle();
+
+  const now = new Date();
+  const expiringSoonEnd = new Date(now);
+  expiringSoonEnd.setDate(expiringSoonEnd.getDate() + 7);
+
+  const [tenants, users, activeSubscriptions, expiringSoonSubscriptions, expiredSubscriptions, supportOpen, coupons, notifications, revenue] = await Promise.all([
     prisma.tenant.count(),
     prisma.user.count(),
     prisma.subscription.count({ where: { status: { in: ["ACTIVE", "TRIALING"] } } }),
+    prisma.subscription.count({
+      where: {
+        status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
+        currentPeriodEnds: { gte: now, lte: expiringSoonEnd }
+      }
+    }),
+    prisma.subscription.count({ where: { status: "EXPIRED" } }),
     prisma.platformSupportRequest.count({ where: { status: "Open" } }),
     prisma.coupon.count({ where: { enabled: true } }),
     prisma.clientNotification.count({ where: { status: "UNREAD" } }),
@@ -15,12 +32,14 @@ export async function getAdminDashboardStats() {
     })
   ]);
 
-  const monthlyRevenue = revenue.reduce((total, subscription) => total + (subscription.plan.monthlyPrice ?? 0), 0);
+  const monthlyRevenue = revenue.reduce((total, subscription) => total + (subscription.plan.monthlyPrice ?? 0), 0) / 100;
 
   return {
     tenants,
     users,
     activeSubscriptions,
+    expiringSoonSubscriptions,
+    expiredSubscriptions,
     supportOpen,
     coupons,
     unreadNotifications: notifications,
@@ -29,6 +48,8 @@ export async function getAdminDashboardStats() {
 }
 
 export async function getAdminCustomers() {
+  await syncSubscriptionLifecycle();
+
   return prisma.tenant.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -48,12 +69,29 @@ export async function getAdminCustomers() {
 }
 
 export async function getAdminCustomerById(id: string) {
+  await syncSubscriptionLifecycle();
+
   return prisma.tenant.findUnique({
     where: { id },
     include: {
       owner: true,
       settings: true,
-      subscription: { include: { plan: true } },
+      subscription: {
+        include: {
+          plan: {
+            include: {
+              features: {
+                include: {
+                  feature: true
+                },
+                orderBy: {
+                  createdAt: "asc"
+                }
+              }
+            }
+          }
+        }
+      },
       domains: { orderBy: { createdAt: "desc" } },
       categories: { orderBy: { createdAt: "asc" } },
       albums: { orderBy: { createdAt: "desc" }, take: 10, include: { _count: { select: { photos: true } } } },
@@ -70,9 +108,31 @@ export async function getAdminCustomerById(id: string) {
   });
 }
 
+export async function getAdminConversationInbox() {
+  return prisma.conversationThread.findMany({
+    orderBy: {
+      updatedAt: "desc"
+    },
+    include: {
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true
+        }
+      },
+      messages: {
+        orderBy: {
+          createdAt: "asc"
+        }
+      }
+    }
+  });
+}
+
 export async function getAdminPlans() {
   return prisma.plan.findMany({
-    orderBy: { monthlyPrice: "asc" },
+    orderBy: [{ displayOrder: "asc" }, { monthlyPrice: "asc" }, { name: "asc" }],
     include: {
       features: { include: { feature: true }, orderBy: { createdAt: "asc" } },
       _count: { select: { subscriptions: true } }
@@ -80,9 +140,43 @@ export async function getAdminPlans() {
   });
 }
 
+export async function getAdminFeatures() {
+  return prisma.feature.findMany({
+    orderBy: [{ name: "asc" }],
+    include: {
+      _count: {
+        select: {
+          plans: true
+        }
+      }
+    }
+  });
+}
+
 export async function getAdminCoupons() {
   return prisma.coupon.findMany({
     orderBy: { createdAt: "desc" }
+  });
+}
+
+export async function getAdminCategoryRequests() {
+  return prisma.platformCategoryRequest.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    include: {
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          subscription: {
+            include: {
+              plan: true
+            }
+          }
+        }
+      },
+      parentType: true
+    }
   });
 }
 
@@ -99,17 +193,31 @@ export async function getAdminEmailSettings() {
     { id: "subscription-expiring", key: "subscription.expiring", label: "Subscription expiring", description: "Notify clients before a package ends.", enabled: true, category: "subscription", createdAt: new Date(), updatedAt: new Date() },
     { id: "subscription-ended", key: "subscription.ended", label: "Subscription ended", description: "Notify clients when package access ends.", enabled: true, category: "subscription", createdAt: new Date(), updatedAt: new Date() },
     { id: "account-created", key: "account.created", label: "Account created", description: "Welcome email after account/site creation.", enabled: true, category: "account", createdAt: new Date(), updatedAt: new Date() },
+    { id: "support-inquiry", key: "support.inquiry", label: "Platform support inquiry", description: "Notify the platform owner when someone submits the main-site support form.", enabled: true, category: "support", createdAt: new Date(), updatedAt: new Date() },
+    { id: "tenant-inquiry", key: "tenant.inquiry", label: "Portfolio visitor inquiry", description: "Notify a client when a visitor submits their portfolio contact form.", enabled: true, category: "support", createdAt: new Date(), updatedAt: new Date() },
     { id: "manual-email", key: "manual.email", label: "Manual emails", description: "Allow super admin to send manual emails.", enabled: true, category: "manual", createdAt: new Date(), updatedAt: new Date() }
   ];
 }
 
+export async function getAdminEmailDeliverySettings() {
+  return getPublicEmailDeliverySettings();
+}
+
 export type PlatformAppConfig = {
+  brandName: string;
+  signatureColor: string;
+  faviconUrl: string;
+  appleTouchIconUrl: string;
+  socialPreviewImageUrl: string;
+  seoKeywords: LocalizedStringList;
   supportEmail: string;
   salesEmail: string;
   footerText: string;
   copyrightText: string;
   companyAddress: string;
   dashboardNotice: string;
+  themeSwitchCooldownDays: number;
+  media: PlatformMediaPolicy;
   phone: {
     label: string;
     value: string;
@@ -136,12 +244,23 @@ export type PlatformExternalLink = {
 };
 
 export const defaultPlatformAppConfig: PlatformAppConfig = {
+  brandName: "Photaaz",
+  signatureColor: "#0f766e",
+  faviconUrl: "/favicon.svg",
+  appleTouchIconUrl: "/favicon.svg",
+  socialPreviewImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=90",
+  seoKeywords: {
+    en: ["photography website", "photography portfolio", "photographer website Pakistan", "photo gallery website", "portfolio website builder"],
+    ur: ["فوٹوگرافی ویب سائٹ", "فوٹوگرافی پورٹ فولیو", "فوٹوگرافر ویب سائٹ"]
+  },
   supportEmail: "bilalshah.dev@gmail.com",
   salesEmail: "bilalshah.dev@gmail.com",
   footerText: "Clean websites for photographers, built to showcase visual work.",
-  copyrightText: "Copyright (c) {year} PhotoFolio. All rights reserved.",
-  companyAddress: "Lahore, Pakistan",
+  copyrightText: "Copyright (c) {year} Photaaz. All rights reserved.",
+  companyAddress: "Islamabad, Pakistan",
   dashboardNotice: "",
+  themeSwitchCooldownDays: 14,
+  media: defaultPlatformMediaPolicy,
   phone: {
     label: "Phone",
     value: "",
@@ -168,7 +287,22 @@ export async function getPlatformAppConfig(): Promise<PlatformAppConfig> {
   return {
     ...defaultPlatformAppConfig,
     ...savedConfig,
+    brandName: savedConfig.brandName ?? defaultPlatformAppConfig.brandName,
+    signatureColor: savedConfig.signatureColor ?? defaultPlatformAppConfig.signatureColor,
+    faviconUrl: savedConfig.faviconUrl ?? defaultPlatformAppConfig.faviconUrl,
+    appleTouchIconUrl: savedConfig.appleTouchIconUrl ?? defaultPlatformAppConfig.appleTouchIconUrl,
+    socialPreviewImageUrl: savedConfig.socialPreviewImageUrl ?? defaultPlatformAppConfig.socialPreviewImageUrl,
+    seoKeywords: savedConfig.seoKeywords ?? defaultPlatformAppConfig.seoKeywords,
     copyrightText: savedConfig.copyrightText ?? defaultPlatformAppConfig.copyrightText,
+    themeSwitchCooldownDays: typeof savedConfig.themeSwitchCooldownDays === "number" ? savedConfig.themeSwitchCooldownDays : defaultPlatformAppConfig.themeSwitchCooldownDays,
+    media: {
+      ...defaultPlatformAppConfig.media,
+      ...(savedConfig.media ?? {}),
+      platformBranding: {
+        ...defaultPlatformAppConfig.media.platformBranding,
+        ...(savedConfig.media?.platformBranding ?? {})
+      }
+    },
     phone: {
       ...defaultPlatformAppConfig.phone,
       ...(savedConfig.phone ?? {})

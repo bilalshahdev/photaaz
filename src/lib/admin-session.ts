@@ -1,2 +1,2 @@
-export const adminSessionStorageKey = "photofolio-super-admin";
-export const adminSidebarStorageKey = "photofolio-admin-sidebar-collapsed";
+export const adminSessionStorageKey = "photaaz-super-admin";
+export const adminSidebarStorageKey = "photaaz-admin-sidebar-collapsed";

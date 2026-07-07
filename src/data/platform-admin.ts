@@ -1,25 +1,26 @@
-import { pricingPlans, themeShowcases } from "@/data/marketing";
+import { themeShowcases } from "@/data/marketing";
 
 export type ManagedPhotographyType = {
   name: string;
   slug: string;
+  image: string;
   parentSlug?: string | null;
   enabled: boolean;
   categorySeed: boolean;
 };
 
 export const managedPhotographyTypes: ManagedPhotographyType[] = [
-  { name: "Wedding", slug: "wedding", enabled: true, categorySeed: true },
-  { name: "Travel", slug: "travel", enabled: true, categorySeed: true },
-  { name: "Street", slug: "street", enabled: true, categorySeed: true },
-  { name: "Nature", slug: "nature", enabled: true, categorySeed: true },
-  { name: "Wildlife", slug: "wildlife", enabled: true, categorySeed: true },
-  { name: "Birds", slug: "wildlife-birds", parentSlug: "wildlife", enabled: true, categorySeed: true },
-  { name: "Insects", slug: "wildlife-insects", parentSlug: "wildlife", enabled: true, categorySeed: true },
-  { name: "Mammals", slug: "wildlife-mammals", parentSlug: "wildlife", enabled: true, categorySeed: true },
-  { name: "Fashion", slug: "fashion", enabled: true, categorySeed: true },
-  { name: "Portrait", slug: "portrait", enabled: true, categorySeed: true },
-  { name: "Events", slug: "events", enabled: false, categorySeed: true }
+  { name: "Wedding", slug: "wedding", image: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Travel", slug: "travel", image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Street", slug: "street", image: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Nature", slug: "nature", image: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Wildlife", slug: "wildlife", image: "https://images.unsplash.com/photo-1474511320723-9a56873867b5?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Birds", slug: "wildlife-birds", image: "https://images.unsplash.com/photo-1444464666168-49d633b86797?auto=format&fit=crop&w=900&q=82", parentSlug: "wildlife", enabled: true, categorySeed: true },
+  { name: "Insects", slug: "wildlife-insects", image: "https://images.unsplash.com/photo-1509967733342-437077d8e41a?auto=format&fit=crop&w=900&q=82", parentSlug: "wildlife", enabled: true, categorySeed: true },
+  { name: "Mammals", slug: "wildlife-mammals", image: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=900&q=82", parentSlug: "wildlife", enabled: true, categorySeed: true },
+  { name: "Fashion", slug: "fashion", image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Portrait", slug: "portrait", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=82", enabled: true, categorySeed: true },
+  { name: "Events", slug: "events", image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=82", enabled: false, categorySeed: true }
 ];
 
 export const managedThemes = themeShowcases.map((theme, index) => ({
@@ -27,11 +28,6 @@ export const managedThemes = themeShowcases.map((theme, index) => ({
   enabled: true,
   premium: index > 1,
   demoPath: `/themes/${theme.slug}/demo`
-}));
-
-export const managedPricingPlans = pricingPlans.map((plan) => ({
-  ...plan,
-  enabled: true
 }));
 
 export const supportRequests = [
@@ -54,6 +50,6 @@ export const supportRequests = [
 ];
 
 export const adminCredentials = {
-  email: "photofolio@admin.com",
+  email: "photaaz@admin.com",
   password: "admin@123"
 } as const;

@@ -1,4 +1,4 @@
-# PhotoFolio Project Context
+# Photaaz Project Context
 
 This file preserves the recovered product context for `bs-photos-hub` so the project direction is not dependent on chat history.
 
@@ -10,7 +10,7 @@ This file preserves the recovered product context for `bs-photos-hub` so the pro
 
 ## Product Vision
 
-PhotoFolio is a modern multi-tenant SaaS platform for photographers to create professional, SEO-friendly portfolio websites without coding.
+Photaaz is a modern multi-tenant SaaS platform for photographers to create professional, SEO-friendly portfolio websites without coding.
 
 Photographers should be able to:
 
@@ -117,6 +117,21 @@ Super admin should manage:
 - Support messages
 - Analytics such as revenue, users, storage, uploads, and subscriptions
 
+## Admin UI Standards
+
+Admin and customer dashboard CRUD should follow one consistent interaction model:
+
+- Similar modules must keep UI symmetry. If customers, themes, categories, FAQs, coupons, packages, blogs, galleries, photos, or messages have comparable CRUD flows, their list pages, headers, action placement, dialogs, empty states, delete confirmations, and detail/edit patterns should feel like the same product.
+- List pages fetch and display records only.
+- Add actions live in the page or panel header.
+- Page-level create actions must use the shared `AdminAddButton` or `CustomerAddButton` pattern so Add customer, Add FAQ, Add package, Add photo, Add blog, and similar actions share the same size, color, icon spacing, and hover behavior.
+- Edit, view, delete, and external actions use consistent icon buttons or icon links.
+- Simple create/edit flows use dialogs; complex records use dedicated detail pages.
+- Delete confirmation uses the shared shadcn dialog, never browser alerts.
+- Ordered records use drag and drop plus a save-order action, not manual display-order inputs.
+- Shared admin primitives such as panels, tables, record cards, status messages, empty states, icon actions, localized fields, and confirm dialogs should be reused before creating one-off UI.
+- Visible form controls should use shadcn primitives or project form wrappers, not raw/default HTML styling. Hidden inputs are acceptable for server actions.
+
 ## Customer Dashboard Scope
 
 Customer dashboard should manage:
@@ -148,10 +163,51 @@ Visitors should never see internal dashboard/admin routes.
 
 - Themes are code-based React experiences
 - Database stores only selected theme and configuration
-- Initial themes should include 4-5 options such as Minimal, Wedding, Travel, Cinematic, Dark Portfolio, Street, or Nature
+- New themes are built by the developer in code, deployed, then enabled/configured from super admin
+- Super admin should manage the theme catalog, not build full themes from the dashboard
+- Each theme should have a live demo using sample tenant data and sample images
+- Theme details and live demo pages should help users preview the real layout before selecting a theme
+- Initial themes should include 4-5 options such as Minimal, Editorial, Cinematic, Masonry, Wedding, Travel, Street, or Nature
 - Theme configuration can include colors, typography, navbar style, gallery style, card style, and footer style
 
-Customer customization should support:
+Recommended future structure:
+
+```txt
+src/themes/minimal
+src/themes/editorial
+src/themes/cinematic
+src/themes/masonry
+```
+
+Each coded theme should be registered in a theme registry:
+
+```ts
+themeRegistry = {
+  minimal: MinimalTheme,
+  editorial: EditorialTheme,
+  cinematic: CinematicTheme
+};
+```
+
+Database/admin theme records should store catalog and availability fields:
+
+- Theme key/slug
+- Display name
+- Preview image
+- Description
+- Feature bullets
+- Enabled/disabled
+- Free/premium
+- Display order
+- Demo path
+- SEO title/description
+- Supported customization options
+
+## Theme Customization And Permissions
+
+The product should use coded themes plus controlled customization tokens. It should not become a free-form page builder.
+
+Customer customization can support:
 
 - Primary, secondary, and accent colors
 - Heading and body fonts
@@ -159,6 +215,109 @@ Customer customization should support:
 - Gallery variants such as grid and masonry
 - Card variants
 - Footer variants
+- Logo/name display style
+- Spacing or density presets
+- Optional dark/light style support if the theme supports it
+
+Customization availability must be checked through three layers:
+
+```txt
+Can tenant use this customization?
+= selected theme supports it
++ tenant plan allows it
++ tenant has access to the theme/customization
+```
+
+Example:
+
+- Free plan: basic themes, basic colors
+- Pro plan: premium themes, custom fonts, more galleries
+- Studio plan: custom domain, advanced layout options, more sections
+- Custom plan: tailored design/support
+
+Later, Photaaz can provide curated component presets rather than a full builder:
+
+- Navbar presets
+- Hero presets
+- Gallery presets
+- Card presets
+- Footer presets
+- Grid/layout presets
+
+These presets should still be theme-supported and plan-limited.
+
+## Categories And Subcategories
+
+Categories and subcategories should use a global approved library plus tenant selections.
+
+Important rules:
+
+- Super admin manages the global/default category library
+- Categories may have subcategories
+- A category can also be a leaf category with no subcategories
+- Photos can be uploaded only to leaf categories
+- If a selected category has subcategories, the client must select a subcategory before uploading
+- During onboarding, selected global categories should be copied/attached into the tenant setup
+- Uploads should attach to approved tenant-available categories, not unapproved requests
+
+Examples:
+
+```txt
+Wedding
+  Bridal
+  Couple Shoot
+  Events
+
+Wildlife
+  Birds
+  Mammals
+  Insects
+```
+
+Client-created category flow:
+
+1. Client requests or creates a missing category/subcategory, only if their plan allows it
+2. The request goes into a pending review queue
+3. Super admin approves or rejects it
+4. If approved, it becomes part of the global category library
+5. Once approved, it can be available to all clients, not only the requesting tenant
+6. Pending/rejected categories cannot be used for uploads
+
+Plan examples:
+
+- Free: cannot request custom categories
+- Pro: limited custom category requests
+- Studio/Custom: more requests or admin-assisted category additions
+
+This keeps taxonomy clean while still letting serious clients expand the platform.
+
+## Premium Client / Separate Deployment Strategy
+
+The main architecture is multi-tenant SaaS, but premium clients may ask for separation or ownership.
+
+Supported business paths:
+
+1. Same app, dedicated tenant
+   - `client1.photaaz.com`
+   - Same deployment, same codebase, same database
+   - Best for normal SaaS clients
+
+2. Same codebase, separate deployment
+   - Separate Vercel/project/server and env vars
+   - Can use a separate database
+   - Useful for premium clients needing privacy, custom branding, or stronger isolation
+   - Future app mode can support:
+     ```env
+     NEXT_PUBLIC_APP_MODE=single-tenant
+     TENANT_SLUG=client1
+     ```
+
+3. Fork/export separate source code
+   - Separate repo/codebase for high-paying custom clients
+   - Useful when client wants ownership or heavy custom features
+   - More maintenance effort and should be priced as custom work
+
+To keep this flexible, avoid hardcoding client-specific behavior in shared components. Prefer tenant config, feature flags, theme support metadata, and plan permissions.
 
 ## Media Rules
 

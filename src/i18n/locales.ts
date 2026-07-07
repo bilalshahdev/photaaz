@@ -36,6 +36,16 @@ export function localizePath(locale: AppLocale, path: string): Route {
   return (normalizedPath === "/" ? `/${locale}` : `/${locale}${normalizedPath}`) as Route;
 }
 
-export function resolveLocalizedString(value: string | { en: string; ur: string }, locale: AppLocale) {
-  return typeof value === "string" ? value : value[locale] || value.en;
+export function resolveLocalizedString(value: string | Record<string, string>, locale: AppLocale) {
+  return typeof value === "string" ? value : value[locale] || value.en || Object.values(value)[0] || "";
+}
+
+export function resolveLocalizedStringList(value: string[] | Record<string, string[]> | undefined, locale: AppLocale) {
+  if (!value) {
+    return [];
+  }
+
+  const values = Array.isArray(value) ? value : value[locale] || value.en || Object.values(value)[0] || [];
+
+  return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)));
 }

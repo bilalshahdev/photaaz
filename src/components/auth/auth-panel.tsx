@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { customerDashboardPath, onboardingPath } from "@/config/routes";
 import { authClient } from "@/lib/auth/client";
 
@@ -63,29 +65,29 @@ export function AuthPanel({ mode }: AuthPanelProps) {
       </div>
       <div className="mt-6 space-y-4">
         {mode === "sign-up" ? (
-          <label className="block">
+          <Label className="block">
             <span className="text-sm font-medium text-white/70">Name</span>
-            <input
+            <Input
               name="name"
               required
               className="mt-2 h-11 w-full rounded-md border border-white/14 bg-[#221d18] px-3 text-white outline-none placeholder:text-white/36 focus:border-accent"
               placeholder="Bilal Shah"
             />
-          </label>
+          </Label>
         ) : null}
-        <label className="block">
+        <Label className="block">
           <span className="text-sm font-medium text-white/70">Email</span>
-          <input
+          <Input
             name="email"
             type="email"
             required
             className="mt-2 h-11 w-full rounded-md border border-white/14 bg-[#221d18] px-3 text-white outline-none placeholder:text-white/36 focus:border-accent"
             placeholder="you@studio.com"
           />
-        </label>
-        <label className="block">
+        </Label>
+        <Label className="block">
           <span className="text-sm font-medium text-white/70">Password</span>
-          <input
+          <Input
             name="password"
             type="password"
             required
@@ -93,7 +95,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
             className="mt-2 h-11 w-full rounded-md border border-white/14 bg-[#221d18] px-3 text-white outline-none placeholder:text-white/36 focus:border-accent"
             placeholder="Minimum 8 characters"
           />
-        </label>
+        </Label>
       </div>
       {error ? <p className="mt-4 rounded-md bg-red-500/16 p-3 text-sm text-red-100">{error}</p> : null}
       <Button disabled={pending} className="mt-6 w-full" size="lg">

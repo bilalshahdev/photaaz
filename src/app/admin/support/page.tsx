@@ -7,7 +7,7 @@ export default async function AdminSupportPage() {
 
   return (
     <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="w-full">
         <AdminPageHeader eyebrow="Support" title="Manage support requests." body="Requests from the homepage contact form and demo seed data appear here." />
         <SupportInbox initialRequests={requests} />
       </div>

@@ -30,13 +30,13 @@ export async function AuthShell({ mode }: AuthShellProps) {
             <span className="flex size-11 items-center justify-center rounded-full bg-white text-foreground">
               <Aperture className="size-5" aria-hidden="true" />
             </span>
-            <span className="font-brand text-2xl font-black tracking-[-0.04em]">PhotoFolio</span>
+            <span className="font-brand text-2xl font-black tracking-[-0.04em]">Photaaz</span>
           </Link>
           <h2 className="mt-12 font-display text-6xl font-black leading-none tracking-[-0.05em] sm:text-7xl">
             Publish-ready portfolios begin with a clean studio setup.
           </h2>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-white/68">
-            Account, tenant, theme, galleries, and domains are separated from day one so each photographer gets a fast,
+            Account, tenant, theme, galleries, and domain setup are separated from day one so each photographer gets a fast,
             scalable workspace.
           </p>
           <Link href={alternateHref} className="mt-8 inline-flex text-sm font-semibold text-accent">

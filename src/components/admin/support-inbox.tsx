@@ -1,12 +1,26 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { LifeBuoy } from "lucide-react";
+import { LifeBuoy, type LucideIcon } from "lucide-react";
+import { AdminEmptyState, AdminRecordCard, AdminStatusMessage } from "@/components/admin/admin-crud-ui";
 import { AdminPanel } from "@/components/admin/admin-ui";
 import { updateSupportRequestStatus } from "@/app/admin/actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import type { PlatformSupportRequestView } from "@/services/platform/platform-data";
 
-export function SupportInbox({ initialRequests }: { initialRequests: PlatformSupportRequestView[] }) {
+type SupportInboxProps = {
+  initialRequests: PlatformSupportRequestView[];
+  title?: string;
+  icon?: LucideIcon;
+};
+
+export function SupportInbox({ initialRequests, title = "Inbox", icon: Icon = LifeBuoy }: SupportInboxProps) {
   const [requests, setRequests] = useState(initialRequests);
   const [message, setMessage] = useState("");
   const [, startTransition] = useTransition();
@@ -26,11 +40,11 @@ export function SupportInbox({ initialRequests }: { initialRequests: PlatformSup
   }
 
   return (
-    <AdminPanel title="Inbox" icon={LifeBuoy}>
-      {message ? <div className="mb-4 border border-teal-200 bg-teal-50 p-3 text-sm font-medium text-teal-900">{message}</div> : null}
+    <AdminPanel title={title} icon={Icon}>
+      {message ? <AdminStatusMessage>{message}</AdminStatusMessage> : null}
       <div className="space-y-3">
         {requests.map((request) => (
-          <article key={request.id} className="border border-slate-200 p-4">
+          <AdminRecordCard key={request.id} className="min-h-0 p-4">
             <div className="flex flex-col justify-between gap-2 sm:flex-row">
               <div>
                 <p className="font-semibold">{request.topic}</p>
@@ -38,15 +52,21 @@ export function SupportInbox({ initialRequests }: { initialRequests: PlatformSup
                   {request.id} - {request.name} - {request.email}
                 </p>
               </div>
-              <select value={request.status} onChange={(event) => updateStatus(request.id, event.target.value)} className="h-9 border border-slate-200 px-2 text-sm outline-none focus:border-teal-700">
-                <option>Open</option>
-                <option>Pending</option>
-                <option>Resolved</option>
-              </select>
+              <Select value={request.status} onValueChange={(status) => updateStatus(request.id, status)}>
+                <SelectTrigger className="h-9 w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Open">Open</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Resolved">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <p className="mt-3 border border-slate-200 px-3 py-2 text-sm leading-6 text-slate-600">{request.message}</p>
-          </article>
+          </AdminRecordCard>
         ))}
+        {requests.length === 0 ? <AdminEmptyState title="No support requests yet." body="New contact form submissions will appear here." /> : null}
       </div>
     </AdminPanel>
   );

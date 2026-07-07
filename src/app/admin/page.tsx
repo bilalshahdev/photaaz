@@ -1,33 +1,32 @@
-import { BadgeDollarSign, Images, LifeBuoy, Mail, Palette, Tags, UsersRound, Wand2 } from "lucide-react";
+import { BadgeDollarSign, CalendarClock, Images, LifeBuoy, Mail, Palette, UsersRound, Wand2 } from "lucide-react";
 import { AdminPanel, MetricCard } from "@/components/admin/admin-ui";
 import { getAdminDashboardStats } from "@/services/admin/admin-data";
-import { getPlatformPhotographyTypes, getPlatformPricingPlans, getPlatformSupportRequests, getPlatformThemes } from "@/services/platform/platform-data";
+import { getPlatformPricingPlans, getPlatformSupportRequests, getPlatformThemes } from "@/services/platform/platform-data";
 
 export default async function AdminPage() {
-  const [stats, themes, photographyTypes, pricingPlans, supportRequests] = await Promise.all([
+  const [stats, themes, pricingPlans, supportRequests] = await Promise.all([
     getAdminDashboardStats(),
     getPlatformThemes(),
-    getPlatformPhotographyTypes(),
     getPlatformPricingPlans(),
     getPlatformSupportRequests()
   ]);
 
   return (
     <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="w-full">
         <div className="mb-8 border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Super Admin</p>
           <h1 className="mt-3 font-display text-4xl font-black tracking-[-0.04em]">Platform Control Center</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
-            Manage the defaults customers see across landing pages, demos, onboarding, themes, pricing, and support.
+            Manage the defaults customers see across landing pages, demos, onboarding, themes, packages, features, and support.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard icon={UsersRound} label="Customers" value={String(stats.tenants)} body={`${stats.users} owner accounts`} />
-          <MetricCard icon={BadgeDollarSign} label="Estimated MRR" value={`$${stats.monthlyRevenue}`} body={`${stats.activeSubscriptions} active/trial packages`} />
+          <MetricCard icon={BadgeDollarSign} label="Estimated MRR" value={`$${stats.monthlyRevenue.toLocaleString("en-US")}`} body={`${stats.activeSubscriptions} active/trial packages`} />
+          <MetricCard icon={CalendarClock} label="Package Watch" value={String(stats.expiringSoonSubscriptions)} body={`${stats.expiredSubscriptions} expired packages`} />
           <MetricCard icon={Palette} label="Themes" value={String(themes.length)} body="Managed theme catalog" />
-          <MetricCard icon={LifeBuoy} label="Support" value={String(stats.supportOpen)} body={`${supportRequests.length} total requests`} />
         </div>
 
         <section className="mt-6 grid gap-6 xl:grid-cols-3">
@@ -45,7 +44,12 @@ export default async function AdminPage() {
           </AdminPanel>
           <AdminPanel title="Operations" icon={Mail}>
             <p className="text-sm leading-6 text-slate-600">
-              {pricingPlans.length} marketing pricing cards, {stats.coupons} active coupons, and {stats.unreadNotifications} unread client notifications are tracked.
+              {pricingPlans.length} public package cards, {stats.coupons} active coupons, and {stats.unreadNotifications} unread client notifications are tracked.
+            </p>
+          </AdminPanel>
+          <AdminPanel title="Support" icon={LifeBuoy}>
+            <p className="text-sm leading-6 text-slate-600">
+              {stats.supportOpen} open support requests from {supportRequests.length} total requests need follow-up.
             </p>
           </AdminPanel>
         </section>

@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
-import { onboardingSchema, type OnboardingDraft } from "@/lib/onboarding-validation";
+import { onboardingSchema } from "@/lib/onboarding-validation";
 import { createTenantForOwner } from "@/services/tenant/create-tenant";
 
 type PublishOnboardingResult =

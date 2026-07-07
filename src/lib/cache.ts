@@ -22,10 +22,10 @@ export function revalidateTenantPublic(slug: string) {
   revalidateTag(cacheTags.tenant(slug), "max");
   revalidateTag(cacheTags.tenantPublic(slug), "max");
   revalidateTag(cacheTags.tenantGalleries(slug), "max");
-  revalidatePath(`/site/${slug}`);
-  revalidatePath(`/site/${slug}/gallery`);
-  revalidatePath(`/ur/site/${slug}`);
-  revalidatePath(`/ur/site/${slug}/gallery`);
+  ["", "/gallery", "/categories", "/blog", "/about"].forEach((path) => {
+    revalidatePath(`/site/${slug}${path}`);
+    revalidatePath(`/ur/site/${slug}${path}`);
+  });
 }
 
 export function revalidateTenantDashboard(slug: string) {

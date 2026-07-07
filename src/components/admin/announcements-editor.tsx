@@ -1,15 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Megaphone, Plus, Save } from "lucide-react";
+import { Megaphone, Save } from "lucide-react";
 import { savePlatformAnnouncements } from "@/app/admin/actions";
+import { AdminDragHandle, AdminRecordCard, AdminStatusMessage } from "@/components/admin/admin-crud-ui";
+import { AdminAddButton, AdminPanel } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LocalizedInput, LocalizedTextarea, type AdminLocaleOption } from "@/components/admin/localized-fields";
 import type { PlatformAnnouncementView } from "@/services/platform/platform-data";
 
-export function AnnouncementsEditor({ initialAnnouncements }: { initialAnnouncements: PlatformAnnouncementView[] }) {
+export function AnnouncementsEditor({ initialAnnouncements, locales }: { initialAnnouncements: PlatformAnnouncementView[]; locales: AdminLocaleOption[] }) {
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [message, setMessage] = useState("");
+  const [draggedAnnouncementId, setDraggedAnnouncementId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const orderedAnnouncements = [...announcements].sort((first, second) => first.displayOrder - second.displayOrder);
 
   function updateAnnouncement(id: string, patch: Partial<PlatformAnnouncementView>) {
     setAnnouncements((current) => current.map((announcement) => (announcement.id === id ? { ...announcement, ...patch } : announcement)));
@@ -22,15 +30,39 @@ export function AnnouncementsEditor({ initialAnnouncements }: { initialAnnouncem
       ...current,
       {
         id: `announcement-${Date.now()}`,
-        title: "Announcement title",
-        body: "Short announcement message.",
-        linkLabel: "",
+        title: { en: "Announcement title" },
+        body: { en: "Short announcement message." },
+        linkLabel: { en: "" },
         linkHref: "",
         enabled: false,
         marquee: false,
         displayOrder: nextOrder
       }
     ]);
+  }
+
+  function reorderAnnouncements(activeId: string, targetId: string) {
+    if (activeId === targetId) {
+      return;
+    }
+
+    const currentOrder = orderedAnnouncements.map((announcement) => announcement.id);
+    const activeIndex = currentOrder.indexOf(activeId);
+    const targetIndex = currentOrder.indexOf(targetId);
+
+    if (activeIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    currentOrder.splice(activeIndex, 1);
+    currentOrder.splice(targetIndex, 0, activeId);
+
+    setAnnouncements((current) =>
+      current.map((announcement) => ({
+        ...announcement,
+        displayOrder: currentOrder.indexOf(announcement.id) + 1
+      }))
+    );
   }
 
   function save() {
@@ -47,79 +79,77 @@ export function AnnouncementsEditor({ initialAnnouncements }: { initialAnnouncem
   }
 
   return (
-    <section className="border border-slate-200 bg-white p-5 shadow-sm">
-      {message ? <div className="mb-5 border border-teal-200 bg-teal-50 p-4 text-sm font-medium text-teal-900">{message}</div> : null}
-
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-3">
-          <Megaphone className="size-5 text-teal-700" aria-hidden="true" />
-          <h2 className="font-semibold">Announcement Bar</h2>
-        </div>
+    <AdminPanel
+      title="Announcement Bar"
+      icon={Megaphone}
+      actions={
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={addAnnouncement} className="rounded-none border-slate-300 bg-transparent font-nav text-xs font-semibold uppercase tracking-[0.18em]">
-            <Plus className="size-4" aria-hidden="true" />
+          <AdminAddButton onClick={addAnnouncement}>
             Add
-          </Button>
+          </AdminAddButton>
           <Button type="button" onClick={save} disabled={isPending} className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
             <Save className="size-4" aria-hidden="true" />
             {isPending ? "Saving" : "Save"}
           </Button>
         </div>
-      </div>
+      }
+    >
+      {message ? <AdminStatusMessage>{message}</AdminStatusMessage> : null}
 
       <div className="grid gap-4">
-        {announcements.map((announcement) => (
-          <article key={announcement.id} className="grid gap-4 border border-slate-200 p-4 xl:grid-cols-[1fr_0.7fr]">
+        {orderedAnnouncements.map((announcement) => (
+          <AdminRecordCard
+            key={announcement.id}
+            draggable
+            onDragStart={() => setDraggedAnnouncementId(announcement.id)}
+            onDragEnd={() => setDraggedAnnouncementId(null)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (draggedAnnouncementId) {
+                reorderAnnouncements(draggedAnnouncementId, announcement.id);
+              }
+              setDraggedAnnouncementId(null);
+            }}
+            className={`grid cursor-grab gap-4 border border-slate-200 p-4 transition active:cursor-grabbing xl:grid-cols-[1fr_0.7fr] ${
+              draggedAnnouncementId === announcement.id ? "border-teal-500 bg-teal-50/40 opacity-70" : "bg-white hover:border-slate-300"
+            }`}
+          >
             <div className="grid gap-3">
-              <AdminInput label="Title" value={announcement.title} onChange={(title) => updateAnnouncement(announcement.id, { title })} />
-              <AdminTextarea label="Body" value={announcement.body} onChange={(body) => updateAnnouncement(announcement.id, { body })} />
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                <AdminDragHandle className="size-7 border-transparent" />
+                Drag to reorder
+              </div>
+              <LocalizedInput locales={locales} label="Title" value={announcement.title} onChange={(title) => updateAnnouncement(announcement.id, { title })} />
+              <LocalizedTextarea locales={locales} label="Body" value={announcement.body} onChange={(body) => updateAnnouncement(announcement.id, { body })} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <AdminInput label="Link label" value={announcement.linkLabel ?? ""} onChange={(linkLabel) => updateAnnouncement(announcement.id, { linkLabel })} />
+                <LocalizedInput locales={locales} label="Link label" value={announcement.linkLabel ?? ""} onChange={(linkLabel) => updateAnnouncement(announcement.id, { linkLabel })} />
                 <AdminInput label="Link href" value={announcement.linkHref ?? ""} onChange={(linkHref) => updateAnnouncement(announcement.id, { linkHref })} />
               </div>
             </div>
 
             <div className="grid content-start gap-4">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={announcement.enabled} onChange={(event) => updateAnnouncement(announcement.id, { enabled: event.target.checked })} />
+              <Label className="flex items-center gap-2 text-sm text-slate-700">
+                <Checkbox checked={announcement.enabled} onCheckedChange={(checked) => updateAnnouncement(announcement.id, { enabled: checked === true })} />
                 Show on marketing pages
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={announcement.marquee} onChange={(event) => updateAnnouncement(announcement.id, { marquee: event.target.checked })} />
+              </Label>
+              <Label className="flex items-center gap-2 text-sm text-slate-700">
+                <Checkbox checked={announcement.marquee} onCheckedChange={(checked) => updateAnnouncement(announcement.id, { marquee: checked === true })} />
                 Animate as marquee
-              </label>
-              <label className="block text-sm font-medium text-slate-700">
-                Display order
-                <input
-                  type="number"
-                  min={1}
-                  value={announcement.displayOrder}
-                  onChange={(event) => updateAnnouncement(announcement.id, { displayOrder: Number(event.target.value) })}
-                  className="mt-2 h-11 w-full border border-slate-200 px-3 text-sm outline-none focus:border-teal-700"
-                />
-              </label>
+              </Label>
             </div>
-          </article>
+          </AdminRecordCard>
         ))}
       </div>
-    </section>
+    </AdminPanel>
   );
 }
 
 function AdminInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="block">
+    <Label className="block">
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11 w-full border border-slate-200 px-3 text-sm outline-none focus:border-teal-700" />
-    </label>
-  );
-}
-
-function AdminTextarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 min-h-28 w-full resize-y border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-700" />
-    </label>
+      <Input value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11" />
+    </Label>
   );
 }

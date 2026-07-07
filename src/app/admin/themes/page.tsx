@@ -7,7 +7,7 @@ export default async function AdminThemesPage() {
 
   return (
     <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="w-full">
         <AdminPageHeader eyebrow="Themes" title="Manage theme catalog." body="Enable themes, edit copy, mark premium themes, and control what appears in onboarding." />
         <ThemesEditor initialThemes={themes} />
       </div>

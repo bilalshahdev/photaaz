@@ -1,24 +1,22 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { FallbackScreen } from "@/components/layout/fallback-screen";
 
-export default function GlobalError({
+export default function Error({
   reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="max-w-md rounded-lg border bg-card p-6 text-center">
-        <h1 className="font-display text-3xl font-black tracking-[-0.04em]">Something needs attention</h1>
-        <p className="mt-3 text-muted-foreground">
-          The page could not finish loading. Try again, or return to the dashboard.
-        </p>
-        <Button className="mt-6" onClick={reset}>
-          Try again
-        </Button>
-      </div>
-    </main>
+    <FallbackScreen
+      eyebrow="Error"
+      title="Something needs attention."
+      description="The page could not finish loading. Try again, or return to the Photaaz home screen."
+      primaryLabel="Try again"
+      onPrimaryAction={reset}
+      secondaryLabel="Go home"
+      secondaryHref="/"
+    />
   );
 }

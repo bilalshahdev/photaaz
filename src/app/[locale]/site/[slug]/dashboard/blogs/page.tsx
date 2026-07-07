@@ -1,5 +1,16 @@
 import { notFound } from "next/navigation";
-import { BookOpenText, FileText } from "lucide-react";
+import { BookOpenText } from "lucide-react";
+import { CustomerBlogActions } from "@/components/customer/customer-blog-actions";
+import {
+  CustomerAddButton,
+  CustomerDashboardHeader,
+  CustomerDashboardPage,
+  CustomerEmptyState,
+  CustomerPanel,
+  CustomerRecordCard,
+  CustomerStatusPill
+} from "@/components/customer/customer-dashboard-ui";
+import { customerDashboardPath } from "@/config/routes";
 import { getCustomerContentView } from "@/services/tenant/customer-dashboard-data";
 
 type CustomerBlogsPageProps = {
@@ -15,37 +26,66 @@ export default async function CustomerBlogsPage({ params }: CustomerBlogsPagePro
   }
 
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Blogs</p>
-          <h1 className="mt-3 font-display text-5xl font-black tracking-[-0.05em]">Manage journal posts.</h1>
-          <p className="mt-3 max-w-2xl text-slate-600">
-            Blog publishing is ready for the dashboard surface. The next pass can add the editor and rich content blocks.
-          </p>
-        </section>
+    <CustomerDashboardPage>
+      <CustomerDashboardHeader
+        eyebrow="Blogs"
+        title="Manage journal posts."
+        body="Publish stories, shoot notes, and SEO-friendly articles for your public portfolio."
+      />
 
-        <section className="mt-5 grid gap-4 lg:grid-cols-2">
-          <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <BookOpenText className="size-6 text-teal-700" aria-hidden="true" />
-            <h2 className="mt-8 font-display text-3xl font-black tracking-[-0.04em]">Posts</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{data.blogs.length} posts created.</p>
-          </article>
-
-          <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <FileText className="size-6 text-teal-700" aria-hidden="true" />
-            <h2 className="mt-8 font-display text-3xl font-black tracking-[-0.04em]">Published Pages</h2>
-            <div className="mt-4 space-y-2">
-              {data.pages.map((page) => (
-                <div key={page.id} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm">
-                  <span>{page.title}</span>
-                  <span className={page.published ? "text-teal-700" : "text-slate-500"}>{page.published ? "Published" : "Draft"}</span>
-                </div>
-              ))}
-            </div>
-          </article>
+      <section className="mt-5">
+          <CustomerPanel
+            title={`${data.blogs.length} posts`}
+            icon={BookOpenText}
+            actions={
+              <CustomerAddButton href={customerDashboardPath(slug, "/blogs/new")}>Add blog</CustomerAddButton>
+            }
+          >
+            {data.blogs.length ? (
+              <div className="grid gap-3">
+                {data.blogs.map((blog) => (
+                  <CustomerRecordCard key={blog.id} className="min-h-0 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h2 className="font-semibold text-slate-950">{blog.title}</h2>
+                        <p className="mt-1 text-sm text-slate-500">/{blog.slug}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CustomerStatusPill
+                          active={blog.moderationStatus === "APPROVED"}
+                          activeLabel="Approved"
+                          inactiveLabel={blog.moderationStatus === "PENDING" ? "In review" : blog.moderationStatus === "REJECTED" ? "Rejected" : "Draft"}
+                          inactiveClassName={
+                            blog.moderationStatus === "REJECTED"
+                              ? "bg-red-50 text-red-700"
+                              : blog.moderationStatus === "PENDING"
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-amber-50 text-amber-800"
+                          }
+                        />
+                        <CustomerBlogActions
+                          tenantSlug={slug}
+                          blog={{
+                            id: blog.id,
+                            slug: blog.slug,
+                            title: blog.title,
+                            isPublic: blog.moderationStatus === "APPROVED" && Boolean(blog.publishedAt)
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {blog.excerpt ? <p className="mt-3 text-sm leading-6 text-slate-600">{blog.excerpt}</p> : null}
+                  </CustomerRecordCard>
+                ))}
+              </div>
+            ) : (
+              <CustomerEmptyState
+                title="No blog posts yet."
+                body="Create the first story from your portfolio dashboard."
+              />
+            )}
+          </CustomerPanel>
         </section>
-      </div>
-    </main>
+    </CustomerDashboardPage>
   );
 }

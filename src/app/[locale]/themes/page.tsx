@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, CheckCircle2, ExternalLink } from "lucide-react";
@@ -7,20 +7,25 @@ import { MarketingHeader } from "@/components/layout/marketing-header";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getThemeIcon } from "@/components/themes/theme-icon";
 import { themeDemoPath, themePath } from "@/config/routes";
-import { localizePath } from "@/i18n/locales";
+import { localizePath, resolveLocalizedString } from "@/i18n/locales";
 import { getRequestLocale } from "@/i18n/server";
-import { createMetadata, themeJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, createMetadata, themeJsonLd } from "@/lib/seo";
 import { getEnabledTranslationLocales } from "@/services/admin/admin-data";
 import { fallbackThemes, getPlatformThemes } from "@/services/platform/platform-data";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = createMetadata({
-  title: "Photography Website Themes - PhotoFolio",
-  description: "Explore premium portfolio themes for photographers, including Minimal, Editorial, Cinematic, Masonry, and Luxury layouts.",
-  path: "/themes",
-  image: fallbackThemes[0]?.image
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+
+  return createMetadata({
+    title: "Photography Website Themes - Photaaz",
+    description: "Explore premium portfolio themes for photographers, including Minimal, Editorial, Cinematic, Masonry, and Luxury layouts.",
+    path: "/themes",
+    locale,
+    image: fallbackThemes[0]?.image
+  });
+}
 
 export default async function ThemesPage() {
   const [themes, enabledLocales, locale] = await Promise.all([
@@ -31,13 +36,13 @@ export default async function ThemesPage() {
 
   return (
     <main className="bg-[#f7f8f6] text-[#101418]">
-      <JsonLd data={themes.map(themeJsonLd)} />
+      <JsonLd data={[breadcrumbJsonLd([{ name: "Home", href: "/" }, { name: "Themes", href: "/themes" }], locale), ...themes.map((theme) => themeJsonLd(theme, locale))]} />
       <MarketingHeader locale={locale} variant="solid" enabledLocales={enabledLocales} />
       <section className="px-4 pb-20 pt-14 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-4xl">
             <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">Themes</p>
-            <h1 className="mt-4 font-display text-6xl font-light leading-none tracking-[-0.05em]">
+            <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.05em]">
               Five portfolio experiences, built as real layouts.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-[#59636b]">
@@ -48,11 +53,14 @@ export default async function ThemesPage() {
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
             {themes.map(({ name, slug, image, description, features, iconKey }) => {
               const Icon = getThemeIcon(iconKey);
+              const themeName = resolveLocalizedString(name, locale);
+              const themeDescription = resolveLocalizedString(description, locale);
+              const themeFeatures = features.map((feature) => resolveLocalizedString(feature, locale));
 
               return (
               <article key={slug} className="group relative grid overflow-hidden border border-[#d7dedb]/80 bg-white shadow-[0_18px_55px_rgba(16,20,24,0.08)] transition-shadow duration-300 hover:shadow-[0_28px_80px_rgba(16,20,24,0.14)] md:grid-cols-[1.12fr_0.88fr]">
                 <div className="relative m-3 min-h-[280px] overflow-hidden bg-[#101418] md:mr-0 md:min-h-[360px]">
-                  <Image src={image} alt={`${name} theme`} fill className="object-cover transition duration-500 group-hover:scale-105" />
+                  <Image src={image} alt={`${themeName} theme`} fill className="object-cover transition duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/5" />
                 </div>
                 <div className="flex min-h-[360px] flex-col p-7">
@@ -64,10 +72,10 @@ export default async function ThemesPage() {
                       UI theme
                     </p>
                   </div>
-                  <h2 className="mt-8 font-display text-5xl font-light leading-none tracking-[-0.055em]">{name}</h2>
-                  <p className="mt-3 text-sm leading-6 text-[#59636b]">{description}</p>
+                  <h2 className="mt-8 font-display text-5xl font-light leading-none tracking-[-0.055em] break-words">{themeName}</h2>
+                  <p className="mt-3 text-sm leading-6 text-[#59636b]">{themeDescription}</p>
                   <ul className="mt-5 space-y-2 text-sm text-[#101418]">
-                    {features.map((feature) => (
+                    {themeFeatures.map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
                         <CheckCircle2 className="size-4 shrink-0 text-teal-700" aria-hidden="true" />
                         <span>{feature}</span>

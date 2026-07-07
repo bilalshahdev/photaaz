@@ -1,5 +1,10 @@
 import { Languages } from "lucide-react";
-import { AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { saveTranslationLocaleConfig } from "@/app/admin/actions";
 import { getTranslationLocaleConfig } from "@/services/admin/admin-data";
 
@@ -7,8 +12,7 @@ export default async function AdminTranslationsPage() {
   const locales = await getTranslationLocaleConfig();
 
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <AdminPage>
         <AdminPageHeader
           eyebrow="Translations"
           title="Manage translation languages and charges."
@@ -38,51 +42,51 @@ export default async function AdminTranslationsPage() {
                 <div>
                   <p className="font-semibold">{locale.label}</p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {locale.nativeLabel} · /{locale.code} · {locale.direction.toUpperCase()}
+                    {locale.nativeLabel} - /{locale.code} - {locale.direction.toUpperCase()}
                   </p>
                   <p className="mt-2 text-xs leading-5 text-slate-500">
                     This locale is predefined in the codebase. Add new languages in code before admins can enable them.
                   </p>
                 </div>
 
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <input name={`${locale.code}:enabled`} type="checkbox" defaultChecked={locale.enabled} disabled={locale.code === "en"} />
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <Checkbox name={`${locale.code}:enabled`} defaultChecked={locale.enabled} disabled={locale.code === "en"} />
                   {locale.code === "en" ? "Default enabled" : "Enabled"}
-                </label>
+                </Label>
 
-                <label className="text-sm font-medium text-slate-700">
+                <Label className="text-sm font-medium text-slate-700">
                   Charge in cents
                   <div className="mt-1 flex h-10 border border-slate-200">
-                    <span className="flex items-center border-r border-slate-200 px-3 text-slate-500">¢</span>
-                    <input
+                    <span className="flex items-center border-r border-slate-200 px-3 text-slate-500">cents</span>
+                    <Input
                       name={`${locale.code}:priceCents`}
                       type="number"
                       min={0}
                       step={100}
                       defaultValue={locale.priceCents}
-                      className="min-w-0 flex-1 px-3 outline-none focus:border-teal-700"
+                      className="h-full min-w-0 flex-1 rounded-none border-0"
                     />
                   </div>
                   <span className="mt-1 block text-xs text-slate-500">Example: 500 = $5.00</span>
-                </label>
+                </Label>
 
-                <label className="text-sm font-medium text-slate-700">
+                <Label className="text-sm font-medium text-slate-700">
                   Billing note
-                  <textarea
+                  <Textarea
                     name={`${locale.code}:billingNote`}
                     defaultValue={locale.billingNote}
-                    className="mt-1 min-h-20 w-full resize-y border border-slate-200 px-3 py-2 outline-none focus:border-teal-700"
+                    className="mt-1 min-h-20 resize-y"
                   />
-                </label>
+                </Label>
               </section>
             ))}
 
-            <button type="submit" className="h-11 w-fit bg-slate-950 px-5 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white">
+            <Button type="submit" className="h-11 w-fit bg-slate-950 px-5 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
               Save translation settings
-            </button>
+            </Button>
           </form>
         </AdminPanel>
-      </div>
-    </main>
+    </AdminPage>
   );
 }
+

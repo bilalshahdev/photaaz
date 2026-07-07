@@ -3,26 +3,27 @@ import { prisma } from "@/lib/db/prisma";
 import { benefitFeatures, pricingPlans, themeShowcases } from "@/data/marketing";
 import { managedPhotographyTypes, supportRequests } from "@/data/platform-admin";
 import { cacheDurations, cacheTags } from "@/lib/cache";
+import { defaultThemeCustomizationPolicy, normalizeThemeCustomizationPolicy, type ThemeCustomizationPolicy } from "@/config/theme-customization";
+import { formatPlanFeatureSummary, formatPlanAmount, getClientVisiblePlanFeatures } from "@/services/subscription/plan-presentation";
 
 export type PlatformThemeView = {
-  name: string;
+  name: LocalizedString;
   slug: string;
   image: string;
-  description: string;
-  features: string[];
+  description: LocalizedString;
+  features: LocalizedString[];
   iconKey: string;
   enabled: boolean;
   premium: boolean;
   demoPath: string;
   displayOrder: number;
-  seoTitle?: string | null;
-  seoDescription?: string | null;
+  customization: ThemeCustomizationPolicy;
+  seoTitle?: LocalizedString | null;
+  seoDescription?: LocalizedString | null;
 };
 
-export type LocalizedString = string | {
-  en: string;
-  ur: string;
-};
+export type LocalizedString = string | Record<string, string>;
+export type LocalizedStringList = string[] | Record<string, string[]>;
 
 export type PlatformLandingSectionKey = "hero" | "themes" | "features" | "pricing" | "faq" | "contact" | "finalCta";
 
@@ -33,18 +34,22 @@ export type PlatformLandingSection = {
 
 export type PlatformPricingPlanView = {
   key: string;
-  name: string;
-  price: string;
-  description: string;
-  features: string[];
+  name: LocalizedString;
+  price: LocalizedString;
+  monthlyPrice: number | null;
+  annualPrice: number | null;
+  lifetimePrice: number | null;
+  description: LocalizedString;
+  features: LocalizedString[];
   enabled: boolean;
   featured: boolean;
   displayOrder: number;
 };
 
 export type PlatformPhotographyTypeView = {
-  name: string;
+  name: LocalizedString;
   slug: string;
+  image: string;
   parentSlug?: string | null;
   enabled: boolean;
   categorySeed: boolean;
@@ -64,6 +69,7 @@ export type PlatformLandingSettings = {
   seo: {
     title: LocalizedString;
     description: LocalizedString;
+    keywords: LocalizedStringList;
   };
   contact: {
     eyebrow: LocalizedString;
@@ -72,8 +78,8 @@ export type PlatformLandingSettings = {
     submitLabel: LocalizedString;
   };
   features: Array<{
-    title: string;
-    body: string;
+    title: LocalizedString;
+    body: LocalizedString;
     iconKey: string;
     enabled: boolean;
     displayOrder: number;
@@ -84,6 +90,7 @@ export type PlatformLandingSettings = {
     enabled: boolean;
     displayOrder: number;
   }>;
+  faqDisplayLimit: number;
 };
 
 export type PlatformSupportRequestView = {
@@ -97,9 +104,9 @@ export type PlatformSupportRequestView = {
 
 export type PlatformAnnouncementView = {
   id: string;
-  title: string;
-  body: string;
-  linkLabel?: string | null;
+  title: LocalizedString;
+  body: LocalizedString;
+  linkLabel?: LocalizedString | null;
   linkHref?: string | null;
   enabled: boolean;
   marquee: boolean;
@@ -140,12 +147,16 @@ export const fallbackLandingSettings: PlatformLandingSettings = {
   },
   seo: {
     title: {
-      en: "PhotoFolio - Professional Photography Websites in Minutes",
-      ur: "PhotoFolio - چند منٹوں میں پیشہ ور فوٹوگرافی ویب سائٹس"
+      en: "Photaaz - Professional Photography Websites in Minutes",
+      ur: "Photaaz - چند منٹوں میں پیشہ ور فوٹوگرافی ویب سائٹس"
     },
     description: {
-      en: "Create a professional photography website in minutes. Pick a design, upload photos, and publish a polished portfolio with themes, galleries, blogs, and custom domains.",
+      en: "Create a professional photography website in minutes. Pick a design, upload photos, and publish a polished portfolio with themes, galleries, blogs, and a custom domain.",
       ur: "چند منٹوں میں پیشہ ور فوٹوگرافی ویب سائٹ بنائیں۔ ڈیزائن منتخب کریں، تصاویر اپ لوڈ کریں، اور تھیمز، گیلریز، بلاگز، اور کسٹم ڈومین کے ساتھ پورٹ فولیو شائع کریں۔"
+    },
+    keywords: {
+      en: ["photography website", "photography portfolio", "photographer website", "photo gallery website", "portfolio website builder"],
+      ur: ["فوٹوگرافی ویب سائٹ", "فوٹوگرافی پورٹ فولیو", "فوٹوگرافر ویب سائٹ"]
     }
   },
   contact: {
@@ -192,8 +203,8 @@ export const fallbackLandingSettings: PlatformLandingSettings = {
         ur: "کیا میں اپنا ڈومین کنیکٹ کر سکتا ہوں؟"
       },
       answer: {
-        en: "You can begin with a free PhotoFolio subdomain. Custom domain connection can be managed from the dashboard on supported packages.",
-        ur: "آپ مفت PhotoFolio سب ڈومین سے شروع کر سکتے ہیں۔ سپورٹڈ پیکجز پر کسٹم ڈومین ڈیش بورڈ سے مینیج کیا جا سکتا ہے۔"
+        en: "You can begin with a free Photaaz subdomain. Custom domain connection can be managed from the dashboard on supported packages.",
+        ur: "آپ مفت Photaaz سب ڈومین سے شروع کر سکتے ہیں۔ سپورٹڈ پیکجز پر کسٹم ڈومین ڈیش بورڈ سے مینیج کیا جا سکتا ہے۔"
       },
       enabled: true,
       displayOrder: 2
@@ -210,7 +221,8 @@ export const fallbackLandingSettings: PlatformLandingSettings = {
       enabled: true,
       displayOrder: 3
     }
-  ]
+  ],
+  faqDisplayLimit: 4
 };
 
 export const fallbackThemes: PlatformThemeView[] = themeShowcases.map(({ name, slug, image, description, features }, index) => ({
@@ -224,7 +236,8 @@ export const fallbackThemes: PlatformThemeView[] = themeShowcases.map(({ name, s
   premium: index > 1,
   demoPath: `/themes/${slug}/demo`,
   displayOrder: index + 1,
-  seoTitle: `${name} Photography Website Theme - PhotoFolio`,
+  customization: defaultThemeCustomizationPolicy,
+  seoTitle: `${name} Photography Website Theme - Photaaz`,
   seoDescription: description
 }));
 
@@ -249,6 +262,9 @@ export const fallbackPricingPlans: PlatformPricingPlanView[] = pricingPlans.map(
   key: plan.name.toLowerCase(),
   name: plan.name,
   price: plan.price,
+  monthlyPrice: plan.monthlyPrice,
+  annualPrice: plan.annualPrice,
+  lifetimePrice: plan.lifetimePrice,
   description: plan.description,
   features: plan.features,
   enabled: true,
@@ -280,6 +296,28 @@ export const fallbackAnnouncements: PlatformAnnouncementView[] = [
 
 const landingSectionKeys: PlatformLandingSectionKey[] = ["hero", "themes", "features", "pricing", "faq", "contact", "finalCta"];
 
+function isLocalizedRecord(value: unknown): value is Record<string, string> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function localizedOrFallback(value: unknown, fallback: string): LocalizedString {
+  return isLocalizedRecord(value) ? value : fallback;
+}
+
+function localizedListOrFallback(value: unknown, fallback: string[]): LocalizedString[] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  return value.map((item, index) => {
+    if (typeof item === "string" || isLocalizedRecord(item)) {
+      return item;
+    }
+
+    return fallback[index] ?? "";
+  });
+}
+
 function normalizeLandingSections(value: unknown): Record<PlatformLandingSectionKey, PlatformLandingSection> {
   const candidate = value && typeof value === "object" ? (value as Partial<Record<PlatformLandingSectionKey, Partial<PlatformLandingSection>>>) : {};
 
@@ -310,14 +348,16 @@ function normalizeLandingSettings(value: PlatformLandingSettings): PlatformLandi
     },
     seo: {
       ...fallbackLandingSettings.seo,
-      ...value.seo
+      ...value.seo,
+      keywords: value.seo?.keywords ?? fallbackLandingSettings.seo.keywords
     },
     contact: {
       ...fallbackLandingSettings.contact,
       ...value.contact
     },
     features: Array.isArray(value.features) ? value.features : fallbackLandingSettings.features,
-    faqs: Array.isArray(value.faqs) ? value.faqs : fallbackLandingSettings.faqs
+    faqs: Array.isArray(value.faqs) ? value.faqs : fallbackLandingSettings.faqs,
+    faqDisplayLimit: typeof value.faqDisplayLimit === "number" ? value.faqDisplayLimit : fallbackLandingSettings.faqDisplayLimit
   };
 }
 
@@ -368,18 +408,19 @@ async function getPlatformThemesFromDb({ enabledOnly = false } = {}) {
     });
 
     return themes.map((theme) => ({
-      name: theme.name,
+      name: localizedOrFallback(theme.nameI18n, theme.name),
       slug: theme.slug,
       image: resolveThemeImage(theme.slug, theme.image),
-      description: theme.description,
-      features: theme.features,
+      description: localizedOrFallback(theme.descriptionI18n, theme.description),
+      features: localizedListOrFallback(theme.featuresI18n, theme.features),
       iconKey: theme.iconKey,
       enabled: theme.enabled,
       premium: theme.premium,
       demoPath: theme.demoPath,
       displayOrder: theme.displayOrder,
-      seoTitle: theme.seoTitle,
-      seoDescription: theme.seoDescription
+      customization: normalizeThemeCustomizationPolicy(theme.customization),
+      seoTitle: theme.seoTitle ? localizedOrFallback(theme.seoTitleI18n, theme.seoTitle) : localizedOrFallback(theme.seoTitleI18n, ""),
+      seoDescription: theme.seoDescription ? localizedOrFallback(theme.seoDescriptionI18n, theme.seoDescription) : localizedOrFallback(theme.seoDescriptionI18n, "")
     }));
   }, enabledOnly ? fallbackThemes.filter((theme) => theme.enabled) : fallbackThemes);
 }
@@ -403,20 +444,35 @@ export async function getPlatformTheme(slug: string) {
 
 async function getPlatformPricingPlansFromDb({ enabledOnly = false } = {}) {
   return fromDbOrFallback(async () => {
-    const plans = await prisma.platformPricingPlan.findMany({
+    const plans = await prisma.plan.findMany({
       where: enabledOnly ? { enabled: true } : undefined,
-      orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+      include: {
+        features: {
+          where: { enabled: true },
+          include: { feature: true },
+          orderBy: { createdAt: "asc" }
+        }
+      },
+      orderBy: [{ displayOrder: "asc" }, { monthlyPrice: "asc" }, { name: "asc" }]
     });
 
     return plans.map((plan) => ({
       key: plan.key,
       name: plan.name,
-      price: plan.price,
-      description: plan.description,
-      features: plan.features,
+      price: formatPackagePrice(plan.monthlyPrice, plan.lifetimePrice),
+      monthlyPrice: plan.monthlyPrice,
+      annualPrice: plan.annualPrice,
+      lifetimePrice: plan.lifetimePrice,
+      description: plan.description || `For photographers using the ${plan.name} package.`,
+      features: getClientVisiblePlanFeatures(plan.features.map((access) => ({
+        key: access.feature.key,
+        name: access.feature.name,
+        description: access.feature.description,
+        limit: access.limit
+      }))).map(formatPlanFeatureSummary),
       enabled: plan.enabled,
       featured: plan.featured,
-      displayOrder: plan.displayOrder
+      displayOrder: plan.displayOrder || 99
     }));
   }, enabledOnly ? fallbackPricingPlans.filter((plan) => plan.enabled) : fallbackPricingPlans);
 }
@@ -430,6 +486,22 @@ export function getPlatformPricingPlans({ enabledOnly = false } = {}) {
       tags: [cacheTags.platform, cacheTags.platformPricing]
     }
   )();
+}
+
+function formatPackagePrice(monthlyPrice: number | null, lifetimePrice: number | null) {
+  if (monthlyPrice && monthlyPrice > 0) {
+    return `Rs ${formatPlanAmount(monthlyPrice)}`;
+  }
+
+  if (lifetimePrice && lifetimePrice > 0) {
+    return `Rs ${formatPlanAmount(lifetimePrice)}`;
+  }
+
+  if (!monthlyPrice) {
+    return "Rs 0";
+  }
+
+  return `Rs ${formatPlanAmount(monthlyPrice)}`;
 }
 
 async function getPlatformPhotographyTypesFromDb() {
@@ -448,15 +520,17 @@ async function getPlatformPhotographyTypesFromDb() {
     });
 
     return types.map((type) => ({
-      name: type.name,
+      name: localizedOrFallback(type.nameI18n, type.name),
       slug: type.slug,
+      image: type.image,
       parentSlug: type.parent?.slug ?? null,
       enabled: type.enabled,
       categorySeed: type.categorySeed,
       displayOrder: type.displayOrder,
       children: type.children.map((child) => ({
-        name: child.name,
+        name: localizedOrFallback(child.nameI18n, child.name),
         slug: child.slug,
+        image: child.image,
         parentSlug: child.parent?.slug ?? type.slug,
         enabled: child.enabled,
         categorySeed: child.categorySeed,
@@ -504,9 +578,9 @@ async function getPlatformAnnouncementsFromDb({ enabledOnly = false } = {}) {
 
     return announcements.map((announcement) => ({
       id: announcement.id,
-      title: announcement.title,
-      body: announcement.body,
-      linkLabel: announcement.linkLabel,
+      title: localizedOrFallback(announcement.titleI18n, announcement.title),
+      body: localizedOrFallback(announcement.bodyI18n, announcement.body),
+      linkLabel: announcement.linkLabel ? localizedOrFallback(announcement.linkLabelI18n, announcement.linkLabel) : localizedOrFallback(announcement.linkLabelI18n, ""),
       linkHref: announcement.linkHref,
       enabled: announcement.enabled,
       marquee: announcement.marquee,

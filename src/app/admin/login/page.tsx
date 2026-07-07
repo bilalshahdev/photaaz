@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { adminSessionStorageKey } from "@/lib/admin-session";
 import { adminCredentials } from "@/data/platform-admin";
 
@@ -36,14 +38,14 @@ export default function AdminLoginPage() {
         </p>
 
         <form onSubmit={login} className="mt-6 grid gap-4">
-          <label className="block">
+          <Label className="block">
             <span className="text-sm font-medium text-slate-700">Email</span>
-            <input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 h-11 w-full border border-slate-200 px-3 outline-none focus:border-teal-700" />
-          </label>
-          <label className="block">
+            <Input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 h-11" />
+          </Label>
+          <Label className="block">
             <span className="text-sm font-medium text-slate-700">Password</span>
-            <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" className="mt-2 h-11 w-full border border-slate-200 px-3 outline-none focus:border-teal-700" />
-          </label>
+            <Input value={password} onChange={(event) => setPassword(event.target.value)} type="password" className="mt-2 h-11" />
+          </Label>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <Button type="submit" className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
             Sign in

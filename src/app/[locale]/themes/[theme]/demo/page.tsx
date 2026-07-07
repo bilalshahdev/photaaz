@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/seo/json-ld";
 import { CustomerSiteExperience } from "@/components/customer/customer-site-experience";
 import { customerDemos } from "@/data/customer-demos";
+import { resolveLocalizedString } from "@/i18n/locales";
 import { getRequestLocale } from "@/i18n/server";
-import { createMetadata, absoluteUrl } from "@/lib/seo";
+import { breadcrumbJsonLd, createMetadata, getLocalizedSeoUrl } from "@/lib/seo";
 import { getPlatformTheme, getPlatformThemes } from "@/services/platform/platform-data";
 
 export const revalidate = 300;
@@ -21,13 +22,14 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: ThemeDemoPageProps): Promise<Metadata> {
   const { theme } = await params;
-  const selectedTheme = await getPlatformTheme(theme);
+  const [selectedTheme, locale] = await Promise.all([getPlatformTheme(theme), getRequestLocale()]);
 
   if (!selectedTheme) {
     return createMetadata({
-      title: "Demo Not Found - PhotoFolio",
-      description: "The requested PhotoFolio demo could not be found.",
+      title: "Demo Not Found - Photaaz",
+      description: "The requested Photaaz demo could not be found.",
       path: `/themes/${theme}/demo`,
+      locale,
       noIndex: true
     });
   }
@@ -35,9 +37,10 @@ export async function generateMetadata({ params }: ThemeDemoPageProps): Promise<
   const demo = customerDemos[`${selectedTheme.slug}-demo`] ?? customerDemos.demo;
 
   return createMetadata({
-    title: `${selectedTheme.name} Theme Live Demo - PhotoFolio`,
+    title: `${resolveLocalizedString(selectedTheme.name, locale)} Theme Live Demo - Photaaz`,
     description: demo.tagline,
     path: `/themes/${selectedTheme.slug}/demo`,
+    locale,
     image: demo.heroImage
   });
 }
@@ -56,14 +59,26 @@ export default async function ThemeDemoPage({ params }: ThemeDemoPageProps) {
   return (
     <>
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: demo.studioName,
-          url: absoluteUrl(`/themes/${selectedTheme.slug}/demo`),
-          description: demo.tagline,
-          image: demo.heroImage
-        }}
+        data={[
+          breadcrumbJsonLd(
+            [
+              { name: "Home", href: "/" },
+              { name: "Themes", href: "/themes" },
+              { name: resolveLocalizedString(selectedTheme.name, locale), href: `/themes/${selectedTheme.slug}` },
+              { name: "Live demo", href: `/themes/${selectedTheme.slug}/demo` }
+            ],
+            locale
+          ),
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: demo.studioName,
+            url: getLocalizedSeoUrl(`/themes/${selectedTheme.slug}/demo`, locale),
+            description: demo.tagline,
+            image: demo.heroImage,
+            inLanguage: locale
+          }
+        ]}
       />
       <CustomerSiteExperience slug={demoSlug} locale={locale} demo={demo} />
     </>

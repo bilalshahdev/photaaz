@@ -4,12 +4,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
+const internalLocaleRewriteHeader = "x-photaaz-internal-locale-rewrite";
 
 const reservedRootSegments = new Set([
   "",
   "admin",
   "api",
+  "blog",
   "get-started",
+  "legal",
   "onboarding",
   "sign-in",
   "sign-up",
@@ -19,6 +22,8 @@ const reservedRootSegments = new Set([
 
 const publicRouteSegments = new Set([
   "get-started",
+  "blog",
+  "legal",
   "onboarding",
   "sign-in",
   "sign-up",
@@ -52,6 +57,19 @@ function redirectToLocale(request: NextRequest, locale: string, segments: string
   return NextResponse.redirect(url);
 }
 
+function routeDefaultLocaleInternally(request: NextRequest, segments: string[]) {
+  const url = request.nextUrl.clone();
+  url.pathname = segments.length ? `/${routing.defaultLocale}/${segments.join("/")}` : `/${routing.defaultLocale}`;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(internalLocaleRewriteHeader, "1");
+
+  return NextResponse.rewrite(url, {
+    request: {
+      headers: requestHeaders
+    }
+  });
+}
+
 function normalizeLocalePrefix(request: NextRequest, segments: string[]) {
   const [firstSegment, secondSegment] = segments;
   const cookieLocale = getCookieLocale(request);
@@ -77,7 +95,13 @@ function rewriteToInternalTenantRoute(request: NextRequest) {
   const [firstSegment, secondSegment] = segments;
 
   if (segments.length === 0) {
-    return null;
+    const preferredLocale = getPreferredLocale(request);
+
+    if (preferredLocale !== routing.defaultLocale) {
+      return redirectToLocale(request, preferredLocale, segments);
+    }
+
+    return routeDefaultLocaleInternally(request, segments);
   }
 
   if (isAssetPath(pathname)) {
@@ -95,6 +119,17 @@ function rewriteToInternalTenantRoute(request: NextRequest) {
   }
 
   if (hasLocale(routing.locales, firstSegment)) {
+    const isInternalDefaultLocaleRewrite =
+      firstSegment === routing.defaultLocale && request.headers.get(internalLocaleRewriteHeader) === "1";
+
+    if (isInternalDefaultLocaleRewrite && (!secondSegment || reservedRootSegments.has(secondSegment))) {
+      return NextResponse.next();
+    }
+
+    if (secondSegment === "site") {
+      return NextResponse.next();
+    }
+
     if (!secondSegment || reservedRootSegments.has(secondSegment)) {
       return null;
     }
@@ -104,8 +139,24 @@ function rewriteToInternalTenantRoute(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  if (firstSegment === "site") {
+    const preferredLocale = getPreferredLocale(request);
+
+    if (preferredLocale !== routing.defaultLocale) {
+      return redirectToLocale(request, preferredLocale, segments);
+    }
+
+    return routeDefaultLocaleInternally(request, segments);
+  }
+
   if (reservedRootSegments.has(firstSegment)) {
-    return null;
+    const preferredLocale = getPreferredLocale(request);
+
+    if (preferredLocale !== routing.defaultLocale) {
+      return redirectToLocale(request, preferredLocale, segments);
+    }
+
+    return routeDefaultLocaleInternally(request, segments);
   }
 
   const preferredLocale = getPreferredLocale(request);

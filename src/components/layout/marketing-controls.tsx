@@ -66,7 +66,7 @@ export function MarketingControls({ locale, messages, variant = "overlay", enabl
     };
   }, []);
 
-  function switchPath(nextLocale: AppLocale) {
+  function switchPath() {
     return pathname || "/";
   }
 
@@ -79,7 +79,7 @@ export function MarketingControls({ locale, messages, variant = "overlay", enabl
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className={`inline-flex h-10 items-center gap-1.5 border px-2 font-nav text-xs font-semibold uppercase tracking-[0.16em] shadow-sm transition sm:gap-2 sm:px-3 ${
+        className={`inline-flex h-10 touch-manipulation items-center gap-1.5 border px-2 font-nav text-xs font-semibold uppercase tracking-[0.16em] shadow-sm transition sm:gap-2 sm:px-3 ${
           isSolid
             ? "border-[#101418]/18 bg-transparent text-[#101418] hover:border-[#101418]/30"
             : "border-white/40 bg-transparent text-white hover:bg-white/10"
@@ -101,7 +101,7 @@ export function MarketingControls({ locale, messages, variant = "overlay", enabl
             return (
               <Link
                 key={language.code}
-                href={switchPath(language.code)}
+                href={switchPath()}
                 locale={language.code}
                 onClick={closeMenu}
                 className={`flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition ${

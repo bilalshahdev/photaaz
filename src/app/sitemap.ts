@@ -1,44 +1,124 @@
 import type { MetadataRoute } from "next";
-import { env } from "@/lib/env";
+import { prisma } from "@/lib/db/prisma";
+import { getPlatformBlogArticles } from "@/data/platform-blog";
+import { absoluteUrl, getLocalizedSeoUrl } from "@/lib/seo";
+import { getEnabledTranslationLocales } from "@/services/admin/admin-data";
 import { getPlatformThemes } from "@/services/platform/platform-data";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const themes = await getPlatformThemes({ enabledOnly: true });
-  const staticRoutes: MetadataRoute.Sitemap = [
-    {
-      url: env.NEXT_PUBLIC_APP_URL,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1
-    },
-    {
-      url: `${env.NEXT_PUBLIC_APP_URL}/get-started`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8
-    },
-    {
-      url: `${env.NEXT_PUBLIC_APP_URL}/themes`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8
-    }
-  ];
+export const revalidate = 3600;
 
-  const themeRoutes: MetadataRoute.Sitemap = themes.flatMap((theme) => [
-    {
-      url: `${env.NEXT_PUBLIC_APP_URL}/themes/${theme.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.75
-    },
-    {
-      url: `${env.NEXT_PUBLIC_APP_URL}/themes/${theme.slug}/demo`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7
-    }
+const epoch = new Date("2024-01-01T00:00:00.000Z");
+
+function latest(...dates: Array<Date | string | null | undefined>) {
+  return dates
+    .filter(Boolean)
+    .map((date) => new Date(date as Date | string))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .reduce((newest, date) => (date > newest ? date : newest), epoch);
+}
+
+function localizedEntries(path: string, locales: Awaited<ReturnType<typeof getEnabledTranslationLocales>>, options: Omit<MetadataRoute.Sitemap[number], "url">) {
+  return locales.map((locale) => ({
+    url: getLocalizedSeoUrl(path, locale),
+    ...options
+  }));
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [themes, enabledLocales, tenants] = await Promise.all([
+    getPlatformThemes({ enabledOnly: true }).catch(() => []),
+    getEnabledTranslationLocales().catch(() => ["en" as const]),
+    prisma.tenant
+      .findMany({
+        where: { status: "ACTIVE" },
+        select: {
+          slug: true,
+          updatedAt: true
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 200
+      })
+      .catch(() => [])
   ]);
 
-  return [...staticRoutes, ...themeRoutes];
+  const now = new Date();
+  const platformBlogArticles = getPlatformBlogArticles();
+  const marketingRoutes: MetadataRoute.Sitemap = [
+    ...localizedEntries("/", enabledLocales, {
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 1
+    }),
+    ...localizedEntries("/themes", enabledLocales, {
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85
+    }),
+    ...localizedEntries("/get-started", enabledLocales, {
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7
+    }),
+    ...localizedEntries("/blog", enabledLocales, {
+      lastModified: latest(...platformBlogArticles.map((article) => article.publishedAt)),
+      changeFrequency: "weekly",
+      priority: 0.75
+    })
+  ];
+
+  const platformBlogRoutes: MetadataRoute.Sitemap = platformBlogArticles.flatMap((article) =>
+    localizedEntries(`/blog/${article.slug}`, enabledLocales, {
+      lastModified: latest(article.publishedAt),
+      changeFrequency: "monthly",
+      priority: 0.65
+    })
+  );
+
+  const themeRoutes: MetadataRoute.Sitemap = themes.flatMap((theme) => [
+    ...localizedEntries(`/themes/${theme.slug}`, enabledLocales, {
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8
+    }),
+    ...localizedEntries(`/themes/${theme.slug}/demo`, enabledLocales, {
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.65
+    })
+  ]);
+
+  const tenantRoutes: MetadataRoute.Sitemap = tenants.flatMap((tenant) => {
+    const tenantUpdated = latest(tenant.updatedAt);
+
+    return [
+      ...localizedEntries(`/site/${tenant.slug}`, enabledLocales, {
+        lastModified: tenantUpdated,
+        changeFrequency: "weekly",
+        priority: 0.75
+      }),
+      ...localizedEntries(`/site/${tenant.slug}/gallery`, enabledLocales, {
+        lastModified: tenantUpdated,
+        changeFrequency: "weekly",
+        priority: 0.65
+      }),
+      ...localizedEntries(`/site/${tenant.slug}/about`, enabledLocales, {
+        lastModified: tenant.updatedAt,
+        changeFrequency: "monthly",
+        priority: 0.45
+      })
+    ];
+  });
+
+  return [
+    ...marketingRoutes,
+    ...platformBlogRoutes,
+    ...themeRoutes,
+    ...tenantRoutes,
+    {
+      url: absoluteUrl("/llms.txt"),
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.2
+    }
+  ];
 }

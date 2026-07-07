@@ -1,26 +1,44 @@
+import {
+  CustomerDashboardHeader,
+  CustomerDashboardPage
+} from "@/components/customer/customer-dashboard-ui";
 import { ThemePreviewStudio } from "@/components/themes/theme-preview-studio";
+import { isLocale, type AppLocale } from "@/i18n/locales";
+import { getAccessibleThemeKeys } from "@/config/themes";
+import { getPlatformAppConfig } from "@/services/admin/admin-data";
+import { getTenantPlanAccess, planLimitKeys } from "@/services/subscription/plan-limits";
 import { getCustomerDashboardView } from "@/services/tenant/customer-dashboard-data";
 
 type CustomerThemePageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 };
 
 export default async function CustomerThemePage({ params }: CustomerThemePageProps) {
-  const { slug } = await params;
-  const tenant = await getCustomerDashboardView(slug);
+  const { locale: localeParam, slug } = await params;
+  const locale: AppLocale = isLocale(localeParam) ? localeParam : "en";
+  const [tenant, appConfig, planAccess] = await Promise.all([
+    getCustomerDashboardView(slug),
+    getPlatformAppConfig(),
+    getTenantPlanAccess(slug)
+  ]);
+  const planKey = planAccess?.planKey ?? tenant?.planKey ?? "free";
+  const accessibleThemeKeys = getAccessibleThemeKeys(planKey, planAccess?.limits[planLimitKeys.premiumThemesLimit]);
 
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <section className="mb-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Theme Studio</p>
-          <h1 className="mt-3 font-display text-5xl font-black tracking-[-0.05em]">Preview and customize the customer site.</h1>
-          <p className="mt-3 max-w-2xl text-slate-600">
-            Theme previews belong inside the customer dashboard, where settings can be saved to that tenant.
-          </p>
-        </section>
-        <ThemePreviewStudio initialThemeKey={tenant?.themeKey} />
-      </div>
-    </main>
+    <CustomerDashboardPage>
+      <CustomerDashboardHeader
+        eyebrow="Theme Studio"
+        title="Choose your portfolio theme."
+        body="View each theme with polished demo content, then apply the layout that fits your photography site."
+      />
+      <ThemePreviewStudio
+        tenantSlug={slug}
+        currentThemeKey={tenant?.themeKey}
+        accessibleThemeKeys={accessibleThemeKeys}
+        locale={locale}
+        themeChangedAt={tenant?.themeChangedAt ?? null}
+        cooldownDays={appConfig.themeSwitchCooldownDays}
+      />
+    </CustomerDashboardPage>
   );
 }

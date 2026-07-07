@@ -1,4 +1,4 @@
-import { CustomerDashboardSidebar } from "@/components/layout/customer-dashboard-sidebar";
+import { CustomerDashboardShell } from "@/components/layout/customer-dashboard-shell";
 import { getCustomerDashboardView } from "@/services/tenant/customer-dashboard-data";
 
 export default async function CustomerDashboardLayout({
@@ -12,9 +12,8 @@ export default async function CustomerDashboardLayout({
   const tenant = await getCustomerDashboardView(slug);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <CustomerDashboardSidebar slug={slug} name={tenant?.name} />
-      <div className="lg:pl-72">{children}</div>
-    </div>
+    <CustomerDashboardShell slug={slug} name={tenant?.name}>
+      {children}
+    </CustomerDashboardShell>
   );
 }
