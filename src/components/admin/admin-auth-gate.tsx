@@ -22,29 +22,36 @@ import {
   Wrench
 } from "lucide-react";
 import { DashboardShell, type DashboardNavItem } from "@/components/layout/dashboard-shell";
+import { AdminLocaleProvider, AdminLocaleSelector } from "@/components/admin/admin-locale-context";
+import type { AdminLocaleOption } from "@/components/admin/localized-fields";
 import { adminSessionStorageKey, adminSidebarStorageKey } from "@/lib/admin-session";
 
 const adminNav: DashboardNavItem[] = [
+  // Overview
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Customers", href: "/admin/customers", icon: UsersRound },
+  { label: "Moderation", href: "/admin/moderation", icon: ShieldAlert },
+  // Content & marketing
   { label: "Landing", href: "/admin/landing", icon: Wand2 },
   { label: "SEO", href: "/admin/seo", icon: Search },
   { label: "FAQs", href: "/admin/faqs", icon: HelpCircle },
   { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
+  // Catalog
   { label: "Themes", href: "/admin/themes", icon: Palette },
   { label: "Categories", href: "/admin/categories", icon: Tags },
-  { label: "Moderation", href: "/admin/moderation", icon: ShieldAlert },
   { label: "Features", href: "/admin/features", icon: Wrench },
   { label: "Packages", href: "/admin/packages", icon: BadgeDollarSign },
   { label: "Coupons", href: "/admin/coupons", icon: Tags },
-  { label: "Translations", href: "/admin/translations", icon: Languages },
-  { label: "Customers", href: "/admin/customers", icon: UsersRound },
+  // Communication
   { label: "Messages", href: "/admin/messages", icon: MessageCircle },
-  { label: "Email Config", href: "/admin/emails", icon: Mail },
   { label: "Support", href: "/admin/support", icon: LifeBuoy },
+  // Settings
+  { label: "Translations", href: "/admin/translations", icon: Languages },
+  { label: "Email Config", href: "/admin/emails", icon: Mail },
   { label: "App Config", href: "/admin/settings", icon: Settings }
 ];
 
-export function AdminAuthGate({ children }: { children: React.ReactNode }) {
+export function AdminAuthGate({ children, enabledLocales = [] }: { children: React.ReactNode; enabledLocales?: AdminLocaleOption[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
@@ -87,24 +94,27 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <DashboardShell
-      brand={{ label: "Photaaz", subtitle: "Super Admin", href: "/admin", mark: "P" }}
-      nav={adminNav}
-      storageKey={adminSidebarStorageKey}
-      activeRootHref="/admin"
-      badge="Dashboard"
-      logout={{
-        label: "Logout",
-        title: "Logout?",
-        body: "You will be signed out of the super admin dashboard.",
-        confirmLabel: "Logout",
-        onClick: () => {
-          localStorage.removeItem(adminSessionStorageKey);
-          router.replace("/admin/login" as Route);
-        }
-      }}
-    >
-      {children}
-    </DashboardShell>
+    <AdminLocaleProvider locales={enabledLocales}>
+      <DashboardShell
+        brand={{ label: "Photaaz", subtitle: "Super Admin", href: "/admin", mark: "P" }}
+        nav={adminNav}
+        storageKey={adminSidebarStorageKey}
+        activeRootHref="/admin"
+        badge="Dashboard"
+        headerExtra={<AdminLocaleSelector />}
+        logout={{
+          label: "Logout",
+          title: "Logout?",
+          body: "You will be signed out of the super admin dashboard.",
+          confirmLabel: "Logout",
+          onClick: () => {
+            localStorage.removeItem(adminSessionStorageKey);
+            router.replace("/admin/login" as Route);
+          }
+        }}
+      >
+        {children}
+      </DashboardShell>
+    </AdminLocaleProvider>
   );
 }

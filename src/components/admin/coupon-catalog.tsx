@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Pencil, Tags, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Pencil, Save, Tags, Trash2 } from "lucide-react";
 import { deleteCoupon, saveCoupon } from "@/app/admin/actions";
 import {
   AdminEmptyState,
   AdminInfoRow,
   AdminRecordCard,
-  AdminRecordGrid,
-  AdminStatusMessage
+  AdminRecordGrid
 } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminConfirmDialog, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,6 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
   const [coupons, setCoupons] = useState(initialCoupons);
   const [draft, setDraft] = useState<CouponDraft | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [message, setMessage] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Coupon | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -99,8 +98,6 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
     if (!draft) return;
 
     startTransition(async () => {
-      setMessage("");
-
       try {
         await saveCoupon({
           id: isCreating ? undefined : draft.id,
@@ -114,22 +111,22 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
         });
 
         if (isCreating) {
-          setMessage("Coupon created.");
+          toast.success("Coupon created.");
         } else {
           setCoupons((current) => current.map((coupon) => (coupon.id === draft.id ? { ...coupon, ...fromDraft(draft) } : coupon)));
-          setMessage("Coupon saved.");
+          toast.success("Coupon saved.");
         }
 
         closeDialog();
       } catch {
-        setMessage("Could not save coupon. Check your local database connection.");
+        toast.error("Could not save coupon. Check your local database connection.");
       }
     });
   }
 
   function removeCoupon(coupon: Coupon) {
     if (coupon.redeemedCount > 0) {
-      setMessage("This coupon has redemptions, so it cannot be deleted. Disable it instead.");
+      toast.error("This coupon has redemptions, so it cannot be deleted. Disable it instead.");
       return;
     }
 
@@ -140,15 +137,13 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
     if (!deleteTarget) return;
 
     startTransition(async () => {
-      setMessage("");
-
       try {
         await deleteCoupon(deleteTarget.id);
         setCoupons((current) => current.filter((item) => item.id !== deleteTarget.id));
-        setMessage("Coupon deleted.");
+        toast.success("Coupon deleted.");
         setDeleteTarget(null);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Could not delete coupon.");
+        toast.error(error instanceof Error ? error.message : "Could not delete coupon.");
       }
     });
   }
@@ -163,8 +158,6 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
         </AdminAddButton>
       }
     >
-      <AdminStatusMessage>{message}</AdminStatusMessage>
-
       <AdminRecordGrid>
         {coupons.map((coupon) => (
           <AdminRecordCard key={coupon.id}>
@@ -172,7 +165,7 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-display text-3xl font-black tracking-[-0.04em] text-slate-950">{coupon.code}</h3>
-                  <span className={coupon.enabled ? "rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"}>
+                  <span className={coupon.enabled ? "rounded-full bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"}>
                     {coupon.enabled ? "Active" : "Disabled"}
                   </span>
                 </div>
@@ -199,7 +192,7 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
           {draft ? (
             <>
               <DialogHeader>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">{isCreating ? "Add coupon" : "Edit coupon"}</p>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">{isCreating ? "Add coupon" : "Edit coupon"}</p>
                 <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{draft.code || "New coupon"}</DialogTitle>
               </DialogHeader>
 
@@ -207,7 +200,7 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
               <div className="grid gap-4 sm:grid-cols-2">
                 <Label className="block text-sm font-medium text-slate-700">
                   Code
-                  <Input value={draft.code} onChange={(event) => setDraft((current) => (current ? { ...current, code: event.target.value.toUpperCase() } : current))} className="mt-2 h-11 uppercase" />
+                  <Input value={draft.code} onChange={(event) => setDraft((current) => (current ? { ...current, code: event.target.value.toUpperCase() } : current))} placeholder="SUMMER2026" className="mt-2 h-11 uppercase" />
                 </Label>
                 <Label className="block text-sm font-medium text-slate-700">
                   Discount type
@@ -234,13 +227,16 @@ export function CouponCatalog({ coupons: initialCoupons }: { coupons: Coupon[] }
               </div>
               <Label className="block text-sm font-medium text-slate-700">
                 Internal notes
-                <Textarea value={draft.notes ?? ""} onChange={(event) => setDraft((current) => (current ? { ...current, notes: event.target.value } : current))} className="mt-2 min-h-24 resize-y" />
+                <Textarea value={draft.notes ?? ""} onChange={(event) => setDraft((current) => (current ? { ...current, notes: event.target.value } : current))} placeholder="Internal notes" className="mt-2 min-h-24 resize-y" />
               </Label>
               </div>
 
               <DialogFooter>
               <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
-              <Button type="button" onClick={saveDraft} disabled={isPending} className="bg-slate-950 text-white hover:bg-teal-800">{isPending ? "Saving" : isCreating ? "Create coupon" : "Save coupon"}</Button>
+              <Button type="button" onClick={saveDraft} disabled={isPending} className="bg-slate-950 text-white hover:bg-primary/90">
+                {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                {isPending ? "Saving\u2026" : isCreating ? "Create coupon" : "Save coupon"}
+              </Button>
               </DialogFooter>
             </>
           ) : null}
@@ -267,7 +263,7 @@ function NumberInput({ label, value, nullable = false, onChange }: { label: stri
         type="number"
         min={1}
         value={value ?? ""}
-        placeholder={nullable ? "Unlimited" : undefined}
+        placeholder={nullable ? "Unlimited" : "10"}
         onChange={(event) => onChange(event.target.value ? Number(event.target.value) : nullable ? null : 0)}
         className="mt-2 h-11"
       />

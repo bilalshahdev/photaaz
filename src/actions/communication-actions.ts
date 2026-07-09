@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { locales } from "@/i18n/locales";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { publishConversationEvent } from "@/services/communication/live-events";
@@ -186,6 +187,7 @@ function publishLatestMessage(
 function revalidateCommunicationPaths(slug: string) {
   revalidatePath("/admin/messages");
   revalidatePath(`/site/${slug}/dashboard/messages`);
-  revalidatePath(`/en/site/${slug}/dashboard/messages`);
-  revalidatePath(`/ur/site/${slug}/dashboard/messages`);
+  for (const locale of locales) {
+    revalidatePath(`/${locale}/site/${slug}/dashboard/messages`);
+  }
 }

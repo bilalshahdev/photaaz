@@ -30,8 +30,8 @@ export default function AdminLoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
       <section className="w-full max-w-xl border border-slate-200 bg-white p-6 shadow-2xl shadow-black/30">
-        <LockKeyhole className="size-7 text-teal-700" aria-hidden="true" />
-        <p className="mt-6 text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">Super Admin Login</p>
+        <LockKeyhole className="size-7 text-primary" aria-hidden="true" />
+        <p className="mt-6 text-sm font-semibold uppercase tracking-[0.2em] text-primary">Super Admin Login</p>
         <h1 className="mt-3 font-display text-4xl font-black tracking-[-0.04em]">Platform control access.</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Demo credentials: <strong>{adminCredentials.email}</strong> / <strong>{adminCredentials.password}</strong>
@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
             <Input value={password} onChange={(event) => setPassword(event.target.value)} type="password" className="mt-2 h-11" />
           </Label>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <Button type="submit" className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
+          <Button type="submit" className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-primary/90">
             Sign in
           </Button>
         </form>

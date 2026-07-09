@@ -34,6 +34,7 @@ type DashboardShellProps = {
   storageKey: string;
   activeRootHref: string;
   badge?: string;
+  headerExtra?: React.ReactNode;
   profile?: {
     href: string;
     label: string;
@@ -48,7 +49,7 @@ type DashboardShellProps = {
   };
 };
 
-export function DashboardShell({ children, brand, nav, storageKey, activeRootHref, badge = "Dashboard", profile, logout }: DashboardShellProps) {
+export function DashboardShell({ children, brand, nav, storageKey, activeRootHref, badge = "Dashboard", headerExtra, profile, logout }: DashboardShellProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useDashboardCollapsed(storageKey);
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
@@ -188,7 +189,8 @@ export function DashboardShell({ children, brand, nav, storageKey, activeRootHre
               <p className="text-xs text-slate-500">{brand.subtitle}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
+            {headerExtra}
             <span className="rounded-full border border-slate-200 px-2.5 py-1">{badge}</span>
             {profile ? (
               <Link

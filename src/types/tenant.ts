@@ -4,7 +4,7 @@ export type TenantContext = {
   tenantId: string;
   slug: string;
   status: TenantStatus;
-  locale: "en" | "ur";
+  locale: import("@/i18n/locales").AppLocale;
   domain?: string;
   planKey: string;
 };

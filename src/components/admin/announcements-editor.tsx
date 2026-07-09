@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Megaphone, Save } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Megaphone, Save } from "lucide-react";
 import { savePlatformAnnouncements } from "@/app/admin/actions";
-import { AdminDragHandle, AdminRecordCard, AdminStatusMessage } from "@/components/admin/admin-crud-ui";
+import { AdminDragHandle, AdminRecordCard } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminPanel } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +15,6 @@ import type { PlatformAnnouncementView } from "@/services/platform/platform-data
 
 export function AnnouncementsEditor({ initialAnnouncements, locales }: { initialAnnouncements: PlatformAnnouncementView[]; locales: AdminLocaleOption[] }) {
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
-  const [message, setMessage] = useState("");
   const [draggedAnnouncementId, setDraggedAnnouncementId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const orderedAnnouncements = [...announcements].sort((first, second) => first.displayOrder - second.displayOrder);
@@ -67,13 +67,11 @@ export function AnnouncementsEditor({ initialAnnouncements, locales }: { initial
 
   function save() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await savePlatformAnnouncements(announcements);
-        setMessage("Announcements saved.");
+        toast.success("Announcements saved.");
       } catch {
-        setMessage("Could not save announcements. Check your local database connection.");
+        toast.error("Could not save announcements. Check your local database connection.");
       }
     });
   }
@@ -83,19 +81,11 @@ export function AnnouncementsEditor({ initialAnnouncements, locales }: { initial
       title="Announcement Bar"
       icon={Megaphone}
       actions={
-        <div className="flex gap-2">
-          <AdminAddButton onClick={addAnnouncement}>
-            Add
-          </AdminAddButton>
-          <Button type="button" onClick={save} disabled={isPending} className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
-            <Save className="size-4" aria-hidden="true" />
-            {isPending ? "Saving" : "Save"}
-          </Button>
-        </div>
+        <AdminAddButton onClick={addAnnouncement}>
+          Add
+        </AdminAddButton>
       }
     >
-      {message ? <AdminStatusMessage>{message}</AdminStatusMessage> : null}
-
       <div className="grid gap-4">
         {orderedAnnouncements.map((announcement) => (
           <AdminRecordCard
@@ -112,7 +102,7 @@ export function AnnouncementsEditor({ initialAnnouncements, locales }: { initial
               setDraggedAnnouncementId(null);
             }}
             className={`grid cursor-grab gap-4 border border-slate-200 p-4 transition active:cursor-grabbing xl:grid-cols-[1fr_0.7fr] ${
-              draggedAnnouncementId === announcement.id ? "border-teal-500 bg-teal-50/40 opacity-70" : "bg-white hover:border-slate-300"
+              draggedAnnouncementId === announcement.id ? "border-primary bg-primary/5 opacity-70" : "bg-white hover:border-slate-300"
             }`}
           >
             <div className="grid gap-3">
@@ -120,10 +110,10 @@ export function AnnouncementsEditor({ initialAnnouncements, locales }: { initial
                 <AdminDragHandle className="size-7 border-transparent" />
                 Drag to reorder
               </div>
-              <LocalizedInput locales={locales} label="Title" value={announcement.title} onChange={(title) => updateAnnouncement(announcement.id, { title })} />
-              <LocalizedTextarea locales={locales} label="Body" value={announcement.body} onChange={(body) => updateAnnouncement(announcement.id, { body })} />
+              <LocalizedInput locales={locales} label="Title" placeholder="Announcement title" value={announcement.title} onChange={(title) => updateAnnouncement(announcement.id, { title })} />
+              <LocalizedTextarea locales={locales} label="Body" placeholder="Announcement message" value={announcement.body} onChange={(body) => updateAnnouncement(announcement.id, { body })} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <LocalizedInput locales={locales} label="Link label" value={announcement.linkLabel ?? ""} onChange={(linkLabel) => updateAnnouncement(announcement.id, { linkLabel })} />
+                <LocalizedInput locales={locales} label="Link label" placeholder="Link text" value={announcement.linkLabel ?? ""} onChange={(linkLabel) => updateAnnouncement(announcement.id, { linkLabel })} />
                 <AdminInput label="Link href" value={announcement.linkHref ?? ""} onChange={(linkHref) => updateAnnouncement(announcement.id, { linkHref })} />
               </div>
             </div>
@@ -141,6 +131,12 @@ export function AnnouncementsEditor({ initialAnnouncements, locales }: { initial
           </AdminRecordCard>
         ))}
       </div>
+      <div className="sticky bottom-4 z-20 flex justify-end">
+        <Button type="button" onClick={save} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+          {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+          {isPending ? "Saving\u2026" : "Save announcements"}
+        </Button>
+      </div>
     </AdminPanel>
   );
 }
@@ -149,7 +145,7 @@ function AdminInput({ label, value, onChange }: { label: string; value: string; 
   return (
     <Label className="block">
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <Input value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11" />
+      <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="https://..." className="mt-2 h-11" />
     </Label>
   );
 }

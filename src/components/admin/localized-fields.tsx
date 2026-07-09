@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Globe, X } from "lucide-react";
+import { useAdminLocale } from "@/components/admin/admin-locale-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,16 +16,24 @@ export type AdminLocaleOption = {
   direction: "ltr" | "rtl";
 };
 
+function useLocaleState(locales: AdminLocaleOption[]) {
+  const ctx = useAdminLocale();
+  const fallback = locales[0]?.code ?? "en";
+  const activeLocale = ctx?.activeLocale ?? fallback;
+  const activeOption = locales.find((l) => l.code === activeLocale) ?? locales[0];
+  return { activeLocale, activeOption };
+}
+
 function normalizeLocalizedString(value: LocalizedString, locales: AdminLocaleOption[]) {
   if (typeof value === "string") {
     return locales.reduce<Record<string, string>>((result, locale) => {
-      result[locale.code] = value;
+      result[locale.code] = locale.code === "en" ? value : "";
       return result;
     }, {});
   }
 
   return locales.reduce<Record<string, string>>((result, locale) => {
-    result[locale.code] = value[locale.code] ?? value.en ?? "";
+    result[locale.code] = value[locale.code] ?? "";
     return result;
   }, {});
 }
@@ -39,32 +48,28 @@ function emptyLocalizedString(locales: AdminLocaleOption[]) {
 function normalizeLocalizedStringList(value: LocalizedStringList, locales: AdminLocaleOption[]) {
   if (Array.isArray(value)) {
     return locales.reduce<Record<string, string[]>>((result, locale) => {
-      result[locale.code] = value;
+      result[locale.code] = locale.code === "en" ? value : [];
       return result;
     }, {});
   }
 
   return locales.reduce<Record<string, string[]>>((result, locale) => {
-    result[locale.code] = value[locale.code] ?? value.en ?? [];
+    result[locale.code] = value[locale.code] ?? [];
     return result;
   }, {});
 }
 
-function LocaleTabs({ locales, activeLocale, onChange }: { locales: AdminLocaleOption[]; activeLocale: string; onChange: (locale: string) => void }) {
+function TranslationHint({ enValue, activeLocale, currentValue }: { enValue: string; activeLocale: string; currentValue: string }) {
+  if (activeLocale === "en" || currentValue.trim()) return null;
+  if (!enValue.trim()) return null;
+
   return (
-    <div className="flex flex-wrap gap-1 border border-slate-200 bg-slate-50 p-1">
-      {locales.map((locale) => (
-        <Button
-          key={locale.code}
-          type="button"
-          variant={activeLocale === locale.code ? "default" : "ghost"}
-          size="sm"
-          onClick={() => onChange(locale.code)}
-          className="h-9 rounded-sm px-3 text-xs uppercase tracking-[0.14em]"
-        >
-          {locale.code}
-        </Button>
-      ))}
+    <div className="mt-1.5 flex items-start gap-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <Globe className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+      <span>
+        <span className="font-semibold">No {activeLocale.toUpperCase()} translation.</span>{" "}
+        English: <span className="italic text-amber-600">&quot;{enValue.length > 80 ? `${enValue.slice(0, 80)}...` : enValue}&quot;</span>
+      </span>
     </div>
   );
 }
@@ -73,30 +78,29 @@ export function LocalizedInput({
   label,
   value,
   locales,
-  onChange
+  onChange,
+  placeholder
 }: {
   label: string;
   value: LocalizedString;
   locales: AdminLocaleOption[];
   onChange: (value: LocalizedString) => void;
+  placeholder?: string;
 }) {
-  const [activeLocale, setActiveLocale] = useState(locales[0]?.code ?? "en");
+  const { activeLocale, activeOption } = useLocaleState(locales);
   const localizedValue = normalizeLocalizedString(value, locales);
-  const activeOption = locales.find((locale) => locale.code === activeLocale) ?? locales[0];
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Label className="text-sm font-medium text-slate-700">{label}</Label>
-        <LocaleTabs locales={locales} activeLocale={activeLocale} onChange={setActiveLocale} />
-      </div>
+      <Label className="mb-2 block text-sm font-medium text-slate-700">{label}</Label>
       <Input
         dir={activeOption?.direction ?? "ltr"}
         value={localizedValue[activeLocale] ?? ""}
+        placeholder={placeholder}
         onChange={(event) => onChange({ ...localizedValue, [activeLocale]: event.target.value })}
         className="h-11"
       />
-      {activeOption ? <p className="mt-1 text-xs text-slate-500">{activeOption.label} / {activeOption.nativeLabel}</p> : null}
+      <TranslationHint enValue={localizedValue.en ?? ""} activeLocale={activeLocale} currentValue={localizedValue[activeLocale] ?? ""} />
     </div>
   );
 }
@@ -105,30 +109,29 @@ export function LocalizedTextarea({
   label,
   value,
   locales,
-  onChange
+  onChange,
+  placeholder
 }: {
   label: string;
   value: LocalizedString;
   locales: AdminLocaleOption[];
   onChange: (value: LocalizedString) => void;
+  placeholder?: string;
 }) {
-  const [activeLocale, setActiveLocale] = useState(locales[0]?.code ?? "en");
+  const { activeLocale, activeOption } = useLocaleState(locales);
   const localizedValue = normalizeLocalizedString(value, locales);
-  const activeOption = locales.find((locale) => locale.code === activeLocale) ?? locales[0];
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Label className="text-sm font-medium text-slate-700">{label}</Label>
-        <LocaleTabs locales={locales} activeLocale={activeLocale} onChange={setActiveLocale} />
-      </div>
+      <Label className="mb-2 block text-sm font-medium text-slate-700">{label}</Label>
       <Textarea
         dir={activeOption?.direction ?? "ltr"}
         value={localizedValue[activeLocale] ?? ""}
+        placeholder={placeholder}
         onChange={(event) => onChange({ ...localizedValue, [activeLocale]: event.target.value })}
         className="min-h-28 resize-y"
       />
-      {activeOption ? <p className="mt-1 text-xs text-slate-500">{activeOption.label} / {activeOption.nativeLabel}</p> : null}
+      <TranslationHint enValue={localizedValue.en ?? ""} activeLocale={activeLocale} currentValue={localizedValue[activeLocale] ?? ""} />
     </div>
   );
 }
@@ -138,17 +141,19 @@ export function LocalizedStringList({
   addLabel = "Add item",
   value,
   locales,
-  onChange
+  onChange,
+  placeholder
 }: {
   label: string;
   addLabel?: string;
   value: LocalizedString[];
   locales: AdminLocaleOption[];
   onChange: (value: LocalizedString[]) => void;
+  placeholder?: string;
 }) {
-  const [activeLocale, setActiveLocale] = useState(locales[0]?.code ?? "en");
-  const activeOption = locales.find((locale) => locale.code === activeLocale) ?? locales[0];
+  const { activeLocale, activeOption } = useLocaleState(locales);
   const localizedItems = value.map((item) => normalizeLocalizedString(item, locales));
+  const hasUntranslated = activeLocale !== "en" && localizedItems.some((item) => !(item[activeLocale] ?? "").trim() && (item.en ?? "").trim());
 
   function updateItem(index: number, nextValue: string) {
     onChange(localizedItems.map((item, itemIndex) => (itemIndex === index ? { ...item, [activeLocale]: nextValue } : item)));
@@ -164,18 +169,24 @@ export function LocalizedStringList({
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Label className="text-sm font-medium text-slate-700">{label}</Label>
-        <LocaleTabs locales={locales} activeLocale={activeLocale} onChange={setActiveLocale} />
-      </div>
+      <Label className="mb-2 block text-sm font-medium text-slate-700">{label}</Label>
+      {hasUntranslated && (
+        <div className="mb-2 flex items-center gap-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <Globe className="size-3 shrink-0" aria-hidden="true" />
+          <span className="font-semibold">Some items have no {activeLocale.toUpperCase()} translation.</span>
+        </div>
+      )}
       <div className="grid gap-2">
         {localizedItems.map((item, index) => (
           <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <Input
-              dir={activeOption?.direction ?? "ltr"}
-              value={item[activeLocale] ?? ""}
-              onChange={(event) => updateItem(index, event.target.value)}
-            />
+            <div>
+              <Input
+                dir={activeOption?.direction ?? "ltr"}
+                value={item[activeLocale] ?? ""}
+                placeholder={placeholder ?? (activeLocale !== "en" && (item.en ?? "").trim() ? `EN: ${item.en}` : undefined)}
+                onChange={(event) => updateItem(index, event.target.value)}
+              />
+            </div>
             <Button type="button" variant="outline" onClick={() => removeItem(index)} className="h-10 text-xs uppercase tracking-[0.14em] text-red-700 hover:bg-red-50">
               Remove
             </Button>
@@ -185,7 +196,6 @@ export function LocalizedStringList({
           {addLabel}
         </Button>
       </div>
-      {activeOption ? <p className="mt-1 text-xs text-slate-500">{activeOption.label} / {activeOption.nativeLabel}</p> : null}
     </div>
   );
 }
@@ -203,11 +213,12 @@ export function LocalizedKeywordInput({
   onChange: (value: LocalizedStringList) => void;
   placeholder?: string;
 }) {
-  const [activeLocale, setActiveLocale] = useState(locales[0]?.code ?? "en");
+  const { activeLocale, activeOption } = useLocaleState(locales);
   const [draft, setDraft] = useState("");
-  const activeOption = locales.find((locale) => locale.code === activeLocale) ?? locales[0];
   const localizedValue = normalizeLocalizedStringList(value, locales);
   const activeKeywords = localizedValue[activeLocale] ?? [];
+  const enKeywords = localizedValue.en ?? [];
+  const showHint = activeLocale !== "en" && activeKeywords.length === 0 && enKeywords.length > 0;
 
   function commitKeyword(rawValue = draft) {
     const keyword = rawValue.trim();
@@ -233,11 +244,17 @@ export function LocalizedKeywordInput({
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Label className="text-sm font-medium text-slate-700">{label}</Label>
-        <LocaleTabs locales={locales} activeLocale={activeLocale} onChange={setActiveLocale} />
-      </div>
-      <div className="min-h-24 border border-slate-200 bg-white p-2 focus-within:border-teal-700">
+      <Label className="mb-2 block text-sm font-medium text-slate-700">{label}</Label>
+      {showHint && (
+        <div className="mb-2 flex items-start gap-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <Globe className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+          <span>
+            <span className="font-semibold">No {activeLocale.toUpperCase()} keywords.</span>{" "}
+            English has: <span className="italic text-amber-600">{enKeywords.slice(0, 5).join(", ")}{enKeywords.length > 5 ? "..." : ""}</span>
+          </span>
+        </div>
+      )}
+      <div className="min-h-24 border border-slate-200 bg-white p-2 focus-within:border-primary">
         <div className="flex flex-wrap gap-2">
           {activeKeywords.map((keyword) => (
             <span key={keyword} className="inline-flex h-8 items-center gap-2 border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-700">
@@ -267,7 +284,6 @@ export function LocalizedKeywordInput({
           />
         </div>
       </div>
-      {activeOption ? <p className="mt-1 text-xs text-slate-500">{activeOption.label} / {activeOption.nativeLabel}</p> : null}
     </div>
   );
 }

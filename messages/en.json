@@ -41,6 +41,12 @@
   "language": {
     "select": "Select language",
     "english": "English",
-    "urdu": "Urdu"
+    "spanish": "Spanish",
+    "arabic": "Arabic",
+    "turkish": "Turkish",
+    "hindi": "Hindi",
+    "portuguese": "Portuguese",
+    "german": "German",
+    "french": "French"
   }
 }

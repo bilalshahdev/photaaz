@@ -98,7 +98,7 @@ export function AdminMessageManager({ threads }: AdminMessageManagerProps) {
                 <div>
                   <h2 className="font-semibold text-slate-950">{thread.subject}</h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    <Link href={`/admin/customers/${thread.tenant.id}` as Route} className="font-semibold text-teal-700 hover:text-teal-800">
+                    <Link href={`/admin/customers/${thread.tenant.id}` as Route} className="font-semibold text-primary hover:text-primary/90">
                       {thread.tenant.name}
                     </Link>{" "}
                     /{thread.tenant.slug}
@@ -145,7 +145,7 @@ function AdminReplyForm({ threadId }: { threadId: string }) {
     <form action={submit} className="mt-4 flex flex-col gap-2 sm:flex-row">
       <input type="hidden" name="threadId" value={threadId} />
       <Input name="body" required minLength={2} placeholder="Reply to client..." className="min-w-0 flex-1" />
-      <Button type="submit" disabled={isPending} className="h-10 bg-teal-700 hover:bg-teal-800">
+      <Button type="submit" disabled={isPending} className="h-10 bg-primary hover:bg-primary/90">
         {isPending ? "Sending" : "Reply"}
       </Button>
     </form>

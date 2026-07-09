@@ -4,13 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { useState, useTransition } from "react";
-import { Edit3, ExternalLink, Palette, Save } from "lucide-react";
+import { Edit3, ExternalLink, Loader2, Palette, Save } from "lucide-react";
+import { toast } from "sonner";
 import { savePlatformTheme, savePlatformThemes } from "@/app/admin/actions";
 import {
   AdminDragHandle,
   AdminRecordCard,
   AdminRecordGrid,
-  AdminStatusMessage,
   AdminStatusPill
 } from "@/components/admin/admin-crud-ui";
 import { AdminIconLink, AdminPanel } from "@/components/admin/admin-ui";
@@ -31,7 +31,6 @@ import type { LocalizedString, PlatformThemeView } from "@/services/platform/pla
 
 export function ThemesEditor({ initialThemes }: { initialThemes: PlatformThemeView[] }) {
   const [themes, setThemes] = useState(initialThemes);
-  const [message, setMessage] = useState("");
   const [draggedThemeSlug, setDraggedThemeSlug] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const orderedThemes = [...themes].sort((first, second) => first.displayOrder - second.displayOrder);
@@ -58,13 +57,11 @@ export function ThemesEditor({ initialThemes }: { initialThemes: PlatformThemeVi
 
   function saveOrder() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await savePlatformThemes(themes);
-        setMessage("Theme order saved.");
+        toast.success("Theme order saved.");
       } catch {
-        setMessage("Could not save theme order. Check your local database connection.");
+        toast.error("Could not save theme order. Check your local database connection.");
       }
     });
   }
@@ -73,14 +70,7 @@ export function ThemesEditor({ initialThemes }: { initialThemes: PlatformThemeVi
     <AdminPanel
       title="Theme Catalog"
       icon={Palette}
-      actions={
-        <Button type="button" onClick={saveOrder} disabled={isPending} className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
-          <Save className="size-4" aria-hidden="true" />
-          {isPending ? "Saving" : "Save order"}
-        </Button>
-      }
     >
-      <AdminStatusMessage>{message}</AdminStatusMessage>
       <AdminRecordGrid>
         {orderedThemes.map((theme) => {
           const themeName = previewText(theme.name);
@@ -100,7 +90,7 @@ export function ThemesEditor({ initialThemes }: { initialThemes: PlatformThemeVi
                 }
                 setDraggedThemeSlug(null);
               }}
-              className={`overflow-hidden p-0 ${draggedThemeSlug === theme.slug ? "border-teal-500 bg-teal-50/40 opacity-70" : "hover:border-slate-400"}`}
+              className={`overflow-hidden p-0 ${draggedThemeSlug === theme.slug ? "border-primary bg-primary/5 opacity-70" : "hover:border-slate-400"}`}
             >
               <div className="relative aspect-[16/10] bg-slate-100">
                 <Image src={theme.image} alt={themeName} fill unoptimized className="object-cover" />
@@ -127,13 +117,18 @@ export function ThemesEditor({ initialThemes }: { initialThemes: PlatformThemeVi
           );
         })}
       </AdminRecordGrid>
+      <div className="sticky bottom-4 z-20 flex justify-end">
+        <Button type="button" onClick={saveOrder} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+          {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+          {isPending ? "Saving\u2026" : "Save order"}
+        </Button>
+      </div>
     </AdminPanel>
   );
 }
 
 export function ThemeDetailEditor({ initialTheme, locales }: { initialTheme: PlatformThemeView; locales: AdminLocaleOption[] }) {
   const [theme, setTheme] = useState(initialTheme);
-  const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function updateTheme(nextTheme: Partial<PlatformThemeView>) {
@@ -155,13 +150,11 @@ export function ThemeDetailEditor({ initialTheme, locales }: { initialTheme: Pla
 
   function save() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await savePlatformTheme(theme);
-        setMessage("Theme saved.");
+        toast.success("Theme saved.");
       } catch {
-        setMessage("Could not save theme. Check the fields and try again.");
+        toast.error("Could not save theme. Check the fields and try again.");
       }
     });
   }
@@ -171,32 +164,25 @@ export function ThemeDetailEditor({ initialTheme, locales }: { initialTheme: Pla
   return (
     <div className="grid gap-6 xl:grid-cols-[0.62fr_0.38fr]">
       <div className="space-y-6">
-        <AdminStatusMessage>{message}</AdminStatusMessage>
         <AdminPanel
           title="Theme Details"
           icon={Palette}
-          actions={
-            <Button type="button" onClick={save} disabled={isPending} className="rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
-              <Save className="size-4" aria-hidden="true" />
-              {isPending ? "Saving" : "Save theme"}
-            </Button>
-          }
         >
           <div className="grid gap-5">
-            <LocalizedInput locales={locales} label="Name" value={theme.name} onChange={(name) => updateTheme({ name })} />
-            <LocalizedTextarea locales={locales} label="Description" value={theme.description} onChange={(description) => updateTheme({ description })} />
-            <LocalizedStringList locales={locales} label="Features" value={theme.features} onChange={(features) => updateTheme({ features })} />
-            <LocalizedInput locales={locales} label="SEO title" value={theme.seoTitle ?? ""} onChange={(seoTitle) => updateTheme({ seoTitle })} />
-            <LocalizedTextarea locales={locales} label="SEO description" value={theme.seoDescription ?? ""} onChange={(seoDescription) => updateTheme({ seoDescription })} />
+            <LocalizedInput locales={locales} label="Name" placeholder="Theme name" value={theme.name} onChange={(name) => updateTheme({ name })} />
+            <LocalizedTextarea locales={locales} label="Description" placeholder="What makes this theme unique" value={theme.description} onChange={(description) => updateTheme({ description })} />
+            <LocalizedStringList locales={locales} label="Features" placeholder="Theme feature" value={theme.features} onChange={(features) => updateTheme({ features })} />
+            <LocalizedInput locales={locales} label="SEO title" placeholder="SEO page title" value={theme.seoTitle ?? ""} onChange={(seoTitle) => updateTheme({ seoTitle })} />
+            <LocalizedTextarea locales={locales} label="SEO description" placeholder="SEO meta description" value={theme.seoDescription ?? ""} onChange={(seoDescription) => updateTheme({ seoDescription })} />
           </div>
         </AdminPanel>
 
         <AdminPanel title="Theme Controls" icon={Palette}>
           <div className="grid gap-4 md:grid-cols-2">
             <ReadOnlyField label="Slug" value={theme.slug} />
-            <AdminTextInput label="Icon key" value={theme.iconKey} onChange={(iconKey) => updateTheme({ iconKey })} />
-            <AdminTextInput label="Preview image URL" value={theme.image} onChange={(image) => updateTheme({ image })} />
-            <AdminTextInput label="Live demo route" value={theme.demoPath} onChange={(demoPath) => updateTheme({ demoPath })} />
+            <AdminTextInput label="Icon key" value={theme.iconKey} onChange={(iconKey) => updateTheme({ iconKey })} placeholder="palette" />
+            <AdminTextInput label="Preview image URL" value={theme.image} onChange={(image) => updateTheme({ image })} placeholder="https://..." />
+            <AdminTextInput label="Live demo route" value={theme.demoPath} onChange={(demoPath) => updateTheme({ demoPath })} placeholder="/themes/demo" />
             <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <Checkbox checked={theme.enabled} onCheckedChange={(checked) => updateTheme({ enabled: checked === true })} />
               Enabled
@@ -235,6 +221,12 @@ export function ThemeDetailEditor({ initialTheme, locales }: { initialTheme: Pla
             ))}
           </div>
         </AdminPanel>
+        <div className="sticky bottom-4 z-20 flex justify-end">
+          <Button type="button" onClick={save} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+            {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+            {isPending ? "Saving\u2026" : "Save theme"}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -247,11 +239,11 @@ export function ThemeDetailEditor({ initialTheme, locales }: { initialTheme: Pla
               <p className="font-display text-3xl font-black tracking-[-0.04em] text-slate-950">{themeName}</p>
               <p className="mt-1 font-mono text-xs text-slate-500">{theme.slug}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={theme.demoPath as Route} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-teal-700 hover:text-teal-700">
+                <Link href={theme.demoPath as Route} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary">
                   Open demo
                   <ExternalLink className="size-4" aria-hidden="true" />
                 </Link>
-                <Link href={`/themes/${theme.slug}` as Route} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-teal-700 hover:text-teal-700">
+                <Link href={`/themes/${theme.slug}` as Route} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary">
                   Public page
                   <ExternalLink className="size-4" aria-hidden="true" />
                 </Link>
@@ -264,11 +256,11 @@ export function ThemeDetailEditor({ initialTheme, locales }: { initialTheme: Pla
   );
 }
 
-function AdminTextInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function AdminTextInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
   return (
     <Label className="text-sm font-medium text-slate-700">
       {label}
-      <Input value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11 bg-white" />
+      <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="mt-2 h-11 bg-white" />
     </Label>
   );
 }

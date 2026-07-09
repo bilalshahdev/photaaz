@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "themes": "Thèmes",
+    "features": "Fonctionnalités",
+    "blog": "Blog",
+    "pricing": "Tarifs",
+    "contact": "Contact",
+    "signIn": "Se connecter",
+    "start": "Commencer"
+  },
+  "home": {
+    "steps": ["Choisir un design", "Téléverser les photos", "Publier le site"],
+    "stepNote": "Lancement en quelques étapes",
+    "themesEyebrow": "Vitrine des thèmes",
+    "themesTitle": "Choisissez le design avec lequel votre portfolio commence.",
+    "themesBody": "Chaque thème est une véritable expérience de portfolio avec aperçu, captures d'écran et démo en direct. Le type de photographie est choisi plus tard lors de la configuration.",
+    "viewAllThemes": "Voir tous les thèmes",
+    "themeDetails": "Détails du thème",
+    "liveDemo": "Démo en direct",
+    "flow": ["Choisir un design", "Choisir le type de photographie", "Publier le site"],
+    "flowNote": "Le produit reste simple : choisissez le style, ajoutez vos travaux et publiez.",
+    "featuresEyebrow": "Ce que les photographes peuvent publier",
+    "featuresTitle": "Tout ce qu'il faut pour un portfolio public soigné.",
+    "pricingEyebrow": "Tarifs",
+    "pricingTitle": "Commencez gratuitement, passez à un plan supérieur quand vous avez besoin de plus d'espace.",
+    "perMonth": "/mois",
+    "faqEyebrow": "FAQ",
+    "faqTitle": "Questions fréquentes avant de publier.",
+    "faqBody": "Réponses courtes pour les photographes qui créent un portfolio public pour la première fois.",
+    "contactSuccess": "Question enregistrée. Elle apparaîtra dans la boîte de support de l'administrateur.",
+    "contactError": "Impossible d'enregistrer pour le moment. Vérifiez votre connexion à la base de données locale et réessayez.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Votre nom",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Je photographie des mariages et je souhaite un portfolio avec des galeries, des articles de blog et un nom de domaine personnalisé.",
+    "launchEyebrow": "Lancez-vous aujourd'hui",
+    "launchTitle": "Commencez à créer votre site de photographie."
+  },
+  "language": {
+    "select": "Choisir la langue",
+    "english": "Anglais",
+    "spanish": "Espagnol",
+    "arabic": "Arabe",
+    "turkish": "Turc",
+    "hindi": "Hindi",
+    "portuguese": "Portugais",
+    "german": "Allemand",
+    "french": "Français"
+  }
+}

@@ -10,7 +10,7 @@ import { themeDemoPath, themePath } from "@/config/routes";
 import { localizePath, resolveLocalizedString } from "@/i18n/locales";
 import { getRequestLocale } from "@/i18n/server";
 import { breadcrumbJsonLd, createMetadata, themeJsonLd } from "@/lib/seo";
-import { getEnabledTranslationLocales } from "@/services/admin/admin-data";
+import { getEnabledTranslationLocales, getPlatformAppConfig } from "@/services/admin/admin-data";
 import { fallbackThemes, getPlatformThemes } from "@/services/platform/platform-data";
 
 export const revalidate = 300;
@@ -28,20 +28,21 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ThemesPage() {
-  const [themes, enabledLocales, locale] = await Promise.all([
+  const [themes, enabledLocales, locale, appConfig] = await Promise.all([
     getPlatformThemes({ enabledOnly: true }),
     getEnabledTranslationLocales(),
-    getRequestLocale()
+    getRequestLocale(),
+    getPlatformAppConfig()
   ]);
 
   return (
     <main className="bg-[#f7f8f6] text-[#101418]">
       <JsonLd data={[breadcrumbJsonLd([{ name: "Home", href: "/" }, { name: "Themes", href: "/themes" }], locale), ...themes.map((theme) => themeJsonLd(theme, locale))]} />
-      <MarketingHeader locale={locale} variant="solid" enabledLocales={enabledLocales} />
+      <MarketingHeader locale={locale} variant="solid" enabledLocales={enabledLocales} brandName={appConfig.brandName} brandFontSize={appConfig.brandFontSize} />
       <section className="px-4 pb-20 pt-14 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-4xl">
-            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">Themes</p>
+            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary">Themes</p>
             <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.05em]">
               Five portfolio experiences, built as real layouts.
             </h1>
@@ -65,7 +66,7 @@ export default async function ThemesPage() {
                 </div>
                 <div className="flex min-h-[360px] flex-col p-7">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="inline-flex size-10 items-center justify-center border border-[#d7dedb] bg-[#f7f8f6] text-teal-700">
+                    <span className="inline-flex size-10 items-center justify-center border border-[#d7dedb] bg-[#f7f8f6] text-primary">
                       <Icon className="size-5" aria-hidden="true" />
                     </span>
                     <p className="font-nav text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#7a858c]">
@@ -77,7 +78,7 @@ export default async function ThemesPage() {
                   <ul className="mt-5 space-y-2 text-sm text-[#101418]">
                     {themeFeatures.map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 shrink-0 text-teal-700" aria-hidden="true" />
+                        <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden="true" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -89,7 +90,7 @@ export default async function ThemesPage() {
                         <ArrowRight className="size-4" aria-hidden="true" />
                       </Link>
                     </Button>
-                    <Button asChild className="rounded-none bg-[#101418] font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
+                    <Button asChild className="rounded-none bg-[#101418] font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-primary/90">
                       <Link href={localizePath(locale, themeDemoPath(slug))}>
                         Live demo
                         <ExternalLink className="size-4" aria-hidden="true" />

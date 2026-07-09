@@ -1,5 +1,6 @@
 import type { TenantContext } from "@/types/tenant";
 import { env } from "@/lib/env";
+import { isLocale } from "@/i18n/locales";
 import { prisma } from "@/lib/db/prisma";
 import { getEffectivePlanKey, syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
 
@@ -59,7 +60,7 @@ export async function resolveTenantFromHost(host: string): Promise<TenantContext
     tenantId: tenant.id,
     slug: tenant.slug,
     status: tenant.status,
-    locale: tenant.defaultLocale === "ur" ? "ur" : "en",
+    locale: isLocale(tenant.defaultLocale) ? tenant.defaultLocale : "en",
     domain: normalizedHost,
     planKey: getEffectivePlanKey(tenant.subscription)
   };

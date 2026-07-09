@@ -89,7 +89,7 @@ export default async function AdminCustomersPage() {
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "ACTIVE":
-      return "inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800";
+      return "inline-flex rounded-full bg-primary/5 px-3 py-1 text-xs font-semibold text-primary";
     case "SUSPENDED":
       return "inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800";
     case "DELETED":

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Pencil, Trash2, Wrench } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Pencil, Save, Trash2, Wrench } from "lucide-react";
 import { deleteFeature, saveFeature } from "@/app/admin/actions";
-import { AdminStatusMessage, AdminTable, AdminTableEmptyRow } from "@/components/admin/admin-crud-ui";
+import { AdminTable, AdminTableEmptyRow } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminConfirmDialog, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +45,6 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
   const [features, setFeatures] = useState(initialFeatures);
   const [draft, setDraft] = useState<FeatureDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FeatureItem | null>(null);
-  const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -68,14 +68,12 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
     if (!draft) return;
 
     startTransition(async () => {
-      setMessage("");
-
       try {
         await saveFeature(draft);
-        setMessage(draft.id ? "Feature saved." : "Feature created.");
+        toast.success(draft.id ? "Feature saved." : "Feature created.");
         setDraft(null);
       } catch {
-        setMessage("Could not save feature. Make sure the key is unique.");
+        toast.error("Could not save feature. Make sure the key is unique.");
       }
     });
   }
@@ -84,15 +82,13 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
     if (!deleteTarget) return;
 
     startTransition(async () => {
-      setMessage("");
-
       try {
         await deleteFeature(deleteTarget.id);
         setFeatures((current) => current.filter((feature) => feature.id !== deleteTarget.id));
-        setMessage("Feature deleted.");
+        toast.success("Feature deleted.");
         setDeleteTarget(null);
       } catch {
-        setMessage("Could not delete feature. Remove it from packages first.");
+        toast.error("Could not delete feature. Remove it from packages first.");
       }
     });
   }
@@ -107,7 +103,6 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
         </AdminAddButton>
       }
     >
-      <AdminStatusMessage>{message}</AdminStatusMessage>
       <AdminTable>
           <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
             <tr>
@@ -145,13 +140,13 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
           {draft ? (
             <>
               <DialogHeader>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">{draft.id ? "Edit feature" : "Add feature"}</p>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">{draft.id ? "Edit feature" : "Add feature"}</p>
                 <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{draft.name || "Feature"}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4">
                 <Label className="block text-sm font-medium text-slate-700">
                   Name
-                  <Input value={draft.name} onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))} className="mt-2 h-11" />
+                  <Input value={draft.name} onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))} placeholder="Feature name" className="mt-2 h-11" />
                 </Label>
                 <Label className="block text-sm font-medium text-slate-700">
                   Key
@@ -159,12 +154,15 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
                 </Label>
                 <Label className="block text-sm font-medium text-slate-700">
                   Description
-                  <Textarea value={draft.description} onChange={(event) => setDraft((current) => (current ? { ...current, description: event.target.value } : current))} className="mt-2 min-h-24 resize-y" />
+                  <Textarea value={draft.description} onChange={(event) => setDraft((current) => (current ? { ...current, description: event.target.value } : current))} placeholder="What this feature does" className="mt-2 min-h-24 resize-y" />
                 </Label>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
-                <Button type="button" onClick={saveDraft} disabled={isPending}>{isPending ? "Saving" : "Save feature"}</Button>
+                <Button type="button" onClick={saveDraft} disabled={isPending} className="bg-slate-950 text-white hover:bg-primary/90">
+                  {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                  {isPending ? "Saving\u2026" : "Save feature"}
+                </Button>
               </DialogFooter>
             </>
           ) : null}

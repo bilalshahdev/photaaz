@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "themes": "Temas",
+    "features": "Características",
+    "blog": "Blog",
+    "pricing": "Precios",
+    "contact": "Contacto",
+    "signIn": "Iniciar sesión",
+    "start": "Comenzar"
+  },
+  "home": {
+    "steps": ["Elige un diseño", "Sube tus fotos", "Publica tu sitio web"],
+    "stepNote": "Lanzamiento en pocos pasos",
+    "themesEyebrow": "Galería de temas",
+    "themesTitle": "Elige el diseño con el que comienza tu portafolio.",
+    "themesBody": "Cada tema es una experiencia real de portafolio con vista previa, capturas de pantalla y una demostración en vivo. El tipo de fotografía se elige después durante la configuración inicial.",
+    "viewAllThemes": "Ver todos los temas",
+    "themeDetails": "Detalles del tema",
+    "liveDemo": "Demostración en vivo",
+    "flow": ["Elige un diseño", "Elige el tipo de fotografía", "Publica tu sitio web"],
+    "flowNote": "El producto es sencillo: elige el aspecto, añade tu trabajo y publícalo.",
+    "featuresEyebrow": "Lo que los fotógrafos pueden publicar",
+    "featuresTitle": "Todo lo necesario para un portafolio público impecable.",
+    "pricingEyebrow": "Precios",
+    "pricingTitle": "Empieza gratis, mejora tu plan cuando necesites más espacio.",
+    "perMonth": "/mes",
+    "faqEyebrow": "Preguntas frecuentes",
+    "faqTitle": "Preguntas comunes antes de publicar.",
+    "faqBody": "Respuestas breves para fotógrafos que crean un portafolio público por primera vez.",
+    "contactSuccess": "Pregunta guardada. Aparecerá en la bandeja de soporte del administrador.",
+    "contactError": "No se pudo guardar. Verifica tu conexión a la base de datos local e intenta de nuevo.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Tu nombre",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "Mensaje",
+    "messagePlaceholder": "Fotografío bodas y quiero un portafolio con galerías, entradas de blog y un dominio personalizado.",
+    "launchEyebrow": "Lanza hoy",
+    "launchTitle": "Empieza a construir tu sitio web de fotografía."
+  },
+  "language": {
+    "select": "Seleccionar idioma",
+    "english": "Inglés",
+    "spanish": "Español",
+    "arabic": "Árabe",
+    "turkish": "Turco",
+    "hindi": "Hindi",
+    "portuguese": "Portugués",
+    "german": "Alemán",
+    "french": "Francés"
+  }
+}

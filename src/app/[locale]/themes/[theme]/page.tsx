@@ -66,7 +66,7 @@ export default async function ThemeDetailPage({ params }: ThemeDetailPageProps) 
       <JsonLd data={[breadcrumbJsonLd([{ name: "Home", href: "/" }, { name: "Themes", href: "/themes" }, { name: themeName, href: `/themes/${selectedTheme.slug}` }], locale), themeJsonLd(selectedTheme, locale)]} />
       <header className="sticky top-0 z-40 border-b border-[#d7dedb] bg-[#f7f8f6] shadow-[0_12px_40px_rgba(16,20,24,0.08)] sm:bg-[#f7f8f6]/94 sm:backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 md:grid md:h-[76px] md:grid-cols-[1fr_auto_1fr] lg:px-8">
-          <Link href={localizePath(locale, themesPath())} className="inline-flex size-10 shrink-0 items-center justify-center font-nav text-xs font-semibold uppercase tracking-[0.22em] text-[#101418] transition hover:bg-[#101418]/6 hover:text-teal-700 md:h-auto md:w-fit md:justify-start md:gap-2 md:hover:bg-transparent">
+          <Link href={localizePath(locale, themesPath())} className="inline-flex size-10 shrink-0 items-center justify-center font-nav text-xs font-semibold uppercase tracking-[0.22em] text-[#101418] transition hover:bg-[#101418]/6 hover:text-primary md:h-auto md:w-fit md:justify-start md:gap-2 md:hover:bg-transparent">
             <ArrowLeft className="size-4" aria-hidden="true" />
             <span className="hidden md:inline">All themes</span>
           </Link>
@@ -80,7 +80,7 @@ export default async function ThemeDetailPage({ params }: ThemeDetailPageProps) 
                 <ExternalLink className="size-4" aria-hidden="true" />
               </Link>
             </Button>
-            <Button asChild size="sm" className="h-10 w-10 rounded-none bg-[#101418] px-0 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800 sm:w-auto sm:px-5">
+            <Button asChild size="sm" className="h-10 w-10 rounded-none bg-[#101418] px-0 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-primary/90 sm:w-auto sm:px-5">
               <Link href={localizePath(locale, onboardingPath())} aria-label="Start">
                 <span className="hidden sm:inline">Start</span>
                 <ArrowRight className="size-4" aria-hidden="true" />
@@ -92,7 +92,7 @@ export default async function ThemeDetailPage({ params }: ThemeDetailPageProps) 
       <section className="px-4 pb-20 pt-14 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1fr] lg:items-end">
           <div>
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">Theme detail</p>
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">Theme detail</p>
             <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.055em]">
               {themeName}
             </h1>
@@ -122,7 +122,7 @@ export default async function ThemeDetailPage({ params }: ThemeDetailPageProps) 
         <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-3">
           {themeFeatures.map((feature) => (
             <article key={feature} className="border border-[#d7dedb] bg-[#f7f8f6] p-6">
-              <CheckCircle2 className="size-5 text-teal-700" aria-hidden="true" />
+              <CheckCircle2 className="size-5 text-primary" aria-hidden="true" />
               <h2 className="mt-8 text-xl font-semibold">{feature}</h2>
               <p className="mt-3 text-sm leading-6 text-[#59636b]">
                 Built into the theme so photographers can publish without assembling pages from scratch.

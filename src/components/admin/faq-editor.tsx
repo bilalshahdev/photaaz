@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Edit3, ListChecks, Save, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Edit3, ListChecks, Loader2, Save, Trash2 } from "lucide-react";
 import { saveLandingSettings } from "@/app/admin/actions";
-import { AdminDragHandle, AdminStatusMessage } from "@/components/admin/admin-crud-ui";
+import { AdminDragHandle } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
 import { LocalizedInput, LocalizedTextarea, type AdminLocaleOption } from "@/components/admin/localized-fields";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,6 @@ function createEmptyFaq(locales: AdminLocaleOption[], displayOrder: number): Faq
 
 export function FaqEditor({ initialSettings, locales }: { initialSettings: PlatformLandingSettings; locales: AdminLocaleOption[] }) {
   const [settings, setSettings] = useState(initialSettings);
-  const [message, setMessage] = useState("");
   const [dialogIndex, setDialogIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<FaqItem | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -123,21 +123,17 @@ export function FaqEditor({ initialSettings, locales }: { initialSettings: Platf
 
   function save() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await saveLandingSettings(settings);
-        setMessage("FAQ settings saved.");
+        toast.success("FAQ settings saved.");
       } catch {
-        setMessage("Could not save FAQ settings. Check your local database connection.");
+        toast.error("Could not save FAQ settings. Check your local database connection.");
       }
     });
   }
 
   return (
     <div className="grid gap-6">
-      {message ? <AdminStatusMessage className="mb-0">{message}</AdminStatusMessage> : null}
-
       <AdminPanel
         title="FAQ Entries"
         icon={ListChecks}
@@ -172,7 +168,7 @@ export function FaqEditor({ initialSettings, locales }: { initialSettings: Platf
                 setDraggedIndex(null);
               }}
               className={`grid cursor-grab gap-3 border-b border-slate-200 bg-white p-3 transition last:border-b-0 active:cursor-grabbing xl:grid-cols-[minmax(0,1fr)_120px_96px] xl:items-center ${
-                draggedIndex === index ? "bg-teal-50/50 opacity-70" : "hover:bg-slate-50"
+                draggedIndex === index ? "bg-primary/5 opacity-70" : "hover:bg-slate-50"
               }`}
             >
               <div className="flex min-w-0 items-start gap-3 px-1">
@@ -216,10 +212,10 @@ export function FaqEditor({ initialSettings, locales }: { initialSettings: Platf
             </article>
           ))}
         </div>
-        <div className="mt-5 flex justify-end border-t border-slate-200 pt-5">
-          <Button type="button" onClick={save} disabled={isPending} className="bg-slate-950 text-white hover:bg-teal-800">
-            <Save className="size-4" aria-hidden="true" />
-            {isPending ? "Saving" : "Save FAQs"}
+        <div className="sticky bottom-4 z-20 flex justify-end">
+          <Button type="button" onClick={save} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+            {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+            {isPending ? "Saving\u2026" : "Save FAQs"}
           </Button>
         </div>
       </AdminPanel>
@@ -229,7 +225,7 @@ export function FaqEditor({ initialSettings, locales }: { initialSettings: Platf
           {draft ? (
             <>
               <DialogHeader>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">FAQ</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">FAQ</p>
                 <DialogTitle>{dialogIndex === null ? "Add FAQ" : "Edit FAQ"}</DialogTitle>
               </DialogHeader>
 
@@ -240,15 +236,15 @@ export function FaqEditor({ initialSettings, locales }: { initialSettings: Platf
                   Show on landing page
                 </Label>
               </div>
-              <LocalizedInput locales={locales} label="Question" value={draft.question} onChange={(question) => setDraft((current) => (current ? { ...current, question } : current))} />
-              <LocalizedTextarea locales={locales} label="Answer" value={draft.answer} onChange={(answer) => setDraft((current) => (current ? { ...current, answer } : current))} />
+              <LocalizedInput locales={locales} label="Question" placeholder="FAQ question" value={draft.question} onChange={(question) => setDraft((current) => (current ? { ...current, question } : current))} />
+              <LocalizedTextarea locales={locales} label="Answer" placeholder="Detailed answer" value={draft.answer} onChange={(answer) => setDraft((current) => (current ? { ...current, answer } : current))} />
               </div>
 
               <DialogFooter>
               <Button type="button" variant="outline" onClick={closeDialog}>
                 Cancel
               </Button>
-              <Button type="button" onClick={applyDraft} className="bg-slate-950 text-white hover:bg-teal-800">
+              <Button type="button" onClick={applyDraft} className="bg-slate-950 text-white hover:bg-primary/90">
                 {dialogIndex === null ? "Add FAQ" : "Update FAQ"}
               </Button>
               </DialogFooter>

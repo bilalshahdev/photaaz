@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Globe2, Image as ImageIcon, Save, Search } from "lucide-react";
+import { Globe2, Image as ImageIcon, Loader2, Save, Search } from "lucide-react";
+import { toast } from "sonner";
 import { savePlatformSeoSettings } from "@/app/admin/actions";
-import { AdminStatusMessage } from "@/components/admin/admin-crud-ui";
 import { AdminPanel } from "@/components/admin/admin-ui";
 import { LocalizedInput, LocalizedKeywordInput, LocalizedTextarea, type AdminLocaleOption } from "@/components/admin/localized-fields";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,6 @@ export function SeoEditor({ initialSettings, initialAppConfig, locales }: SeoEdi
     socialPreviewImageUrl: initialAppConfig.socialPreviewImageUrl,
     seoKeywords: initialAppConfig.seoKeywords
   });
-  const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const previewLocale = locales[0]?.code ?? "en";
@@ -55,16 +54,14 @@ export function SeoEditor({ initialSettings, initialAppConfig, locales }: SeoEdi
 
   function save() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await savePlatformSeoSettings({
           seo,
           ...assets
         });
-        setMessage("SEO settings saved.");
+        toast.success("SEO settings saved.");
       } catch {
-        setMessage("Could not save SEO settings. Check the fields and try again.");
+        toast.error("Could not save SEO settings. Check the fields and try again.");
       }
     });
   }
@@ -72,17 +69,17 @@ export function SeoEditor({ initialSettings, initialAppConfig, locales }: SeoEdi
   return (
     <div className="grid gap-6 xl:grid-cols-[0.62fr_0.38fr]">
       <div className="space-y-6">
-        {message ? <AdminStatusMessage className="mb-0">{message}</AdminStatusMessage> : null}
-
         <AdminPanel title="Homepage Metadata" icon={Search}>
           <div className="grid gap-5">
             <LocalizedInput locales={locales} label="Meta title" value={seo.title} onChange={(title) => setSeo((current) => ({ ...current, title }))} />
             <LocalizedTextarea locales={locales} label="Meta description" value={seo.description} onChange={(description) => setSeo((current) => ({ ...current, description }))} />
             <LocalizedKeywordInput locales={locales} label="Homepage keywords" value={seo.keywords} onChange={(keywords) => setSeo((current) => ({ ...current, keywords }))} />
-            <Button type="button" onClick={save} disabled={isPending} className="w-fit rounded-none bg-slate-950 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
-              <Save className="size-4" aria-hidden="true" />
-              {isPending ? "Saving" : "Save SEO"}
-            </Button>
+            <div className="sticky bottom-4 z-20 flex justify-end">
+              <Button type="button" onClick={save} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+                {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                {isPending ? "Saving\u2026" : "Save SEO"}
+              </Button>
+            </div>
           </div>
         </AdminPanel>
 

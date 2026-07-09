@@ -8,7 +8,7 @@ import { ScrollToTop } from "@/components/marketing/scroll-to-top";
 import { HeroMediaCarousel, type HeroMediaSlide } from "@/components/customer/hero-media-carousel";
 import { CustomerSiteContainer, customerSiteContainerClass } from "@/components/customer/customer-site-container";
 import { CustomerSiteFooter } from "@/components/customer/customer-site-footer";
-import { CustomerSiteNav } from "@/components/layout/customer-site-nav";
+import { CustomerNavProvider, CustomerSiteNav } from "@/components/layout/customer-site-nav";
 import { ImageWatermark as PhotoImageWatermark } from "@/components/customer/image-watermark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -562,6 +562,39 @@ function getFeaturedPhotoFrame(variant: CustomerSiteThemeVariant) {
     };
   }
 
+  if (variant === "cinematic") {
+    return {
+      card: "border-white/5 bg-white/5 p-3",
+      imageFrame: "",
+      image: "contrast-125 brightness-90",
+      body: "border-t border-white/10 pt-3",
+      title: "font-display text-xl font-light tracking-[-0.045em]",
+      meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-300"
+    };
+  }
+
+  if (variant === "luxury") {
+    return {
+      card: "border-[rgba(216,191,136,0.25)] bg-[#1a1814] text-[#fbf4e8] p-4",
+      imageFrame: "",
+      image: "saturate-90",
+      body: "pt-3 text-center",
+      title: "font-display text-xl font-light tracking-[-0.045em]",
+      meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d8bf88]"
+    };
+  }
+
+  if (variant === "panorama") {
+    return {
+      card: "rounded-[1.5rem] border-[#cbd3cd] bg-white/75 p-3 shadow-[0_20px_60px_rgba(23,32,28,0.12)]",
+      imageFrame: "",
+      image: "rounded-[1.25rem]",
+      body: "pt-3",
+      title: "font-display text-xl font-light tracking-[-0.045em]",
+      meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-700"
+    };
+  }
+
   return {
     card: "border-[#d7dedb] bg-white p-3",
     imageFrame: "",
@@ -631,7 +664,7 @@ function FavoriteCategories({ slug, locale, demo, variant }: CustomerSiteExperie
     return (
       <CustomerSiteContainer as="section" className="pb-16">
         <SectionIntro eyebrow="Browse by type" title="Stories organized for easy discovery." description="Categories help visitors move through the portfolio by subject, mood, and shoot style." />
-        <div className="pf-stagger grid gap-4 lg:grid-cols-4">
+        <div className="pf-stagger grid gap-6 lg:grid-cols-4">
           {visibleCategories.map((category, index) => (
             <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-[#ddcdbf] bg-[#fffaf2] text-[#211917]" mutedClassName="text-[#695f58]" accentClassName="text-[#9a4f32]" />
           ))}
@@ -640,7 +673,7 @@ function FavoriteCategories({ slug, locale, demo, variant }: CustomerSiteExperie
     );
   }
 
-  if (variant === "cinematic" || variant === "monochrome") {
+  if (variant === "cinematic") {
     return (
       <CustomerSiteContainer as="section" className="pb-16">
         <SectionIntro eyebrow="Explore" title="Move through the work by category." description="A clear taxonomy gives visitors a faster path into the kinds of images they care about." dark />
@@ -653,11 +686,24 @@ function FavoriteCategories({ slug, locale, demo, variant }: CustomerSiteExperie
     );
   }
 
+  if (variant === "monochrome") {
+    return (
+      <CustomerSiteContainer as="section" className="pb-16">
+        <SectionIntro eyebrow="Browse" title="Monochrome organization." description="Each category leads to a focused black-and-white gallery." dark />
+        <div className="pf-stagger grid gap-px sm:grid-cols-2 lg:grid-cols-4">
+          {visibleCategories.map((category, index) => (
+            <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-white/10 bg-[#151515] text-white" mutedClassName="text-white/60" accentClassName="text-teal-300" />
+          ))}
+        </div>
+      </CustomerSiteContainer>
+    );
+  }
+
   if (variant === "masonry") {
     return (
       <section className="px-5 pb-16 sm:px-8 lg:px-10">
         <SectionIntro eyebrow="Index" title="Fast routes into the archive." description="Visitors can browse broad categories first, then move into a focused gallery or shoot." />
-        <div className="pf-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="pf-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {visibleCategories.map((category, index) => (
             <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-[#d9dfdc] bg-white text-[#101418]" mutedClassName="text-[#5f6970]" accentClassName="text-teal-700" />
           ))}
@@ -671,9 +717,9 @@ function FavoriteCategories({ slug, locale, demo, variant }: CustomerSiteExperie
       <CustomerSiteContainer as="section" className="pb-16 text-center">
         <p className="font-nav text-xs font-semibold uppercase tracking-[0.34em] text-[#d8bf88]">Portfolio paths</p>
         <h2 className="mx-auto mt-3 max-w-3xl font-display text-5xl font-light tracking-[-0.06em]">A refined way to browse the work.</h2>
-        <div className="pf-stagger mt-8 grid gap-4 md:grid-cols-4">
+        <div className="pf-stagger mt-8 grid gap-6 md:grid-cols-4">
           {visibleCategories.map((category, index) => (
-            <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-white/10 bg-[#1a1814] text-[#fbf4e8]" mutedClassName="text-[#d8cab8]" accentClassName="text-[#d8bf88]" />
+            <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-[rgba(216,191,136,0.25)] bg-[#1a1814] text-[#fbf4e8]" mutedClassName="text-[#d8cab8]" accentClassName="text-[#d8bf88]" />
           ))}
         </div>
       </CustomerSiteContainer>
@@ -684,9 +730,9 @@ function FavoriteCategories({ slug, locale, demo, variant }: CustomerSiteExperie
     return (
       <CustomerSiteContainer as="section" className="pb-16">
         <SectionIntro eyebrow="Explore" title="Routes, places, and natural subjects." description="Categories make wide travel stories easier to scan without flattening the visual mood." />
-        <div className="pf-stagger grid gap-4 md:grid-cols-4">
+        <div className="pf-stagger grid gap-6 lg:grid-cols-2">
           {visibleCategories.map((category, index) => (
-            <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-[#cbd3cd] bg-white/70 text-[#17201c]" mutedClassName="text-[#59645f]" accentClassName="text-teal-700" imageClassName="aspect-[16/10]" />
+            <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="rounded-[1.5rem] border-[#cbd3cd] bg-white/70 text-[#17201c]" mutedClassName="text-[#59645f]" accentClassName="text-teal-700" imageClassName="aspect-[16/10]" />
           ))}
         </div>
       </CustomerSiteContainer>
@@ -696,9 +742,9 @@ function FavoriteCategories({ slug, locale, demo, variant }: CustomerSiteExperie
   return (
     <CustomerSiteContainer as="section" className="pb-16">
       <SectionIntro eyebrow="Browse by type" title="A simple way into the work." description="Visitors can start with a category, then move into the right collection or story." />
-      <div className="pf-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="pf-stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {visibleCategories.map((category, index) => (
-          <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-[#d8d1c7] bg-[#fffaf2] text-[#15120f]" mutedClassName="text-[#59636b]" accentClassName="text-teal-700" />
+          <CategoryPreviewCard key={category.name} category={category} image={getCategoryImage(category, demo.galleries, index) ?? demo.heroImage} index={index} slug={slug} locale={locale} variant={variant} className="border-[#d7dedb] bg-white text-[#15120f]" mutedClassName="text-[#59636b]" accentClassName="text-teal-700" />
         ))}
       </div>
     </CustomerSiteContainer>
@@ -710,11 +756,42 @@ function ContactSection({ demo, variant }: { demo: DemoData; variant: CustomerSi
   const isDark = variant === "cinematic" || variant === "luxury" || variant === "monochrome";
   const contactShellClass = cn(
     "pf-reveal grid gap-8 border p-6 sm:p-8 lg:items-start",
+    variant === "cinematic" && "border-white/10 bg-black/80 lg:grid-cols-[0.85fr_1.15fr]",
     variant === "luxury" && "border-[rgba(216,191,136,0.28)] bg-[#171511] text-center shadow-[0_22px_80px_rgba(0,0,0,0.28)] lg:grid-cols-[0.82fr_1.18fr] lg:text-left",
     variant === "monochrome" && "border-white/10 bg-[#050505] lg:grid-cols-[0.75fr_1.25fr]",
     variant === "panorama" && "rounded-[2rem] border-[#cbd3cd] bg-white/55 shadow-[0_22px_80px_rgba(23,32,28,0.08)] lg:grid-cols-[1fr_1fr]",
     variant === "editorial" && "border-[#ddcdbf] bg-[#fbf5ec] shadow-[0_18px_50px_rgba(94,55,33,0.08)] lg:grid-cols-[1fr_1fr]",
-    !["luxury", "monochrome", "panorama", "editorial"].includes(variant) && cn("shadow-[0_18px_50px_rgba(15,23,42,0.05)] lg:grid-cols-[0.9fr_1.1fr]", tone.card)
+    variant === "masonry" && "border-[#d9dfdc] bg-white lg:grid-cols-[1fr_1fr]",
+    !["cinematic", "luxury", "monochrome", "panorama", "editorial", "masonry"].includes(variant) && cn("shadow-[0_18px_50px_rgba(15,23,42,0.05)] lg:grid-cols-[0.9fr_1.1fr]", tone.card)
+  );
+
+  const inputClass = cn(
+    "h-12 rounded-none bg-transparent text-sm",
+    isDark ? "border-white/20 text-white placeholder:text-white/40" : "border-current/10 placeholder:text-current/40",
+    variant === "cinematic" && "border-white/10 text-white placeholder:text-white/30",
+    variant === "luxury" && "border-[rgba(216,191,136,0.25)] text-[#fbf4e8] placeholder:text-[#d8cab8]/50",
+    variant === "monochrome" && "border-white/10 text-white placeholder:text-white/30",
+    variant === "editorial" && "border-[#ddcdbf] text-[#211917] placeholder:text-[#695f58]/50",
+    variant === "masonry" && "border-[#d9dfdc] text-[#101418]",
+    variant === "panorama" && "border-[#cbd3cd] text-[#17201c] placeholder:text-[#59645f]/50"
+  );
+
+  const headingClass = cn(
+    "mt-3 font-display font-light leading-tight tracking-[-0.05em]",
+    variant === "masonry" ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl",
+    variant === "cinematic" && "text-3xl sm:text-4xl",
+    variant === "luxury" && "text-3xl sm:text-4xl"
+  );
+
+  const buttonClass = cn(
+    "pf-action h-12 rounded-none px-5 font-nav text-xs font-semibold uppercase tracking-[0.24em]",
+    tone.button,
+    variant === "cinematic" && "border-teal-300 bg-teal-300 text-black hover:bg-teal-200",
+    variant === "luxury" && "border-[#d8bf88] bg-[#d8bf88] text-[#11100d] hover:bg-[#d8bf88]/80",
+    variant === "monochrome" && "border-white bg-white text-black hover:bg-white/80",
+    variant === "editorial" && "border-[#9a4f32] bg-[#9a4f32] text-white hover:bg-[#9a4f32]/80",
+    variant === "masonry" && "border-teal-700 bg-teal-700 text-white hover:bg-teal-600",
+    variant === "panorama" && "border-teal-700 bg-teal-700 text-white hover:bg-teal-600"
   );
 
   return (
@@ -722,7 +799,7 @@ function ContactSection({ demo, variant }: { demo: DemoData; variant: CustomerSi
       <div className={contactShellClass}>
         <div>
           <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.28em]", tone.accent)}>Inquiries</p>
-          <h2 className="mt-3 font-display text-4xl font-light leading-tight tracking-[-0.05em] sm:text-5xl">Start a conversation.</h2>
+          <h2 className={headingClass}>Start a conversation.</h2>
           <p className={cn("mt-4 max-w-2xl text-base leading-7", tone.muted)}>{demo.tagline}</p>
           <p className={cn("mt-6 text-sm leading-6", tone.muted)}>Use this form for shoot dates, gallery access, custom packages, or collaboration requests.</p>
           <div className={cn("mt-5 grid gap-2 text-sm", tone.muted)}>
@@ -733,12 +810,12 @@ function ContactSection({ demo, variant }: { demo: DemoData; variant: CustomerSi
         </div>
         <form className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input className={cn("h-12 rounded-none bg-transparent text-sm", isDark ? "border-white/20 placeholder:text-white/40" : "border-current/10 placeholder:text-current/40")} placeholder="Your name" />
-            <Input className={cn("h-12 rounded-none bg-transparent text-sm", isDark ? "border-white/20 placeholder:text-white/40" : "border-current/10 placeholder:text-current/40")} placeholder="Email address" />
+            <Input className={inputClass} placeholder="Your name" />
+            <Input className={inputClass} placeholder="Email address" />
           </div>
-          <Input className={cn("h-12 rounded-none bg-transparent text-sm", isDark ? "border-white/20 placeholder:text-white/40" : "border-current/10 placeholder:text-current/40")} placeholder="Shoot type or subject" />
-          <Textarea className={cn("min-h-32 rounded-none bg-transparent text-sm", isDark ? "border-white/20 placeholder:text-white/40" : "border-current/10 placeholder:text-current/40")} placeholder="Tell us what you want photographed" />
-          <Button type="button" className={cn("pf-action h-12 rounded-none px-5 font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.button)}>
+          <Input className={inputClass} placeholder="Shoot type or subject" />
+          <Textarea className={cn("min-h-32 rounded-none bg-transparent text-sm", inputClass)} placeholder="Tell us what you want photographed" />
+          <Button type="button" className={buttonClass}>
             Send inquiry
           </Button>
         </form>
@@ -1086,13 +1163,15 @@ export function CustomerSiteExperience(props: CustomerSiteExperienceProps) {
     );
 
   return (
-    <WatermarkContext.Provider value={props.demo.imageWatermark ?? null}>
-      <ViewerContext.Provider value={openViewer}>
-        {content}
-        <PhotoViewer images={viewerImages} index={viewerIndex} onClose={() => setViewerIndex(null)} onStep={stepViewer} />
-        <ScrollToTop />
-      </ViewerContext.Provider>
-    </WatermarkContext.Provider>
+    <CustomerNavProvider>
+      <WatermarkContext.Provider value={props.demo.imageWatermark ?? null}>
+        <ViewerContext.Provider value={openViewer}>
+          {content}
+          <PhotoViewer images={viewerImages} index={viewerIndex} onClose={() => setViewerIndex(null)} onStep={stepViewer} />
+          <ScrollToTop />
+        </ViewerContext.Provider>
+      </WatermarkContext.Provider>
+    </CustomerNavProvider>
   );
 }
 

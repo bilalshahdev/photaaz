@@ -5,7 +5,7 @@ export function AdminStatusMessage({ children, className }: { children: React.Re
   if (!children) return null;
 
   return (
-    <div className={cn("mb-4 border border-teal-200 bg-teal-50 p-3 text-sm font-medium text-teal-900", className)}>
+    <div className={cn("mb-4 border border-primary/20 bg-primary/5 p-3 text-sm font-medium text-primary", className)}>
       {children}
     </div>
   );
@@ -104,7 +104,7 @@ export function AdminStatusPill({
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em]",
-        active ? activeClassName ?? "bg-teal-50 text-teal-700" : inactiveClassName ?? "bg-slate-100 text-slate-500"
+        active ? activeClassName ?? "bg-primary/5 text-primary" : inactiveClassName ?? "bg-slate-100 text-slate-500"
       )}
     >
       {active ? <Check className="size-3" aria-hidden="true" /> : <X className="size-3" aria-hidden="true" />}

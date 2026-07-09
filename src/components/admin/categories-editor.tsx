@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import { Edit3, ImageIcon, Plus, Save, Tags, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Edit3, ImageIcon, Loader2, Plus, Save, Tags, Trash2 } from "lucide-react";
 import { savePhotographyTypes } from "@/app/admin/actions";
 import {
   AdminDragHandle,
   AdminEmptyState,
   AdminRecordCard,
   AdminRecordGrid,
-  AdminStatusMessage,
   AdminStatusPill
 } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminConfirmDialog, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
@@ -49,7 +49,6 @@ const emptyDraft: CategoryDraft = {
 
 export function CategoriesEditor({ initialTypes, locales }: { initialTypes: PlatformPhotographyTypeView[]; locales: AdminLocaleOption[] }) {
   const [types, setTypes] = useState(initialTypes);
-  const [message, setMessage] = useState("");
   const [draggedTypeSlug, setDraggedTypeSlug] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<CategoryDialogMode | null>(null);
   const [draft, setDraft] = useState<CategoryDraft>(emptyDraft);
@@ -59,13 +58,11 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
 
   function save() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await savePhotographyTypes(types);
-        setMessage("Categories saved.");
+        toast.success("Categories saved.");
       } catch {
-        setMessage("Could not save categories. Check your local database connection.");
+        toast.error("Could not save categories. Check your local database connection.");
       }
     });
   }
@@ -162,18 +159,11 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
         title="Category Library"
         icon={Tags}
         actions={
-          <>
-            <AdminAddButton onClick={openAddCategoryDialog}>
-              Add category
-            </AdminAddButton>
-            <Button type="button" onClick={save} disabled={isPending} className="bg-slate-950 text-white hover:bg-teal-800">
-              <Save className="size-4" aria-hidden="true" />
-              {isPending ? "Saving" : "Save categories"}
-            </Button>
-          </>
+          <AdminAddButton onClick={openAddCategoryDialog}>
+            Add category
+          </AdminAddButton>
         }
       >
-        <AdminStatusMessage>{message}</AdminStatusMessage>
         <AdminRecordGrid>
           {parentTypes.map((type) => {
             const children = types.filter((item) => item.parentSlug === type.slug).sort((a, b) => a.displayOrder - b.displayOrder);
@@ -192,11 +182,11 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
                   }
                   setDraggedTypeSlug(null);
                 }}
-                className={draggedTypeSlug === type.slug ? "border-teal-500 bg-teal-50/40 opacity-70" : "hover:border-slate-400"}
+                className={draggedTypeSlug === type.slug ? "border-primary bg-primary/5 opacity-70" : "hover:border-slate-400"}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Category</p>
+                    <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">Category</p>
                     <h2 className="mt-1 truncate font-display text-2xl font-black tracking-[-0.04em] text-slate-950">{previewText(type.name)}</h2>
                     <p className="mt-1 font-mono text-xs text-slate-500">{type.slug}</p>
                   </div>
@@ -207,7 +197,7 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
                     <AdminIconButton icon={Edit3} label={`Edit ${previewText(type.name)}`} tooltip="Edit category" onClick={() => openEditDialog(type)} className="size-8" />
                     <AdminIconButton icon={Trash2} label={`Delete ${previewText(type.name)}`} tooltip="Delete category" tone="danger" onClick={() => setDeleteTarget(type)} className="size-8" />
                     <Tooltip content="Add subcategory">
-                      <Button type="button" size="sm" onClick={() => openAddSubcategoryDialog(type.slug)} className="size-8 bg-slate-950 p-0 text-white hover:bg-teal-800" aria-label={`Add subcategory under ${previewText(type.name)}`}>
+                      <Button type="button" size="sm" onClick={() => openAddSubcategoryDialog(type.slug)} className="size-8 bg-slate-950 p-0 text-white hover:bg-primary/90" aria-label={`Add subcategory under ${previewText(type.name)}`}>
                         <Plus className="size-4" aria-hidden="true" />
                       </Button>
                     </Tooltip>
@@ -243,11 +233,11 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
                           setDraggedTypeSlug(null);
                         }}
                         className={`flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 transition ${
-                          draggedTypeSlug === child.slug ? "border-teal-500 bg-teal-50/50 opacity-70" : "hover:border-slate-300"
+                          draggedTypeSlug === child.slug ? "border-primary bg-primary/5 opacity-70" : "hover:border-slate-300"
                         }`}
                       >
                         <div className="min-w-0">
-                          <p className="font-nav text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-700">Subcategory</p>
+                          <p className="font-nav text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Subcategory</p>
                           <p className="truncate text-sm font-semibold text-slate-900">{previewText(child.name)}</p>
                           <p className="truncate font-mono text-xs text-slate-500">{child.slug}</p>
                         </div>
@@ -266,6 +256,12 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
             );
           })}
         </AdminRecordGrid>
+        <div className="sticky bottom-4 z-20 flex justify-end">
+          <Button type="button" onClick={save} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+            {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+            {isPending ? "Saving\u2026" : "Save categories"}
+          </Button>
+        </div>
       </AdminPanel>
 
       <Dialog open={Boolean(dialogMode)} onOpenChange={(open) => !open && closeDialog()}>
@@ -273,12 +269,12 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
           {dialogMode ? (
             <>
               <DialogHeader>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">Category</p>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">Category</p>
                 <DialogTitle>{dialogTitle(dialogMode)}</DialogTitle>
                 <p className="text-sm text-slate-500">{dialogDescription(dialogMode, types)}</p>
               </DialogHeader>
               <div className="grid gap-5">
-              <LocalizedInput locales={locales} label="Name" value={draft.name} onChange={(name) => setDraft((current) => ({ ...current, name }))} />
+              <LocalizedInput locales={locales} label="Name" placeholder="Category name" value={draft.name} onChange={(name) => setDraft((current) => ({ ...current, name }))} />
               <Label className="text-sm font-medium text-slate-700">
                 Photo URL
                 <Input value={draft.image} onChange={(event) => setDraft((current) => ({ ...current, image: event.target.value }))} placeholder="https://..." className="mt-2 h-11" />
@@ -300,7 +296,7 @@ export function CategoriesEditor({ initialTypes, locales }: { initialTypes: Plat
               <Button type="button" variant="outline" onClick={closeDialog}>
                 Cancel
               </Button>
-              <Button type="button" onClick={saveDialog} className="bg-slate-950 text-white hover:bg-teal-800">
+              <Button type="button" onClick={saveDialog} className="bg-slate-950 text-white hover:bg-primary/90">
                 {dialogMode.type === "edit" ? "Update" : "Add"}
               </Button>
               </DialogFooter>

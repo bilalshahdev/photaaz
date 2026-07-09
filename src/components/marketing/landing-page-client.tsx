@@ -176,7 +176,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
   return (
     <main dir={isRtl ? "rtl" : "ltr"} className="flex flex-col bg-[#f7f8f6] text-[#101418]">
       <JsonLd data={[softwareApplicationJsonLd(appConfig, pricingPlans), ...(activeFaqs.length ? [faqJsonLd(activeFaqs)] : [])]} />
-      <MarketingHeaderStack announcement={activeAnnouncement} locale={locale} messages={messages} enabledLocales={enabledLocales} />
+      <MarketingHeaderStack announcement={activeAnnouncement} locale={locale} messages={messages} enabledLocales={enabledLocales} brandName={appConfig.brandName} brandFontSize={appConfig.brandFontSize} />
       <ScrollToTop />
 
       {isSectionVisible("hero") ? (
@@ -200,7 +200,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
               key={image.src}
               type="button"
               onClick={() => setHeroImageIndex(index)}
-              className={`h-1.5 w-10 transition ${index === heroImageIndex ? "bg-teal-300" : "bg-white/28"}`}
+              className={`h-1.5 w-10 transition ${index === heroImageIndex ? "bg-primary-light" : "bg-white/28"}`}
               aria-label={`Show hero image ${index + 1}`}
             />
           ))}
@@ -231,7 +231,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
             <div className="mt-12 grid w-full gap-4 border-y border-white/18 py-5 sm:grid-cols-3">
               {copy.steps.map((item) => (
                 <div key={item}>
-                  <CheckCircle2 className="size-4 text-teal-300" aria-hidden="true" />
+                  <CheckCircle2 className="size-4 text-primary-light" aria-hidden="true" />
                   <p className="mt-2 text-sm font-semibold">{item}</p>
                   <p className="mt-1 text-xs text-white/52">{copy.stepNote}</p>
                 </div>
@@ -247,7 +247,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
         <MarketingContainer>
           <div className="border-b border-[#d7dedb] pb-5 lg:pb-8">
             <div className="max-w-4xl">
-              <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.themesEyebrow}</p>
+              <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary">{copy.themesEyebrow}</p>
               <h2 className="pf-fluid-title-page mt-3 font-display font-light leading-none tracking-[-0.05em]">
                 {copy.themesTitle}
               </h2>
@@ -304,7 +304,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                   </div>
                   <div className="flex min-h-[360px] flex-col p-7">
                     <div className="flex items-center justify-between gap-4">
-                      <span className="inline-flex size-10 items-center justify-center border border-[#d7dedb] bg-[#f7f8f6] text-teal-700">
+                      <span className="inline-flex size-10 items-center justify-center border border-[#d7dedb] bg-[#f7f8f6] text-primary">
                         <Icon className="size-5" aria-hidden="true" />
                       </span>
                       <p className="font-nav text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[#7a858c]">
@@ -316,7 +316,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                     <ul className="mt-5 space-y-2 text-sm text-[#101418]">
                       {themeFeatures.map((feature) => (
                         <li key={feature} className="flex items-center gap-2">
-                          <CheckCircle2 className="size-4 shrink-0 text-teal-700" aria-hidden="true" />
+                          <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden="true" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -325,7 +325,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                       <Link href={localizePath(locale, themePath(slug))} className="inline-flex h-11 items-center justify-center border border-[#d7dedb] bg-[#ffffff] font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#101418] transition hover:border-[#101418]">
                         {copy.themeDetails}
                       </Link>
-                      <Link href={localizePath(locale, themeDemoPath(slug))} className="inline-flex h-11 items-center justify-center gap-2 bg-[#101418] font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-teal-800">
+                      <Link href={localizePath(locale, themeDemoPath(slug))} className="inline-flex h-11 items-center justify-center gap-2 bg-[#101418] font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-primary/90">
                         {copy.liveDemo}
                         <ExternalLink className="size-3.5" aria-hidden="true" />
                       </Link>
@@ -354,7 +354,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                   aria-label={`Show ${resolveLocalizedString(theme.name, locale)} theme`}
                   aria-current={index === activeThemeIndex ? "true" : undefined}
                 >
-                    <span className="h-1.5 w-4 rounded-full bg-[#cbd5d1] transition-colors duration-300 hover:bg-teal-700" aria-hidden="true" />
+                    <span className="h-1.5 w-4 rounded-full bg-[#cbd5d1] transition-colors duration-300 hover:bg-primary" aria-hidden="true" />
                 </button>
               ))}
               </div>
@@ -368,7 +368,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       <section id="features" className="bg-white px-4 py-20 sm:px-6 lg:px-8" style={{ order: sectionOrder("features") }}>
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
-            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.featuresEyebrow}</p>
+            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary">{copy.featuresEyebrow}</p>
             <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.featuresTitle}
             </h2>
@@ -385,7 +385,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
 
                 return (
                   <article key={`${featureTitle}-${index}`} className="border border-[#d7dedb] bg-[#f7f8f6] p-5">
-                    <Icon className="size-6 text-teal-700" aria-hidden="true" />
+                    <Icon className="size-6 text-primary" aria-hidden="true" />
                     <h3 className="mt-8 text-lg font-semibold">{featureTitle}</h3>
                     <p className="mt-3 text-sm leading-6 text-[#59636b]">{featureBody}</p>
                   </article>
@@ -400,7 +400,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8" style={{ order: sectionOrder("pricing") }}>
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
-            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.pricingEyebrow}</p>
+            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary">{copy.pricingEyebrow}</p>
             <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.pricingTitle}
             </h2>
@@ -413,7 +413,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
 
               return (
               <article key={plan.key} className={plan.featured ? "border-2 border-[#101418] bg-[#101418] p-6 text-white" : "border border-[#d7dedb] bg-white p-6"}>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-500">{planName}</p>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-primary">{planName}</p>
                 <MarketingPrice
                   monthlyPrice={plan.monthlyPrice}
                   annualPrice={plan.annualPrice}
@@ -424,7 +424,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
                 <ul className="mt-6 space-y-3">
                   {planFeatures.map((feature) => (
                     <li key={feature} className="flex gap-3 text-sm">
-                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-teal-500" aria-hidden="true" />
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -444,7 +444,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       <section id="faq" className="bg-[#f7f8f6] px-4 py-20 sm:px-6 lg:px-8" style={{ order: sectionOrder("faq") }}>
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
-            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{copy.faqEyebrow}</p>
+            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary">{copy.faqEyebrow}</p>
             <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.faqTitle}
             </h2>
@@ -466,7 +466,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       <section id="contact" className="bg-white px-4 py-20 sm:px-6 lg:px-8" style={{ order: sectionOrder("contact") }}>
         <div className="mx-auto max-w-7xl">
           <div className={`border-b border-[#d7dedb] pb-8 ${isRtl ? "text-right" : ""}`}>
-            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-700">{contact.eyebrow}</p>
+            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary">{contact.eyebrow}</p>
             <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {contact.title}
             </h2>
@@ -498,7 +498,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
             }}
           >
             {contactStatus !== "idle" ? (
-              <div className={contactStatus === "success" ? "mb-5 border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900" : "mb-5 border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"}>
+              <div className={contactStatus === "success" ? "mb-5 border border-primary/20 bg-primary/5 p-4 text-sm text-primary" : "mb-5 border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"}>
                 {contactStatus === "success"
                   ? copy.contactSuccess
                   : copy.contactError}
@@ -507,26 +507,26 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Label className="block">
-                <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{copy.nameLabel}</span>
+                <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">{copy.nameLabel}</span>
                 <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-[#ffffff] px-4">
-                  <UserRound className="mr-3 size-5 shrink-0 text-teal-700" aria-hidden="true" />
+                  <UserRound className="mr-3 size-5 shrink-0 text-primary" aria-hidden="true" />
                   <Input required name="name" className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder={copy.namePlaceholder} />
                 </span>
               </Label>
 
               <Label className="block">
-                <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{copy.emailLabel}</span>
+                <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">{copy.emailLabel}</span>
                 <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-[#ffffff] px-4">
-                  <Mail className="mr-3 size-5 shrink-0 text-teal-700" aria-hidden="true" />
+                  <Mail className="mr-3 size-5 shrink-0 text-primary" aria-hidden="true" />
                   <Input required name="email" type="email" className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder={copy.emailPlaceholder} />
                 </span>
               </Label>
             </div>
 
             <Label className="mt-4 block">
-              <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{copy.messageLabel}</span>
+              <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">{copy.messageLabel}</span>
               <span className="mt-2 flex min-h-40 items-start border border-[#d7dedb] bg-[#ffffff] px-4 py-4">
-                <MessageSquareText className="mr-3 mt-1 size-5 shrink-0 text-teal-700" aria-hidden="true" />
+                <MessageSquareText className="mr-3 mt-1 size-5 shrink-0 text-primary" aria-hidden="true" />
                 <Textarea
                   required
                   name="message"
@@ -536,7 +536,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
               </span>
             </Label>
 
-            <Button type="submit" className="mt-5 h-11 rounded-none bg-[#101418] px-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white hover:bg-teal-800">
+            <Button type="submit" className="mt-5 h-11 rounded-none bg-[#101418] px-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white hover:bg-primary/90">
               {contact.submitLabel}
             </Button>
           </form>
@@ -548,7 +548,7 @@ export function LandingPageClient({ locale, messages, settings, themes, pricingP
       <section className="bg-[#101418] px-4 py-14 text-white sm:px-6 lg:px-8" style={{ order: sectionOrder("finalCta") }}>
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 md:flex-row md:items-end">
           <div>
-            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-teal-300">{copy.launchEyebrow}</p>
+            <p className="font-nav text-sm font-semibold uppercase tracking-[0.28em] text-primary-light">{copy.launchEyebrow}</p>
             <h2 className="pf-fluid-title-page mt-3 max-w-4xl font-display font-light leading-none tracking-[-0.05em]">
               {copy.launchTitle}
             </h2>
@@ -572,12 +572,16 @@ function MarketingHeaderStack({
   announcement,
   locale,
   messages,
-  enabledLocales
+  enabledLocales,
+  brandName,
+  brandFontSize
 }: {
   announcement?: PlatformAnnouncementView;
   locale: AppLocale;
   messages: MarketingMessages;
   enabledLocales: AppLocale[];
+  brandName?: string;
+  brandFontSize?: import("@/lib/brand-fonts").BrandFontSize;
 }) {
   const [offset, setOffset] = useState(0);
 
@@ -597,7 +601,7 @@ function MarketingHeaderStack({
   return (
     <div className="fixed inset-x-0 top-0 z-50 will-change-transform" style={{ transform: `translateY(${offset}px)` }}>
       {announcement ? <AnnouncementBar announcement={announcement} locale={locale} /> : null}
-      <MarketingHeader locale={locale} messages={messages} enabledLocales={enabledLocales} hasAnnouncement={Boolean(announcement)} stacked />
+      <MarketingHeader locale={locale} messages={messages} enabledLocales={enabledLocales} hasAnnouncement={Boolean(announcement)} stacked brandName={brandName} brandFontSize={brandFontSize} />
     </div>
   );
 }
@@ -615,7 +619,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
   const showPhone = config.phone.enabled && Boolean(config.phone.value);
   const showCreator = config.creatorLink.enabled && isHttpUrl(config.creatorLink.href);
   const creatorLabel = config.creatorLink.label.replace(/^(built|made)\s+by\s+/i, "").trim();
-  const copyrightText = config.copyrightText.replace(/\{year\}/g, String(new Date().getFullYear()));
+  const copyrightText = resolveLocalizedString(config.copyrightText, locale).replace(/\{year\}/g, String(new Date().getFullYear()));
 
   return (
     <footer className="border-t border-[#20272b] bg-[#101418] text-white" style={{ order: 1000 }}>
@@ -627,10 +631,10 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
             <Link href={localizePath(locale, "/")} className="font-brand text-5xl font-semibold tracking-[-0.05em] text-white">
               Photaaz
             </Link>
-            {config.footerText ? <p className="mt-3 max-w-xl truncate text-xs leading-6 text-white/62">{config.footerText}</p> : null}
+            {config.footerText ? <p className="mt-3 max-w-xl truncate text-xs leading-6 text-white/62">{resolveLocalizedString(config.footerText, locale)}</p> : null}
             <div className="mt-5 flex flex-wrap gap-3 text-sm text-white/75">
               {showSupportEmail ? (
-                <a href={`mailto:${config.supportEmail}`} className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2 transition hover:border-teal-300/60 hover:text-teal-300">
+                <a href={`mailto:${config.supportEmail}`} className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2 transition hover:border-primary-light/60 hover:text-primary-light">
                   <Mail className="size-4" aria-hidden="true" />
                   <span>{config.supportEmail}</span>
                 </a>
@@ -640,10 +644,10 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
           </div>
 
           <div>
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-300">{locale === "ur" ? "\u0642\u0627\u0646\u0648\u0646\u06cc" : "Legal"}</p>
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-primary-light">Legal</p>
             <nav className="mt-4 grid gap-2.5 text-sm text-white/72">
               {legalLinks.map((link) => (
-                <Link key={link.slug} href={localizePath(locale, legalPath(link.slug))} className="w-fit transition hover:translate-x-1 hover:text-teal-300">
+                <Link key={link.slug} href={localizePath(locale, legalPath(link.slug))} className="w-fit transition hover:translate-x-1 hover:text-primary-light">
                   {resolveLocalizedString(link.label, locale)}
                 </Link>
               ))}
@@ -651,7 +655,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
           </div>
 
           <div className="space-y-4">
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-300">{locale === "ur" ? "\u0633\u0648\u0634\u0644" : "Social"}</p>
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-primary-light">Social</p>
             {socialLinks.length ? (
               <div className="flex flex-wrap gap-2">
                 {socialLinks.map(({ key, icon: Icon, href, label }) => (
@@ -661,7 +665,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
                       target="_blank"
                       rel="noreferrer"
                       aria-label={label}
-                      className="inline-flex size-11 items-center justify-center border border-white/14 bg-white/[0.04] text-white transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-300 hover:text-[#101418]"
+                      className="inline-flex size-11 items-center justify-center border border-white/14 bg-white/[0.04] text-white transition hover:-translate-y-0.5 hover:border-primary-light hover:bg-primary-light hover:text-[#101418]"
                     >
                       <Icon className="size-4" aria-hidden="true" />
                     </a>
@@ -671,7 +675,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
             ) : null}
             <div className="flex flex-col gap-3 text-sm text-white/72">
               {showPhone ? (
-                <a href={`tel:${config.phone.value.replace(/\s+/g, "")}`} className="inline-flex items-center gap-2 transition hover:text-teal-300">
+                <a href={`tel:${config.phone.value.replace(/\s+/g, "")}`} className="inline-flex items-center gap-2 transition hover:text-primary-light">
                   <Phone className="size-4" aria-hidden="true" />
                   <span>
                     {config.phone.label}: {config.phone.value}
@@ -680,7 +684,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
               ) : null}
             </div>
             {showSalesEmail ? (
-              <a href={`mailto:${config.salesEmail}`} className="inline-flex items-center gap-2 text-sm text-white/72 transition hover:text-teal-300">
+              <a href={`mailto:${config.salesEmail}`} className="inline-flex items-center gap-2 text-sm text-white/72 transition hover:text-primary-light">
                 <Mail className="size-4" aria-hidden="true" />
                 <span>{config.salesEmail}</span>
               </a>
@@ -692,7 +696,7 @@ function MarketingFooter({ locale, config }: { locale: AppLocale; config: Platfo
           <span aria-hidden="true" className="hidden sm:block" />
           <p>{copyrightText}</p>
           {showCreator && creatorLabel ? (
-            <a href={config.creatorLink.href} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 text-teal-300 transition hover:text-white sm:justify-self-end">
+            <a href={config.creatorLink.href} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 text-primary-light transition hover:text-white sm:justify-self-end">
               Made by {creatorLabel}
               <ExternalLink className="size-3.5" aria-hidden="true" />
             </a>
@@ -714,10 +718,10 @@ function OwnershipPricingCard({ plan, locale }: { plan: PlatformPricingPlanView;
   const planFeatures = plan.features.map((feature) => resolveLocalizedString(feature, locale));
 
   return (
-    <article className="border border-teal-800/30 bg-[#f3f7f3] p-6 text-[#101418] shadow-[0_24px_70px_rgba(16,20,24,0.10)] lg:col-span-3">
+    <article className="border border-primary/30 bg-[#f3f7f3] p-6 text-[#101418] shadow-[0_24px_70px_rgba(16,20,24,0.10)] lg:col-span-3">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
         <div>
-          <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-700">Permanent ownership</p>
+          <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-primary">Permanent ownership</p>
           <h3 className="mt-4 font-display text-5xl font-light leading-none tracking-[-0.06em]">{planName}</h3>
           <MarketingPrice
             monthlyPrice={plan.monthlyPrice}
@@ -730,8 +734,8 @@ function OwnershipPricingCard({ plan, locale }: { plan: PlatformPricingPlanView;
 
         <div className="grid gap-3 sm:grid-cols-2">
           {planFeatures.slice(0, 8).map((feature) => (
-            <div key={feature} className="flex gap-3 border border-teal-900/15 bg-white/75 p-4 text-sm text-[#334155]">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-teal-700" aria-hidden="true" />
+            <div key={feature} className="flex gap-3 border border-primary/15 bg-white/75 p-4 text-sm text-[#334155]">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
               <span>{feature}</span>
             </div>
           ))}
@@ -807,7 +811,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
         aria-expanded={isOpen}
       >
         <span>{question}</span>
-        <ChevronDown className={`mt-1 size-5 shrink-0 text-teal-700 transition duration-300 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+        <ChevronDown className={`mt-1 size-5 shrink-0 text-primary transition duration-300 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
       <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">

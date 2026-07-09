@@ -17,7 +17,7 @@ export async function GET() {
   const lines: string[] = [
     `# ${config.brandName}`,
     "",
-    `> ${landing ? resolveLocalizedString(landing.seo.description, "en") : config.footerText}`,
+    `> ${landing ? resolveLocalizedString(landing.seo.description, "en") : resolveLocalizedString(config.footerText, "en")}`,
     "",
     `${config.brandName} helps photographers publish clean public portfolio websites with themes, galleries, blogs, contact flows, and a custom domain option.`,
     "",

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getPublicEmailDeliverySettings } from "@/services/email/email-service";
 import type { AppLocale } from "@/i18n/locales";
 import { syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
-import type { LocalizedStringList } from "@/services/platform/platform-data";
+import type { LocalizedString, LocalizedStringList } from "@/services/platform/platform-data";
 import { defaultPlatformMediaPolicy, type PlatformMediaPolicy } from "@/services/platform/media-policy";
 
 export async function getAdminDashboardStats() {
@@ -12,7 +12,7 @@ export async function getAdminDashboardStats() {
   const expiringSoonEnd = new Date(now);
   expiringSoonEnd.setDate(expiringSoonEnd.getDate() + 7);
 
-  const [tenants, users, activeSubscriptions, expiringSoonSubscriptions, expiredSubscriptions, supportOpen, coupons, notifications, revenue] = await Promise.all([
+  const [tenants, users, activeSubscriptions, expiringSoonSubscriptions, expiredSubscriptions, supportOpen, coupons, notifications, revenue, totalPhotos, totalAlbums, totalBlogs, pendingModeration, pendingCategoryRequests] = await Promise.all([
     prisma.tenant.count(),
     prisma.user.count(),
     prisma.subscription.count({ where: { status: { in: ["ACTIVE", "TRIALING"] } } }),
@@ -29,7 +29,12 @@ export async function getAdminDashboardStats() {
     prisma.subscription.findMany({
       where: { status: { in: ["ACTIVE", "TRIALING"] } },
       include: { plan: true }
-    })
+    }),
+    prisma.photo.count(),
+    prisma.album.count(),
+    prisma.blogPost.count(),
+    prisma.photo.count({ where: { moderationStatus: "PENDING" } }),
+    prisma.platformCategoryRequest.count({ where: { status: "PENDING" } })
   ]);
 
   const monthlyRevenue = revenue.reduce((total, subscription) => total + (subscription.plan.monthlyPrice ?? 0), 0) / 100;
@@ -43,7 +48,12 @@ export async function getAdminDashboardStats() {
     supportOpen,
     coupons,
     unreadNotifications: notifications,
-    monthlyRevenue
+    monthlyRevenue,
+    totalPhotos,
+    totalAlbums,
+    totalBlogs,
+    pendingModeration,
+    pendingCategoryRequests
   };
 }
 
@@ -205,6 +215,8 @@ export async function getAdminEmailDeliverySettings() {
 
 export type PlatformAppConfig = {
   brandName: string;
+  brandFont: import("@/lib/brand-fonts").BrandFont;
+  brandFontSize: import("@/lib/brand-fonts").BrandFontSize;
   signatureColor: string;
   faviconUrl: string;
   appleTouchIconUrl: string;
@@ -212,10 +224,10 @@ export type PlatformAppConfig = {
   seoKeywords: LocalizedStringList;
   supportEmail: string;
   salesEmail: string;
-  footerText: string;
-  copyrightText: string;
+  footerText: LocalizedString;
+  copyrightText: LocalizedString;
   companyAddress: string;
-  dashboardNotice: string;
+  dashboardNotice: LocalizedString;
   themeSwitchCooldownDays: number;
   media: PlatformMediaPolicy;
   phone: {
@@ -245,20 +257,21 @@ export type PlatformExternalLink = {
 
 export const defaultPlatformAppConfig: PlatformAppConfig = {
   brandName: "Photaaz",
+  brandFont: "inter",
+  brandFontSize: "md",
   signatureColor: "#0f766e",
   faviconUrl: "/favicon.svg",
   appleTouchIconUrl: "/favicon.svg",
   socialPreviewImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=90",
   seoKeywords: {
-    en: ["photography website", "photography portfolio", "photographer website Pakistan", "photo gallery website", "portfolio website builder"],
-    ur: ["فوٹوگرافی ویب سائٹ", "فوٹوگرافی پورٹ فولیو", "فوٹوگرافر ویب سائٹ"]
+    en: ["photography website", "photography portfolio", "photographer website", "photo gallery website", "portfolio website builder"]
   },
   supportEmail: "bilalshah.dev@gmail.com",
   salesEmail: "bilalshah.dev@gmail.com",
-  footerText: "Clean websites for photographers, built to showcase visual work.",
-  copyrightText: "Copyright (c) {year} Photaaz. All rights reserved.",
+  footerText: { en: "Clean websites for photographers, built to showcase visual work." },
+  copyrightText: { en: "Copyright (c) {year} Photaaz. All rights reserved." },
   companyAddress: "Islamabad, Pakistan",
-  dashboardNotice: "",
+  dashboardNotice: { en: "" },
   themeSwitchCooldownDays: 14,
   media: defaultPlatformMediaPolicy,
   phone: {
@@ -342,13 +355,67 @@ export const predefinedTranslationLocales: TranslationLocaleConfig[] = [
     billingNote: "Default platform language"
   },
   {
-    code: "ur",
-    label: "Urdu",
-    nativeLabel: "اردو",
+    code: "es",
+    label: "Spanish",
+    nativeLabel: "Español",
+    direction: "ltr",
+    enabled: true,
+    priceCents: 500,
+    billingNote: "Latin America & Spain"
+  },
+  {
+    code: "ar",
+    label: "Arabic",
+    nativeLabel: "العربية",
     direction: "rtl",
     enabled: true,
     priceCents: 500,
-    billingNote: "Optional translated public site language"
+    billingNote: "Middle East & North Africa"
+  },
+  {
+    code: "tr",
+    label: "Turkish",
+    nativeLabel: "Türkçe",
+    direction: "ltr",
+    enabled: true,
+    priceCents: 500,
+    billingNote: "Turkey"
+  },
+  {
+    code: "hi",
+    label: "Hindi",
+    nativeLabel: "हिन्दी",
+    direction: "ltr",
+    enabled: true,
+    priceCents: 500,
+    billingNote: "India"
+  },
+  {
+    code: "pt",
+    label: "Portuguese",
+    nativeLabel: "Português",
+    direction: "ltr",
+    enabled: true,
+    priceCents: 500,
+    billingNote: "Brazil & Portugal"
+  },
+  {
+    code: "de",
+    label: "German",
+    nativeLabel: "Deutsch",
+    direction: "ltr",
+    enabled: true,
+    priceCents: 500,
+    billingNote: "Germany, Austria, Switzerland"
+  },
+  {
+    code: "fr",
+    label: "French",
+    nativeLabel: "Français",
+    direction: "ltr",
+    enabled: true,
+    priceCents: 500,
+    billingNote: "France, Canada, North Africa"
   }
 ];
 

@@ -9,6 +9,7 @@ import { onboardingPath, signInPath } from "@/config/routes";
 import { MarketingContainer } from "@/components/layout/marketing-container";
 import { MarketingControls } from "@/components/layout/marketing-controls";
 import { getMessages, localizePath, type AppLocale, type MarketingMessages } from "@/i18n/locales";
+import { brandFontSizeClasses, type BrandFontSize } from "@/lib/brand-fonts";
 
 type MarketingHeaderProps = {
   locale?: AppLocale;
@@ -17,9 +18,11 @@ type MarketingHeaderProps = {
   hasAnnouncement?: boolean;
   enabledLocales?: AppLocale[];
   stacked?: boolean;
+  brandName?: string;
+  brandFontSize?: BrandFontSize;
 };
 
-export function MarketingHeader({ locale = "en", messages = getMessages(locale), variant = "overlay", hasAnnouncement = false, enabledLocales, stacked = false }: MarketingHeaderProps) {
+export function MarketingHeader({ locale = "en", messages = getMessages(locale), variant = "overlay", hasAnnouncement = false, enabledLocales, stacked = false, brandName = "Photaaz", brandFontSize = "md" }: MarketingHeaderProps) {
   const copy = messages.nav;
   const isSolid = variant === "solid";
   const homePath = localizePath(locale, "/");
@@ -53,15 +56,15 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
   const positionClass = stacked ? "relative" : isSolid ? "sticky top-0" : "fixed inset-x-0";
   const transformClass = !isSolid && isHidden && !stacked ? "-translate-y-full" : "translate-y-0";
   const navTone = shouldUseSolidStyle ? "text-[#101418]" : "text-white";
-  const hoverTone = shouldUseSolidStyle ? "transition hover:text-teal-700" : "transition hover:text-teal-200";
+  const hoverTone = shouldUseSolidStyle ? "transition hover:text-primary" : "transition hover:text-primary-light";
   const mobileMenuTone = shouldUseSolidStyle ? "border-[#d7dedb] bg-[#f7f8f6] text-[#101418]" : "border-white/14 bg-[#101418]/96 text-white";
   const mobileLinkTone = shouldUseSolidStyle ? "border-[#101418]/10 hover:bg-[#101418]/5" : "border-white/10 hover:bg-white/10";
   const navItems = [
     { label: copy.themes, href: `${homePath}#themes` },
     { label: copy.features, href: `${homePath}#features` },
-    { label: "blog" in copy ? copy.blog : "Blog", href: localizePath(locale, "/blog") },
     { label: copy.pricing, href: `${homePath}#pricing` },
-    { label: copy.contact, href: `${homePath}#contact` }
+    { label: copy.contact, href: `${homePath}#contact` },
+    { label: "blog" in copy ? copy.blog : "Blog", href: localizePath(locale, "/blog") }
   ];
 
   return (
@@ -81,7 +84,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
         </nav>
 
         <Link href={homePath} className={`focus-ring min-w-0 shrink-0 justify-self-center rounded-md ${navTone}`}>
-          <span className="font-brand text-2xl font-semibold leading-none tracking-[-0.04em] sm:text-3xl md:text-4xl">Photaaz</span>
+          <span className={`font-brand font-semibold leading-none tracking-[-0.04em] ${brandFontSizeClasses[brandFontSize]}`}>{brandName}</span>
         </Link>
 
         <nav className="flex shrink-0 items-center justify-end gap-3 sm:gap-3">
@@ -114,7 +117,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
             asChild
             size="sm"
             className={`hidden h-10 rounded-none px-5 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:inline-flex ${
-              shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-teal-800" : "bg-white text-[#101418] hover:bg-white/90"
+              shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-primary/90" : "bg-white text-[#101418] hover:bg-white/90"
             }`}
           >
             <Link href={localizePath(locale, onboardingPath())} aria-label={copy.start}>
@@ -135,7 +138,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
             <Link href={localizePath(locale, signInPath())} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${mobileLinkTone}`}>
               {copy.signIn}
             </Link>
-            <Link href={localizePath(locale, onboardingPath())} onClick={() => setIsMenuOpen(false)} className={`mt-2 inline-flex items-center justify-center gap-2 px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-teal-800" : "bg-white text-[#101418] hover:bg-white/90"}`}>
+            <Link href={localizePath(locale, onboardingPath())} onClick={() => setIsMenuOpen(false)} className={`mt-2 inline-flex items-center justify-center gap-2 px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-primary/90" : "bg-white text-[#101418] hover:bg-white/90"}`}>
               {copy.start}
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>

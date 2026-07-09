@@ -66,7 +66,7 @@ export async function GET() {
   <channel>
     <title>${escapeXml(config.brandName)} Updates</title>
     <link>${SITE_URL}/</link>
-    <description>${escapeXml(config.footerText)}</description>
+    <description>${escapeXml(resolveLocalizedString(config.footerText, "en"))}</description>
     <language>en</language>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml" />
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>${blogItems.join("")}${announcementItems.join("")}${themeItems.join("")}

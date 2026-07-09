@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeDollarSign, CheckCircle2, Pencil, Save, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { BadgeDollarSign, CheckCircle2, Loader2, Pencil, Save, Trash2 } from "lucide-react";
+import { booleanOnlyFeatures, featureDisplayOrder } from "@/config/features";
 import { createPlanPackage, deletePlanPackage, savePlanPackage } from "@/app/admin/actions";
 import {
   AdminDragHandle,
   AdminInfoRow,
   AdminRecordCard,
-  AdminRecordGrid,
-  AdminStatusMessage
+  AdminRecordGrid
 } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminConfirmDialog, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,6 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
   const [plans, setPlans] = useState(initialPlans);
   const [draft, setDraft] = useState<PackageDraft | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [message, setMessage] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<PackagePlan | null>(null);
   const [draggedPlanId, setDraggedPlanId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -127,8 +127,6 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
     if (!draft) return;
 
     startTransition(async () => {
-      setMessage("");
-
       try {
         if (isCreating) {
           await createPlanPackage(toPlanInput(draft));
@@ -140,16 +138,16 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
 
         setIsCreating(false);
         setDraft(null);
-        setMessage(isCreating ? "Package created." : "Package saved.");
+        toast.success(isCreating ? "Package created." : "Package saved.");
       } catch {
-        setMessage("Could not save package. Check your local database connection.");
+        toast.error("Could not save package. Check your local database connection.");
       }
     });
   }
 
   function deletePlan(plan: PackagePlan) {
     if (plan._count.subscriptions > 0) {
-      setMessage("This package has subscriptions, so it cannot be deleted. Disable it instead.");
+      toast.error("This package has subscriptions, so it cannot be deleted. Disable it instead.");
       return;
     }
 
@@ -160,15 +158,13 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
     if (!deleteTarget) return;
 
     startTransition(async () => {
-      setMessage("");
-
       try {
         await deletePlanPackage(deleteTarget.id);
         setPlans((current) => current.filter((item) => item.id !== deleteTarget.id));
-        setMessage("Package deleted.");
+        toast.success("Package deleted.");
         setDeleteTarget(null);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Could not delete package.");
+        toast.error(error instanceof Error ? error.message : "Could not delete package.");
       }
     });
   }
@@ -206,13 +202,11 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
 
   function saveOrder() {
     startTransition(async () => {
-      setMessage("");
-
       try {
         await Promise.all(orderedPlans.map((plan) => savePlanPackage(toPlanInput(planToDraft(plan)))));
-        setMessage("Package order saved.");
+        toast.success("Package order saved.");
       } catch {
-        setMessage("Could not save package order. Check your local database connection.");
+        toast.error("Could not save package order. Check your local database connection.");
       }
     });
   }
@@ -223,17 +217,18 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
       icon={BadgeDollarSign}
       actions={
         <>
-          <Button type="button" variant="outline" onClick={saveOrder} disabled={isPending} className="border-slate-300 bg-white">
-            <Save className="size-4" aria-hidden="true" />
-            Save order
-          </Button>
+          <div className="sticky bottom-4 z-20 flex justify-end">
+            <Button type="button" onClick={saveOrder} disabled={isPending} className="h-11 gap-2 bg-slate-950 px-6 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70">
+              {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+              {isPending ? "Saving\u2026" : "Save order"}
+            </Button>
+          </div>
           <AdminAddButton onClick={openCreateDialog}>
             Add package
           </AdminAddButton>
         </>
       }
     >
-      <AdminStatusMessage>{message}</AdminStatusMessage>
       <AdminRecordGrid className="lg:grid-cols-3">
         {orderedPlans.map((plan) => {
           const enabledFeatures = plan.features.filter((feature) => feature.enabled);
@@ -252,13 +247,13 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
                 }
                 setDraggedPlanId(null);
               }}
-              className={draggedPlanId === plan.id ? "border-teal-500 bg-teal-50/40 opacity-70" : "hover:border-slate-400"}
+              className={draggedPlanId === plan.id ? "border-primary bg-primary/5 opacity-70" : "hover:border-slate-400"}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-display text-3xl font-black tracking-[-0.04em] text-slate-950">{plan.name}</h3>
-                    {plan.featured ? <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">Featured</span> : null}
+                    {plan.featured ? <span className="rounded-full bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">Featured</span> : null}
                     {!plan.enabled ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">Hidden</span> : null}
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{plan._count.subscriptions} subscriptions</p>
@@ -285,7 +280,7 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
                   {enabledFeatures.length ? (
                     enabledFeatures.map((access) => (
                       <p key={access.featureId} className="flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-teal-600" aria-hidden="true" />
+                        <CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
                         <span>
                           {access.feature.name}
                           {access.limit === null ? "" : ` (${access.limit})`}
@@ -307,7 +302,7 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
           {draft ? (
             <>
               <DialogHeader>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">{isCreating ? "Add package" : "Edit package"}</p>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">{isCreating ? "Add package" : "Edit package"}</p>
                 <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{draft.name}</DialogTitle>
               </DialogHeader>
 
@@ -315,12 +310,12 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
               <div className="grid gap-4">
                 <Label className="block text-sm font-medium text-slate-700">
                   Package name
-                  <Input value={draft.name} onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))} className="mt-2 h-11" />
+                  <Input value={draft.name} onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))} placeholder="Package name" className="mt-2 h-11" />
                 </Label>
               </div>
               <Label className="block text-sm font-medium text-slate-700">
                 Public pricing description
-                <Textarea value={draft.description} onChange={(event) => setDraft((current) => (current ? { ...current, description: event.target.value } : current))} className="mt-2 min-h-24 resize-y" />
+                <Textarea value={draft.description} onChange={(event) => setDraft((current) => (current ? { ...current, description: event.target.value } : current))} placeholder="What's included in this plan" className="mt-2 min-h-24 resize-y" />
               </Label>
               <div className="grid gap-3 sm:grid-cols-3">
                 <PriceInput label="Monthly price" value={draft.monthlyPrice} onChange={(monthlyPrice) => setDraft((current) => (current ? { ...current, monthlyPrice } : current))} />
@@ -344,27 +339,31 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
                   <p className="mt-1 text-sm text-slate-500">Enable features and set an optional numeric limit. Leave limit empty for unlimited.</p>
                 </div>
                 <div className="divide-y divide-slate-200">
-                  {features.map((feature) => {
+                  {sortedFeatures(features).map((feature) => {
                     const access = draft.features.find((item) => item.featureId === feature.id) ?? { featureId: feature.id, enabled: false, limit: null };
+                    const isBooleanOnly = booleanOnlyFeatures.has(feature.key);
 
                     return (
                       <div key={feature.id} className="grid gap-3 p-4 md:grid-cols-[1fr_120px] md:items-center">
                         <Label className="flex items-start gap-3 text-sm">
-                          <Checkbox checked={access.enabled} onCheckedChange={(checked) => updateFeature(feature.id, { enabled: checked === true })} className="mt-1" />
+                          <Checkbox checked={access.enabled} onCheckedChange={(checked) => updateFeature(feature.id, { enabled: checked === true, ...(isBooleanOnly ? { limit: null } : {}) })} className="mt-1" />
                           <span>
                             <span className="block font-semibold text-slate-950">{feature.name}</span>
-                            <span className="block font-mono text-xs text-slate-400">{feature.key}</span>
-                            {feature.description ? <span className="mt-1 block text-slate-500">{feature.description}</span> : null}
+                            {feature.description ? <span className="mt-1 block text-xs text-slate-500">{feature.description}</span> : null}
                           </span>
                         </Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={access.limit ?? ""}
-                          onChange={(event) => updateFeature(feature.id, { limit: event.target.value === "" ? null : Number(event.target.value) })}
-                          placeholder="Unlimited"
-                          className="h-10"
-                        />
+                        {isBooleanOnly ? (
+                          <span className="text-center text-xs text-slate-400">—</span>
+                        ) : (
+                          <Input
+                            type="number"
+                            min={0}
+                            value={access.limit ?? ""}
+                            onChange={(event) => updateFeature(feature.id, { limit: event.target.value === "" ? null : Number(event.target.value) })}
+                            placeholder="Unlimited"
+                            className="h-10"
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -373,7 +372,10 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
             </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={closeEditor}>Cancel</Button>
-                <Button type="button" onClick={saveDraft} disabled={isPending} className="bg-slate-950 text-white hover:bg-teal-800">{isPending ? "Saving" : isCreating ? "Create package" : "Save package"}</Button>
+                <Button type="button" onClick={saveDraft} disabled={isPending} className="bg-slate-950 text-white hover:bg-primary/90">
+                  {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                  {isPending ? "Saving\u2026" : isCreating ? "Create package" : "Save package"}
+                </Button>
               </DialogFooter>
             </>
           ) : null}
@@ -445,10 +447,19 @@ function PriceInput({ label, value, onChange }: { label: string; value: number |
         min={0}
         value={value ?? 0}
         onChange={(event) => onChange(Number(event.target.value))}
+        placeholder="0"
         className="mt-2 h-11"
       />
     </Label>
   );
+}
+
+function sortedFeatures(features: FeatureOption[]) {
+  return [...features].sort((a, b) => {
+    const ai = featureDisplayOrder.indexOf(a.key);
+    const bi = featureDisplayOrder.indexOf(b.key);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
 }
 
 function formatPrice(value: number | null) {

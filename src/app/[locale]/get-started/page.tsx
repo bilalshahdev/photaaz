@@ -257,7 +257,7 @@ export default function GetStartedPage() {
           <div className="grid gap-8 lg:grid-cols-[0.72fr_0.28fr]">
             <section className="border border-[#d7dedb] bg-white shadow-[0_20px_70px_rgba(16,20,24,0.08)]">
               <div className="border-b border-[#d7dedb] p-6 md:p-8">
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-teal-700">Get started</p>
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-primary">Get started</p>
                 <h1 className="pf-fluid-title-page mt-4 max-w-3xl font-display font-light leading-none tracking-[-0.055em] md:text-7xl">
                   Create your portfolio in six simple steps.
                 </h1>
@@ -287,7 +287,7 @@ export default function GetStartedPage() {
                         }`}
                       >
                         <span className={`inline-flex size-8 shrink-0 items-center justify-center border ${isActive ? "border-white/18 bg-white/10" : "border-[#d7dedb] bg-white"}`}>
-                          {isDone ? <CheckCircle2 className="size-4 text-teal-600" /> : <Icon className={isActive ? "size-4 text-teal-300" : "size-4 text-teal-700"} />}
+                          {isDone ? <CheckCircle2 className="size-4 text-primary" /> : <Icon className={isActive ? "size-4 text-primary-light" : "size-4 text-primary"} />}
                         </span>
                         <span>
                           <span className="block font-nav text-[0.62rem] font-semibold uppercase tracking-[0.18em]">0{index + 1}</span>
@@ -317,11 +317,11 @@ export default function GetStartedPage() {
                               }
                             }}
                             className={`group relative grid overflow-hidden border-2 text-left transition md:grid-cols-[0.85fr_1fr] ${
-                              selectedTheme === item.slug ? "border-teal-400 bg-[#101418] text-white shadow-[0_18px_45px_rgba(16,20,24,0.18)]" : "border-[#d7dedb] bg-[#ffffff] hover:border-[#101418]"
+                              selectedTheme === item.slug ? "border-primary bg-[#101418] text-white shadow-[0_18px_45px_rgba(16,20,24,0.18)]" : "border-[#d7dedb] bg-[#ffffff] hover:border-[#101418]"
                             }`}
                           >
                             {selectedTheme === item.slug ? (
-                              <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-2 bg-teal-300 px-2.5 py-1 font-nav text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#101418]">
+                              <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-2 bg-primary-light px-2.5 py-1 font-nav text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#101418]">
                                 <CheckCircle2 className="size-3.5" aria-hidden="true" />
                                 Selected
                               </span>
@@ -330,7 +330,7 @@ export default function GetStartedPage() {
                               <Image src={item.image} alt={item.name} fill className="object-cover transition duration-500 group-hover:scale-105" />
                             </div>
                             <div className="p-5">
-                              <Icon className={selectedTheme === item.slug ? "size-5 text-teal-300" : "size-5 text-teal-700"} />
+                              <Icon className={selectedTheme === item.slug ? "size-5 text-primary-light" : "size-5 text-primary"} />
                               <h2 className="mt-5 font-display text-4xl font-light tracking-[-0.05em]">{item.name}</h2>
                               <p className={selectedTheme === item.slug ? "mt-3 text-sm leading-6 text-white/68" : "mt-3 text-sm leading-6 text-[#59636b]"}>{item.description}</p>
                             </div>
@@ -353,7 +353,7 @@ export default function GetStartedPage() {
                           <article
                             key={item.slug}
                             className={`group overflow-hidden border-2 transition ${
-                              isSelected ? "border-teal-400 bg-[#101418] text-white shadow-[0_18px_45px_rgba(16,20,24,0.16)]" : "border-[#d7dedb] bg-[#ffffff] hover:border-[#101418]"
+                              isSelected ? "border-primary bg-[#101418] text-white shadow-[0_18px_45px_rgba(16,20,24,0.16)]" : "border-[#d7dedb] bg-[#ffffff] hover:border-[#101418]"
                             }`}
                           >
                             <button type="button" onClick={() => togglePhotographyType(item.slug)} className="block w-full text-left">
@@ -368,7 +368,7 @@ export default function GetStartedPage() {
                               <div className="p-4">
                                 <div className="flex items-center justify-between gap-3">
                                   <p className="font-display text-3xl font-light tracking-[-0.05em]">{item.name}</p>
-                                  <span className={`inline-flex size-7 items-center justify-center border ${isSelected ? "border-teal-300 bg-teal-300 text-[#101418]" : "border-[#d7dedb] bg-white"}`}>
+                                  <span className={`inline-flex size-7 items-center justify-center border ${isSelected ? "border-primary-light bg-primary-light text-[#101418]" : "border-[#d7dedb] bg-white"}`}>
                                     {isSelected ? <CheckCircle2 className="size-4" /> : null}
                                   </span>
                                 </div>
@@ -383,7 +383,7 @@ export default function GetStartedPage() {
                                 onClick={() => makePrimaryType(item.slug)}
                                 className={`h-9 w-full border font-nav text-[0.64rem] font-semibold uppercase tracking-[0.16em] transition ${
                                   isPrimary
-                                    ? "border-teal-300 bg-teal-300 text-[#101418]"
+                                    ? "border-primary-light bg-primary-light text-[#101418]"
                                     : isSelected
                                       ? "border-white/24 text-white hover:bg-white/10"
                                       : "border-[#d7dedb] bg-white text-[#101418] hover:border-[#101418]"
@@ -407,7 +407,7 @@ export default function GetStartedPage() {
                   <div>
                     <SectionHeading eyebrow="Step 3" title="Claim your free address." body="Start with a Photaaz subdomain. You can connect a custom domain later from the dashboard." />
                     <div className="mt-8 max-w-2xl border border-[#d7dedb] bg-[#ffffff] p-5">
-                      <Label className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700" htmlFor="subdomain">
+                      <Label className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary" htmlFor="subdomain">
                         Subdomain
                       </Label>
                       <div className="mt-3 flex flex-col border border-[#d7dedb] bg-white sm:flex-row">
@@ -443,16 +443,16 @@ export default function GetStartedPage() {
                           type="button"
                           onClick={() => setPhotoMode(item.key)}
                           className={`relative border-2 p-6 text-left transition ${
-                            photoMode === item.key ? "border-teal-400 bg-[#101418] text-white shadow-[0_18px_45px_rgba(16,20,24,0.16)]" : "border-[#d7dedb] bg-[#ffffff] hover:border-[#101418]"
+                            photoMode === item.key ? "border-primary bg-[#101418] text-white shadow-[0_18px_45px_rgba(16,20,24,0.16)]" : "border-[#d7dedb] bg-[#ffffff] hover:border-[#101418]"
                           }`}
                         >
                           {photoMode === item.key ? (
-                            <span className="absolute right-4 top-4 inline-flex items-center gap-2 bg-teal-300 px-2.5 py-1 font-nav text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#101418]">
+                            <span className="absolute right-4 top-4 inline-flex items-center gap-2 bg-primary-light px-2.5 py-1 font-nav text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#101418]">
                               <CheckCircle2 className="size-3.5" aria-hidden="true" />
                               Selected
                             </span>
                           ) : null}
-                          <ImagePlus className={photoMode === item.key ? "size-6 text-teal-300" : "size-6 text-teal-700"} />
+                          <ImagePlus className={photoMode === item.key ? "size-6 text-primary-light" : "size-6 text-primary"} />
                           <h2 className="mt-10 font-display text-4xl font-light tracking-[-0.05em]">{item.title}</h2>
                           <p className={photoMode === item.key ? "mt-3 text-sm leading-6 text-white/68" : "mt-3 text-sm leading-6 text-[#59636b]"}>{item.body}</p>
                         </button>
@@ -466,16 +466,16 @@ export default function GetStartedPage() {
                     <SectionHeading eyebrow="Step 5" title="Create your account." body="This saves the draft and prepares the customer dashboard. Real auth can be wired after the flow is approved." />
                     <div id="account-errors" className="mt-8 grid max-w-2xl gap-4">
                       <Label className="block">
-                        <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">Studio name</span>
+                        <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">Studio name</span>
                         <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-white px-4">
-                          <UserRound className="mr-3 size-5 text-teal-700" />
+                          <UserRound className="mr-3 size-5 text-primary" />
                           <Input value={studioName} onChange={(event) => setStudioName(event.target.value)} className="h-full flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
                         </span>
                       </Label>
                       <Label className="block">
-                        <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">Email</span>
+                        <span className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">Email</span>
                         <span className="mt-2 flex h-14 items-center border border-[#d7dedb] bg-white px-4">
-                          <Mail className="mr-3 size-5 text-teal-700" />
+                          <Mail className="mr-3 size-5 text-primary" />
                           <Input value={email} onChange={(event) => setEmail(event.target.value)} className="h-full flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" placeholder="you@example.com" />
                         </span>
                       </Label>
@@ -495,7 +495,7 @@ export default function GetStartedPage() {
                     </div>
                     <ValidationMessages messages={[...stepErrors, ...(publishError ? [publishError] : [])]} />
                     <div className="mt-8 flex flex-wrap gap-3">
-                      <Button type="button" size="lg" disabled={!canPublish || isPublishing} onClick={publishDraft} className="rounded-none bg-[#101418] px-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white hover:bg-teal-800 disabled:opacity-50">
+                      <Button type="button" size="lg" disabled={!canPublish || isPublishing} onClick={publishDraft} className="rounded-none bg-[#101418] px-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white hover:bg-primary/90 disabled:opacity-50">
                           {isPublishing ? "Publishing" : "Publish preview"}
                           <RadioTower className="size-4" aria-hidden="true" />
                       </Button>
@@ -513,12 +513,12 @@ export default function GetStartedPage() {
                   Back
                 </Button>
                 {step < steps.length - 1 ? (
-                  <Button type="button" onClick={nextStep} disabled={!canContinue} className="rounded-none bg-[#101418] font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
+                  <Button type="button" onClick={nextStep} disabled={!canContinue} className="rounded-none bg-[#101418] font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-primary/90">
                     Continue
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </Button>
                 ) : (
-                  <Button type="button" disabled={!canPublish || isPublishing} onClick={publishDraft} className="rounded-none bg-[#101418] font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800 disabled:opacity-50">
+                  <Button type="button" disabled={!canPublish || isPublishing} onClick={publishDraft} className="rounded-none bg-[#101418] font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-primary/90 disabled:opacity-50">
                     {isPublishing ? "Publishing" : "Publish"}
                     <RadioTower className="size-4" aria-hidden="true" />
                   </Button>
@@ -536,7 +536,7 @@ export default function GetStartedPage() {
                   ))}
                 </div>
                 <div className="border-t border-white/12 p-6">
-                  <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-300">Draft website</p>
+                  <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary-light">Draft website</p>
                   <h2 className="mt-4 font-display text-4xl font-light leading-none tracking-[-0.05em]">{studioName || "Your Studio"}</h2>
                   <dl className="mt-6 space-y-4 text-sm">
                     <SummaryRow label="Theme" value={selectedThemeName} />
@@ -558,7 +558,7 @@ export default function GetStartedPage() {
 function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (
     <div>
-      <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-teal-700">{eyebrow}</p>
+      <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-primary">{eyebrow}</p>
       <h2 className="pf-fluid-title-page mt-3 font-display font-light leading-none tracking-[-0.055em]">{title}</h2>
       <p className="mt-4 max-w-2xl text-sm leading-6 text-[#59636b]">{body}</p>
     </div>
@@ -568,7 +568,7 @@ function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: stri
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <article className="border border-[#d7dedb] bg-[#ffffff] p-5">
-      <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">{label}</p>
+      <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">{label}</p>
       <p className="mt-8 text-lg font-semibold">{value}</p>
     </article>
   );

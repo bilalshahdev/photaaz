@@ -1,3 +1,5 @@
+import { locales } from "@/i18n/locales";
+
 export const reservedSlugs = [
   "admin",
   "api",
@@ -7,8 +9,7 @@ export const reservedSlugs = [
   "get-started",
   "themes",
   "support",
-  "en",
-  "ur"
+  ...locales
 ] as const;
 
 export function isReservedSlug(slug: string) {

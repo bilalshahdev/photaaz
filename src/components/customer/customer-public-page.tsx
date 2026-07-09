@@ -2,7 +2,7 @@ import Image from "next/image";
 import { type ReactNode } from "react";
 import { ImageWatermark } from "@/components/customer/image-watermark";
 import { CustomerSiteFooter } from "@/components/customer/customer-site-footer";
-import { CustomerSiteNav } from "@/components/layout/customer-site-nav";
+import { CustomerNavProvider, CustomerSiteNav } from "@/components/layout/customer-site-nav";
 import { ScrollToTop } from "@/components/marketing/scroll-to-top";
 import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
 import { type AppLocale } from "@/i18n/locales";
@@ -86,31 +86,33 @@ export function CustomerPublicPage({ slug, locale, site, eyebrow, title, descrip
   const headerDescription = pageHeader?.description || description;
 
   return (
-    <main className={cn(surface.main, variant === "masonry" && "lg:pl-[260px]")}>
-      <section className={cn("relative min-h-[42vh] overflow-hidden text-white", headerImage ? "bg-[#15120f]" : solidHeaderClass(variant))}>
-        <CustomerSiteNav slug={slug} locale={locale} name={site.studioName} variant={variant} />
-        {headerImage ? (
-          <>
-            <Image src={headerImage} alt={heroImageAlt ?? `${site.studioName} cover`} fill priority className={cn(variant === "panorama" ? "pf-panorama-drift" : "pf-hero-drift", "object-cover opacity-58")} />
-            <ImageWatermark watermark={site.imageWatermark} className="bottom-5" />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,10,10,0.86),rgba(10,10,10,0.34))]" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(45,212,191,0.16),transparent_35%),linear-gradient(90deg,rgba(10,10,10,0.82),rgba(10,10,10,0.18))]" />
-        )}
-        <div className="relative mx-auto flex min-h-[42vh] max-w-6xl items-end px-5 pb-10 pt-24 sm:px-8 lg:px-10">
-          <div className="pf-reveal max-w-4xl">
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-white/70">{eyebrow}</p>
-            <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.05em] sm:text-7xl">{headerTitle}</h1>
-            {headerDescription ? <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 sm:text-lg sm:leading-8">{headerDescription}</p> : null}
+    <CustomerNavProvider>
+      <main className={cn(surface.main, variant === "masonry" && "lg:pl-[260px]")}>
+        <section className={cn("relative min-h-[42vh] overflow-hidden text-white", headerImage ? "bg-[#15120f]" : solidHeaderClass(variant))}>
+          <CustomerSiteNav slug={slug} locale={locale} name={site.studioName} variant={variant} />
+          {headerImage ? (
+            <>
+              <Image src={headerImage} alt={heroImageAlt ?? `${site.studioName} cover`} fill priority className={cn(variant === "panorama" ? "pf-panorama-drift" : "pf-hero-drift", "object-cover opacity-58")} />
+              <ImageWatermark watermark={site.imageWatermark} className="bottom-5" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,10,10,0.86),rgba(10,10,10,0.34))]" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(45,212,191,0.16),transparent_35%),linear-gradient(90deg,rgba(10,10,10,0.82),rgba(10,10,10,0.18))]" />
+          )}
+          <div className="relative mx-auto flex min-h-[42vh] max-w-6xl items-end px-5 pb-10 pt-24 sm:px-8 lg:px-10">
+            <div className="pf-reveal max-w-4xl">
+              <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-white/70">{eyebrow}</p>
+              <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.05em] sm:text-7xl">{headerTitle}</h1>
+              {headerDescription ? <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 sm:text-lg sm:leading-8">{headerDescription}</p> : null}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {children}
-      {site.sections?.footer !== false ? <CustomerSiteFooter slug={slug} locale={locale} site={site} variant={variant} /> : null}
-      <ScrollToTop />
-    </main>
+        {children}
+        {site.sections?.footer !== false ? <CustomerSiteFooter slug={slug} locale={locale} site={site} variant={variant} /> : null}
+        <ScrollToTop />
+      </main>
+    </CustomerNavProvider>
   );
 }
 

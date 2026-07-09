@@ -8,7 +8,7 @@ type CreateTenantInput = {
   categories?: string[];
   primaryType?: string;
   photoMode?: "sample" | "upload";
-  defaultLocale?: "en" | "ur";
+  defaultLocale?: string;
 };
 
 export async function createTenantForOwner({

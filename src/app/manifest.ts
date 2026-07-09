@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { resolveLocalizedString } from "@/i18n/locales";
 import { getPlatformAppConfig } from "@/services/admin/admin-data";
 
 function getIconType(src: string) {
@@ -13,7 +14,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     name: `${config.brandName} - Photography Portfolio Websites`,
     short_name: config.brandName,
-    description: config.footerText,
+    description: resolveLocalizedString(config.footerText, "en"),
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "themes": "Temas",
+    "features": "Recursos",
+    "blog": "Blog",
+    "pricing": "Preços",
+    "contact": "Contato",
+    "signIn": "Entrar",
+    "start": "Começar"
+  },
+  "home": {
+    "steps": ["Escolha o design", "Envie as fotos", "Publique o site"],
+    "stepNote": "Caminho simples para o lançamento",
+    "themesEyebrow": "Vitrine de temas",
+    "themesTitle": "Escolha o design com o qual seu portfólio começa.",
+    "themesBody": "Cada tema é uma experiência real de portfólio com prévia, capturas de tela e demonstração ao vivo. O tipo de fotografia é escolhido depois, durante a configuração inicial.",
+    "viewAllThemes": "Ver todos os temas",
+    "themeDetails": "Detalhes do tema",
+    "liveDemo": "Demonstração ao vivo",
+    "flow": ["Escolha o design", "Escolha o tipo de fotografia", "Publique o site"],
+    "flowNote": "O produto é simples: escolha o visual, adicione seu trabalho e publique.",
+    "featuresEyebrow": "O que fotógrafos podem publicar",
+    "featuresTitle": "Tudo o que você precisa para um portfólio público impecável.",
+    "pricingEyebrow": "Preços",
+    "pricingTitle": "Comece grátis, faça upgrade quando precisar de mais espaço.",
+    "perMonth": "/mês",
+    "faqEyebrow": "Perguntas frequentes",
+    "faqTitle": "Perguntas comuns antes de publicar.",
+    "faqBody": "Respostas curtas para fotógrafos criando um portfólio público pela primeira vez.",
+    "contactSuccess": "Pergunta salva. Ela aparecerá na caixa de suporte do administrador.",
+    "contactError": "Não foi possível salvar. Verifique sua conexão com o banco de dados local e tente novamente.",
+    "nameLabel": "Nome",
+    "namePlaceholder": "Seu nome",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "Mensagem",
+    "messagePlaceholder": "Fotografo casamentos e quero um portfólio com galerias, posts de blog e um domínio personalizado.",
+    "launchEyebrow": "Lance hoje",
+    "launchTitle": "Comece a construir seu site de fotografia."
+  },
+  "language": {
+    "select": "Selecionar idioma",
+    "english": "Inglês",
+    "spanish": "Espanhol",
+    "arabic": "Árabe",
+    "turkish": "Turco",
+    "hindi": "Hindi",
+    "portuguese": "Português",
+    "german": "Alemão",
+    "french": "Francês"
+  }
+}

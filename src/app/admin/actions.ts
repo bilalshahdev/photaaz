@@ -12,6 +12,7 @@ import { themeCustomizationKeys } from "@/config/theme-customization";
 import { fallbackLandingSettings } from "@/services/platform/platform-data";
 import { emailDeliverySettingKey, getEmailDeliverySettings } from "@/services/email/email-service";
 import type { LocalizedString, PlatformAnnouncementView, PlatformLandingSettings, PlatformPhotographyTypeView, PlatformThemeView } from "@/services/platform/platform-data";
+import { locales } from "@/i18n/locales";
 
 const localizedStringSchema = z.union([
   z.string().min(2),
@@ -239,6 +240,8 @@ const notificationSchema = z.object({
 
 const appConfigSchema = z.object({
   brandName: z.string().min(2),
+  brandFont: z.enum(["inter", "montserrat", "cormorant", "raleway", "whisper", "playfair", "poppins", "lato", "josefin", "garamond"]).optional().default("inter"),
+  brandFontSize: z.enum(["xs", "sm", "md", "lg", "xl", "2xl"]).optional().default("md"),
   signatureColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   faviconUrl: z.string().min(1),
   appleTouchIconUrl: z.string().min(1),
@@ -246,16 +249,17 @@ const appConfigSchema = z.object({
   seoKeywords: localizedStringListSchema,
   supportEmail: z.string().email(),
   salesEmail: z.string().email(),
-  footerText: z.string().min(2),
-  copyrightText: z.string().min(2),
+  footerText: localizedStringSchema,
+  copyrightText: localizedStringSchema,
   companyAddress: z.string().min(2),
-  dashboardNotice: z.string().optional(),
+  dashboardNotice: optionalLocalizedStringSchema,
   themeSwitchCooldownDays: z.coerce.number().int().min(0).max(365),
   media: z.object({
     maxImageUploadMb: z.coerce.number().int().min(1).max(50),
     platformBranding: z.object({
       enabled: z.boolean(),
       text: z.string().trim().min(1).max(40),
+      font: z.enum(["inter", "montserrat", "cormorant", "raleway", "whisper", "playfair", "poppins", "lato", "josefin", "garamond"]).optional().default("inter"),
       position: z.enum(["bottom-left", "bottom-center", "bottom-right", "center"]),
       size: z.enum(["small", "medium", "large"]),
       opacity: z.coerce.number().min(0.1).max(1),
@@ -312,13 +316,14 @@ const translationLocaleSchema = z.array(
 
 function revalidatePlatform() {
   revalidatePath("/");
-  revalidatePath("/ur");
-  revalidatePath("/themes");
-  revalidatePath("/ur/themes");
-  revalidatePath("/get-started");
-  revalidatePath("/ur/get-started");
   revalidatePath("/sitemap.xml");
   revalidatePath("/admin");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+    revalidatePath(`/${locale}/themes`);
+    revalidatePath(`/${locale}/get-started`);
+  }
 }
 
 function defaultLocalizedText(value: LocalizedString | null | undefined) {
@@ -884,7 +889,10 @@ export async function savePlanPackage(input: z.input<typeof planSchema>) {
 
   revalidatePath("/admin/packages");
   revalidatePath("/");
-  revalidatePath("/ur");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+  }
   revalidatePath("/admin");
 }
 
@@ -921,7 +929,10 @@ export async function createPlanPackage(input: z.input<typeof createPlanSchema>)
 
   revalidatePath("/admin/packages");
   revalidatePath("/");
-  revalidatePath("/ur");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+  }
   revalidatePath("/admin");
 }
 
@@ -941,7 +952,10 @@ export async function deletePlanPackage(id: string) {
 
   revalidatePath("/admin/packages");
   revalidatePath("/");
-  revalidatePath("/ur");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+  }
   revalidatePath("/admin");
 }
 
@@ -970,7 +984,10 @@ export async function saveFeature(input: z.input<typeof featureSchema>) {
   revalidatePath("/admin/features");
   revalidatePath("/admin/packages");
   revalidatePath("/");
-  revalidatePath("/ur");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+  }
 }
 
 export async function deleteFeature(id: string) {
@@ -983,7 +1000,10 @@ export async function deleteFeature(id: string) {
   revalidatePath("/admin/features");
   revalidatePath("/admin/packages");
   revalidatePath("/");
-  revalidatePath("/ur");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+  }
 }
 
 function slugifyKey(value: string) {
@@ -1169,9 +1189,114 @@ export async function savePlatformAppConfig(input: z.input<typeof appConfigSchem
     create: { key: "app_config", value }
   });
 
-  revalidatePath("/admin/settings");
   revalidatePath("/");
-  revalidatePath("/ur");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+  }
+}
+
+export type AdminAppConfigActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
+
+function parseBrandFont(v: FormDataEntryValue | null) {
+  const allowed = ["inter", "montserrat", "cormorant", "raleway", "whisper", "playfair", "poppins", "lato", "josefin", "garamond"] as const;
+  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "inter" as const;
+}
+function parseBrandFontSize(v: FormDataEntryValue | null) {
+  const allowed = ["xs", "sm", "md", "lg", "xl", "2xl"] as const;
+  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "md" as const;
+}
+function parseBrandingPositionValue(v: FormDataEntryValue | null) {
+  const allowed = ["bottom-left", "bottom-center", "bottom-right", "center"] as const;
+  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "bottom-right" as const;
+}
+function parseBrandingSizeValue(v: FormDataEntryValue | null) {
+  const allowed = ["small", "medium", "large"] as const;
+  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "small" as const;
+}
+function parseLocalizedField(v: FormDataEntryValue | null): Record<string, string> | string {
+  const raw = String(v ?? "");
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) return parsed;
+  } catch { /* not JSON, treat as plain string */ }
+  return raw ? { en: raw } : { en: "" };
+}
+function safeFloat(v: FormDataEntryValue | null, fallback: number, min: number, max: number) {
+  const n = parseFloat(String(v ?? ""));
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+export async function savePlatformAppConfigWithFeedback(
+  _state: AdminAppConfigActionState,
+  formData: FormData
+): Promise<AdminAppConfigActionState> {
+  try {
+    const seoKeywords = (() => {
+      try { return JSON.parse(String(formData.get("seoKeywords") ?? "{}")); } catch { return { en: [], ur: [] }; }
+    })();
+
+    await savePlatformAppConfig({
+      brandName: String(formData.get("brandName")),
+      brandFont: parseBrandFont(formData.get("brandFont")),
+      brandFontSize: parseBrandFontSize(formData.get("brandFontSize")),
+      signatureColor: String(formData.get("signatureColor")),
+      faviconUrl: String(formData.get("faviconUrl")),
+      appleTouchIconUrl: String(formData.get("appleTouchIconUrl")),
+      socialPreviewImageUrl: String(formData.get("socialPreviewImageUrl")),
+      seoKeywords,
+      supportEmail: String(formData.get("supportEmail")),
+      salesEmail: String(formData.get("salesEmail")),
+      footerText: parseLocalizedField(formData.get("footerText")),
+      copyrightText: parseLocalizedField(formData.get("copyrightText")),
+      companyAddress: String(formData.get("companyAddress")),
+      dashboardNotice: parseLocalizedField(formData.get("dashboardNotice")),
+      themeSwitchCooldownDays: Math.max(0, Math.min(365, parseInt(String(formData.get("themeSwitchCooldownDays") ?? "14"), 10) || 14)),
+      media: {
+        maxImageUploadMb: Math.max(1, Math.min(50, parseInt(String(formData.get("maxImageUploadMb") ?? "8"), 10) || 8)),
+        platformBranding: {
+          enabled: formData.get("platformBrandingEnabled") === "on",
+          text: String(formData.get("platformBrandingText")),
+          font: parseBrandFont(formData.get("platformBrandingFont")),
+          position: parseBrandingPositionValue(formData.get("platformBrandingPosition")),
+          size: parseBrandingSizeValue(formData.get("platformBrandingSize")),
+          opacity: safeFloat(formData.get("platformBrandingOpacity"), 0.9, 0.1, 1),
+          textColor: String(formData.get("platformBrandingTextColor")),
+          backgroundColor: String(formData.get("platformBrandingBackgroundColor")),
+          backgroundOpacity: safeFloat(formData.get("platformBrandingBackgroundOpacity"), 0.35, 0, 1),
+          borderColor: String(formData.get("platformBrandingBorderColor")),
+          borderOpacity: safeFloat(formData.get("platformBrandingBorderOpacity"), 0.18, 0, 1),
+        }
+      },
+      phone: {
+        label: String(formData.get("phoneLabel") || "Phone"),
+        value: String(formData.get("phoneValue") || ""),
+        enabled: formData.get("phoneEnabled") === "on"
+      },
+      creatorLink: {
+        label: String(formData.get("creatorLabel") || "Creator"),
+        href: String(formData.get("creatorHref") || ""),
+        enabled: formData.get("creatorEnabled") === "on"
+      },
+      socialLinks: {
+        instagram: { label: String(formData.get("instagramLabel") || "Instagram"), href: String(formData.get("instagramHref") || ""), enabled: formData.get("instagramEnabled") === "on" },
+        facebook: { label: String(formData.get("facebookLabel") || "Facebook"), href: String(formData.get("facebookHref") || ""), enabled: formData.get("facebookEnabled") === "on" },
+        youtube: { label: String(formData.get("youtubeLabel") || "YouTube"), href: String(formData.get("youtubeHref") || ""), enabled: formData.get("youtubeEnabled") === "on" },
+        linkedin: { label: String(formData.get("linkedinLabel") || "LinkedIn"), href: String(formData.get("linkedinHref") || ""), enabled: formData.get("linkedinEnabled") === "on" },
+        snapchat: { label: String(formData.get("snapchatLabel") || "Snapchat"), href: String(formData.get("snapchatHref") || ""), enabled: formData.get("snapchatEnabled") === "on" },
+      }
+    });
+
+    return { status: "success", message: "Platform configuration saved successfully." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Failed to save configuration. Please check all fields and try again."
+    };
+  }
 }
 
 export async function saveTranslationLocaleConfig(input: z.input<typeof translationLocaleSchema>) {
@@ -1203,8 +1328,10 @@ export async function saveTranslationLocaleConfig(input: z.input<typeof translat
   });
 
   revalidatePath("/");
-  revalidatePath("/ur");
-  revalidatePath("/themes");
-  revalidatePath("/ur/themes");
+  for (const locale of locales) {
+    if (locale === "en") continue;
+    revalidatePath(`/${locale}`);
+    revalidatePath(`/${locale}/themes`);
+  }
   revalidatePath("/admin/translations");
 }

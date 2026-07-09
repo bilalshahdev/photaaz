@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
 import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
 import { ImageWatermark } from "@/components/customer/image-watermark";
-import { Button } from "@/components/ui/button";
+import { useNavbarVisibility } from "@/components/layout/customer-site-nav";
 import { cn } from "@/lib/utils";
 import type { CustomerSiteGallery } from "@/services/tenant/customer-site-data";
 import type { EffectiveImageWatermark } from "@/services/platform/media-policy";
@@ -61,6 +61,9 @@ function buildPhotoEntries(galleries: CustomerSiteGallery[], variant: CustomerSi
 export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, imageWatermark, isDemo = false }: CustomerGalleryBrowserProps) {
   const variant = variantProp ?? resolveCustomerSiteThemeVariant(slug);
   const isDark = variant === "cinematic" || variant === "luxury" || variant === "monochrome";
+  const { isTopHidden, navbarHeight, setLocked } = useNavbarVisibility();
+  const filterBarRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const [activeGallery, setActiveGallery] = useState<string>("All");
   const [visiblePhotos, setVisiblePhotos] = useState(initialVisiblePhotos);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -120,8 +123,19 @@ export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [filteredEntries.length, hasMore]);
 
+  function scrollToContent() {
+    if (!sectionRef.current) return;
+    setLocked(true);
+    const sectionTop = sectionRef.current.getBoundingClientRect().top + window.scrollY;
+    const filterBarH = filterBarRef.current?.offsetHeight ?? 50;
+    const navOffset = isTopHidden ? 0 : navbarHeight;
+    window.scrollTo({ top: sectionTop - navOffset - filterBarH, behavior: "smooth" });
+    setTimeout(() => setLocked(false), 700);
+  }
+
   function selectGallery(gallery: string) {
     setActiveGallery(gallery);
+    scrollToContent();
   }
 
   function openViewer(photo: PhotoEntry) {
@@ -129,50 +143,34 @@ export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, 
     setViewerIndex(nextIndex >= 0 ? nextIndex : 0);
   }
 
-  const filterButtonIdle = isDark ? "border-white/20 bg-white/[0.06] text-white hover:bg-white/10" : "border-[#d7dedb] bg-white text-[#15120f] hover:bg-[#eef3ef]";
-  const filterButtonActive = "border-teal-700 bg-teal-700 text-white hover:bg-teal-700";
   const browserStyle = getGalleryBrowserStyle(variant, isDark);
-
-  const filterOffsetClass = variant === "masonry" ? "top-16 lg:top-0" : "top-16 sm:top-[4.5rem]";
+  const theme = getGalleryFilterTheme(variant, isDark);
+  // navbarHeight is measured from the actual rendered header element; 0 on masonry desktop (sidebar nav, no top bar)
+  const filterBarTop = isTopHidden ? "0px" : `${navbarHeight}px`;
 
   return (
     <>
-      <div className={cn("sticky z-20 border-b", filterOffsetClass, isDark ? "border-white/10 bg-[#090a0a] text-white" : "border-[#d7dedb] bg-[#f7f2ea] text-[#15120f]")}>
-        <div className="pf-reveal mx-auto flex max-w-6xl flex-col gap-3 px-5 py-3 sm:px-8 lg:px-10">
-          <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain no-scrollbar">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => selectGallery("All")}
-              className={cn("shrink-0 rounded-none border px-4 font-nav text-xs uppercase tracking-[0.2em]", activeGallery === "All" ? filterButtonActive : filterButtonIdle)}
-            >
+      <div ref={filterBarRef} className={cn("sticky z-20 w-full border-b", theme.bar)} style={{ top: filterBarTop, transition: "top 300ms ease-out" }}>
+        <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
+          <div className={cn("pf-reveal flex overflow-x-auto overscroll-x-contain no-scrollbar", theme.row)}>
+            <button type="button" onClick={() => selectGallery("All")} className={cn(theme.btn, activeGallery === "All" ? theme.active : theme.idle)}>
               All galleries
-            </Button>
+            </button>
             {galleries.map((gallery, index) => (
-              <Button
-                key={`${gallery.title}-${gallery.photos?.[0]?.image ?? gallery.title}-${index}`}
+              <button
+                key={`${gallery.title}-${index}`}
                 type="button"
-                variant="outline"
                 onClick={() => selectGallery(gallery.title)}
-                className={cn("shrink-0 rounded-none border px-4 font-nav text-xs uppercase tracking-[0.2em]", activeGallery === gallery.title ? filterButtonActive : filterButtonIdle)}
+                className={cn(theme.btn, activeGallery === gallery.title ? theme.active : theme.idle)}
               >
                 {gallery.title}
-              </Button>
+              </button>
             ))}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm opacity-62">
-              {visibleEntries.length} of {filteredEntries.length} photographs
-            </p>
-            {activeGallery !== "All" ? (
-              <p className="font-nav text-xs font-semibold uppercase tracking-[0.18em] opacity-60">{activeGallery}</p>
-            ) : null}
           </div>
         </div>
       </div>
 
-      <section className={cn("mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-10", isDark && "bg-black text-white")}>
+      <section ref={sectionRef} className={cn("mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-10", isDark && "bg-black text-white")}>
         {visibleEntries.length ? (
           <div className={cn("pf-stagger", browserStyle.grid)}>
             {visibleEntries.map((photo, index) => (
@@ -240,6 +238,79 @@ export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, 
   );
 }
 
+type FilterTheme = {
+  bar: string;
+  row: string;
+  btn: string;
+  idle: string;
+  active: string;
+};
+
+function getGalleryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolean): FilterTheme {
+  switch (variant) {
+    case "luxury":
+      return {
+        bar: "bg-[#0d0c09]/90 text-[#fbf4e8] backdrop-blur-md",
+        row: "justify-center gap-2 py-3",
+        btn: "shrink-0 rounded-full border px-5 py-2 font-nav text-xs font-semibold uppercase tracking-[0.26em] transition-colors",
+        idle: "border-[rgba(216,191,136,0.25)] bg-transparent text-[#fbf4e8]/75 hover:border-[rgba(216,191,136,0.55)] hover:text-[#fbf4e8]",
+        active: "border-[#d8bf88] bg-[#d8bf88] text-[#0d0c09]",
+      };
+    case "monochrome":
+      return {
+        bar: "bg-black/90 text-white backdrop-blur-md",
+        row: "gap-0",
+        btn: "shrink-0 border-0 border-r border-white/10 px-5 py-3.5 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition-colors last:border-r-0",
+        idle: "bg-transparent text-white/55 hover:bg-white/5 hover:text-white/90",
+        active: "bg-white/12 text-white",
+      };
+    case "cinematic":
+      return {
+        bar: "bg-black/90 text-white backdrop-blur-md",
+        row: "gap-0",
+        btn: "shrink-0 border-0 border-b-2 px-5 py-3 font-nav text-xs font-semibold uppercase tracking-[0.2em] transition-colors",
+        idle: "border-transparent text-white/60 hover:text-white/90",
+        active: "border-teal-400 text-teal-300",
+      };
+    case "editorial":
+      return {
+        bar: "bg-[#f8f1e8]/90 text-[#211917] backdrop-blur-md",
+        row: "gap-6 py-2",
+        btn: "shrink-0 border-0 border-b-2 px-1 py-2.5 font-display text-sm tracking-[-0.01em] transition-colors",
+        idle: "border-transparent text-[#5c524c] hover:text-[#211917]",
+        active: "border-[#9a4f32] text-[#9a4f32] font-medium",
+      };
+    case "masonry":
+      return {
+        bar: "bg-white/90 text-[#101418] backdrop-blur-md",
+        row: "gap-1.5 py-2.5",
+        btn: "shrink-0 rounded-full border px-4 py-1.5 font-nav text-xs font-semibold uppercase tracking-[0.14em] transition-colors",
+        idle: "border-[#d9dfdc] bg-transparent text-[#38424a]/80 hover:bg-[#eef3ef]",
+        active: "border-teal-700 bg-teal-700 text-white",
+      };
+    case "panorama":
+      return {
+        bar: "bg-[#e4e9e2]/90 text-[#17201c] backdrop-blur-md",
+        row: "gap-3 py-3",
+        btn: "shrink-0 border-0 border-b px-4 py-2.5 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition-colors",
+        idle: "border-transparent text-[#17201c]/60 hover:text-[#17201c]",
+        active: "border-teal-700 text-teal-700",
+      };
+    default:
+      return {
+        bar: isDark
+          ? "bg-[#090a0a]/90 text-white backdrop-blur-md"
+          : "bg-[#f7f2ea]/90 text-[#15120f] backdrop-blur-md",
+        row: "gap-2 py-3",
+        btn: "shrink-0 border px-4 py-2.5 font-nav text-xs font-semibold uppercase tracking-[0.18em] transition-colors",
+        idle: isDark
+          ? "border-white/[0.15] bg-transparent text-white/60 hover:bg-white/5 hover:text-white/90"
+          : "border-[#d7dedb] bg-transparent text-[#15120f]/75 hover:bg-[#eef3ef] hover:text-[#15120f]",
+        active: isDark ? "border-white bg-white text-black" : "border-teal-700 bg-teal-700 text-white",
+      };
+  }
+}
+
 function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boolean) {
   if (variant === "monochrome") {
     return {
@@ -255,11 +326,11 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "panorama") {
     return {
-      grid: "grid gap-5 lg:grid-cols-2",
-      card: "rounded-[1.35rem] border-[#cbd3cd] bg-white/75 p-2 shadow-[0_18px_50px_rgba(23,32,28,0.08)]",
-      aspect: () => "aspect-[18/9]",
-      image: "rounded-[1rem]",
-      body: "grid gap-2 px-3 pb-3 pt-4 sm:grid-cols-[1fr_auto] sm:items-end",
+      grid: "grid gap-6 lg:grid-cols-2",
+      card: "rounded-[1.5rem] border-[#cbd3cd] bg-white/90 p-3 shadow-[0_20px_60px_rgba(23,32,28,0.12)]",
+      aspect: () => "aspect-[21/9]",
+      image: "rounded-[1.25rem]",
+      body: "grid gap-2 px-4 pb-4 pt-5 sm:grid-cols-[1fr_auto] sm:items-end",
       title: "font-display text-2xl font-light tracking-[-0.05em]",
       meta: "font-nav text-[10px] font-semibold uppercase tracking-[0.22em] text-teal-700"
     };
@@ -267,11 +338,11 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "luxury") {
     return {
-      grid: "grid gap-5 md:grid-cols-2 xl:grid-cols-3",
-      card: "border-[rgba(216,191,136,0.25)] bg-[#1a1814] text-[#fbf4e8]",
+      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      card: "border-[rgba(216,191,136,0.3)] bg-[#1a1814] text-[#fbf4e8] shadow-[0_8px_32px_rgba(216,191,136,0.08)]",
       aspect: (index: number) => (index % 3 === 1 ? "aspect-square" : "aspect-[4/5]"),
       image: "saturate-90",
-      body: "p-4 text-center",
+      body: "p-5 text-center",
       title: "font-display text-2xl font-light tracking-[-0.05em]",
       meta: "mt-3 font-nav text-[10px] font-semibold uppercase tracking-[0.24em] text-[#d8bf88]"
     };
@@ -279,18 +350,42 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "editorial") {
     return {
-      grid: "grid gap-5 md:grid-cols-2 xl:grid-cols-3",
-      card: "border-[#ddcdbf] bg-[#fffaf2]",
+      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      card: "border-[#ddcdbf] bg-[#fffaf2] shadow-sm",
       aspect: (index: number) => (index % 4 === 0 ? "aspect-[16/11]" : "aspect-[4/5]"),
       image: "",
-      body: "p-4",
+      body: "p-5",
       title: "font-display text-2xl font-light tracking-[-0.05em]",
       meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9a4f32]"
     };
   }
 
+  if (variant === "masonry") {
+    return {
+      grid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+      card: "border-[#d9dfdc] bg-white",
+      aspect: () => "aspect-square",
+      image: "",
+      body: "p-3",
+      title: "font-display text-lg font-light tracking-[-0.04em]",
+      meta: "mt-1 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-700"
+    };
+  }
+
+  if (variant === "cinematic") {
+    return {
+      grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+      card: "border-white/5 bg-white/5",
+      aspect: () => "aspect-[4/5]",
+      image: "contrast-125 brightness-90",
+      body: "border-t border-white/10 p-4",
+      title: "font-display text-2xl font-light tracking-[-0.05em]",
+      meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.22em] text-teal-300"
+    };
+  }
+
   return {
-    grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+    grid: "grid gap-5 sm:grid-cols-2 lg:grid-cols-3",
     card: isDark ? "border-white/10 bg-white/5" : "border-[#d7dedb] bg-white",
     aspect: () => "aspect-[4/5]",
     image: "",

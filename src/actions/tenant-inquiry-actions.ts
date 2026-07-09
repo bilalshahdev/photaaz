@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { locales } from "@/i18n/locales";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/services/email/email-service";
@@ -86,8 +87,9 @@ export async function createTenantVisitorInquiry(formData: FormData) {
   }
 
   revalidatePath(`/site/${tenant.slug}/dashboard/support`);
-  revalidatePath(`/en/site/${tenant.slug}/dashboard/support`);
-  revalidatePath(`/ur/site/${tenant.slug}/dashboard/support`);
+  for (const locale of locales) {
+    revalidatePath(`/${locale}/site/${tenant.slug}/dashboard/support`);
+  }
 }
 
 export async function updateTenantInquiryStatus(formData: FormData) {
@@ -117,8 +119,9 @@ export async function updateTenantInquiryStatus(formData: FormData) {
   });
 
   revalidatePath(`/site/${tenant.slug}/dashboard/support`);
-  revalidatePath(`/en/site/${tenant.slug}/dashboard/support`);
-  revalidatePath(`/ur/site/${tenant.slug}/dashboard/support`);
+  for (const locale of locales) {
+    revalidatePath(`/${locale}/site/${tenant.slug}/dashboard/support`);
+  }
 }
 
 function optionalString(value: FormDataEntryValue | null) {

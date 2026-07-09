@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { brandFontKeys, type BrandFont } from "@/lib/brand-fonts";
 
 export type ImageWatermarkPosition = "bottom-left" | "bottom-center" | "bottom-right" | "center";
 export type ImageWatermarkSize = "small" | "medium" | "large";
@@ -8,6 +9,7 @@ export type PlatformMediaPolicy = {
   platformBranding: {
     enabled: boolean;
     text: string;
+    font: BrandFont;
     position: ImageWatermarkPosition;
     size: ImageWatermarkSize;
     opacity: number;
@@ -22,6 +24,7 @@ export type PlatformMediaPolicy = {
 export type TenantWatermarkSettings = {
   enabled: boolean;
   text: string;
+  font: BrandFont;
   position: ImageWatermarkPosition;
   size: ImageWatermarkSize;
   opacity: number;
@@ -35,6 +38,7 @@ export type TenantWatermarkSettings = {
 export type EffectiveImageWatermark = {
   enabled: boolean;
   text: string;
+  font: BrandFont;
   position: ImageWatermarkPosition;
   size: ImageWatermarkSize;
   opacity: number;
@@ -51,6 +55,7 @@ export const defaultPlatformMediaPolicy: PlatformMediaPolicy = {
   platformBranding: {
     enabled: true,
     text: "Photaaz",
+    font: "inter",
     position: "bottom-right",
     size: "small",
     opacity: 0.9,
@@ -65,6 +70,7 @@ export const defaultPlatformMediaPolicy: PlatformMediaPolicy = {
 export const defaultTenantWatermarkSettings: TenantWatermarkSettings = {
   enabled: false,
   text: "",
+  font: "inter",
   position: "bottom-right",
   size: "small",
   opacity: 0.9,
@@ -89,6 +95,7 @@ export async function getPlatformMediaPolicy(): Promise<PlatformMediaPolicy> {
     platformBranding: {
       enabled: readBoolean(branding.enabled, defaultPlatformMediaPolicy.platformBranding.enabled),
       text: readString(branding.text) ?? defaultPlatformMediaPolicy.platformBranding.text,
+      font: readEnum(branding.font, brandFontKeys, defaultPlatformMediaPolicy.platformBranding.font),
       position: readEnum(branding.position, ["bottom-left", "bottom-center", "bottom-right", "center"], defaultPlatformMediaPolicy.platformBranding.position),
       size: readEnum(branding.size, ["small", "medium", "large"], defaultPlatformMediaPolicy.platformBranding.size),
       opacity: readNumber(branding.opacity, defaultPlatformMediaPolicy.platformBranding.opacity, 0.1, 1),
@@ -128,6 +135,7 @@ export function resolveEffectiveImageWatermark({
     return {
       enabled: true,
       text: platformPolicy.platformBranding.text.trim(),
+      font: platformPolicy.platformBranding.font,
       position: platformPolicy.platformBranding.position,
       size: platformPolicy.platformBranding.size,
       opacity: platformPolicy.platformBranding.opacity,
@@ -149,6 +157,7 @@ export function normalizeTenantWatermark(value: unknown): TenantWatermarkSetting
   return {
     enabled: readBoolean(watermark.enabled, defaultTenantWatermarkSettings.enabled),
     text: readString(watermark.text) ?? defaultTenantWatermarkSettings.text,
+    font: readEnum(watermark.font, brandFontKeys, defaultTenantWatermarkSettings.font),
     position: readEnum(watermark.position, ["bottom-left", "bottom-center", "bottom-right", "center"], defaultTenantWatermarkSettings.position),
     size: readEnum(watermark.size, ["small", "medium", "large"], defaultTenantWatermarkSettings.size),
     opacity: readNumber(watermark.opacity, defaultTenantWatermarkSettings.opacity, 0.1, 1),

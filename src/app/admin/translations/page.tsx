@@ -1,12 +1,12 @@
 import { Languages } from "lucide-react";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveTranslationLocaleConfig } from "@/app/admin/actions";
 import { getTranslationLocaleConfig } from "@/services/admin/admin-data";
+import { TranslationsFormButton } from "./translations-form-button";
 
 export default async function AdminTranslationsPage() {
   const locales = await getTranslationLocaleConfig();
@@ -38,14 +38,11 @@ export default async function AdminTranslationsPage() {
             className="grid gap-4"
           >
             {locales.map((locale) => (
-              <section key={locale.code} className="grid gap-4 border border-slate-200 p-4 lg:grid-cols-[0.35fr_0.2fr_0.2fr_0.25fr] lg:items-center">
+              <section key={locale.code} className="grid gap-4 rounded-md border border-slate-200 p-4 lg:grid-cols-[0.35fr_0.2fr_0.2fr_0.25fr] lg:items-center">
                 <div>
                   <p className="font-semibold">{locale.label}</p>
                   <p className="mt-1 text-sm text-slate-500">
                     {locale.nativeLabel} - /{locale.code} - {locale.direction.toUpperCase()}
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-slate-500">
-                    This locale is predefined in the codebase. Add new languages in code before admins can enable them.
                   </p>
                 </div>
 
@@ -56,7 +53,7 @@ export default async function AdminTranslationsPage() {
 
                 <Label className="text-sm font-medium text-slate-700">
                   Charge in cents
-                  <div className="mt-1 flex h-10 border border-slate-200">
+                  <div className="mt-1 flex h-10 rounded-md border border-slate-200">
                     <span className="flex items-center border-r border-slate-200 px-3 text-slate-500">cents</span>
                     <Input
                       name={`${locale.code}:priceCents`}
@@ -81,12 +78,11 @@ export default async function AdminTranslationsPage() {
               </section>
             ))}
 
-            <Button type="submit" className="h-11 w-fit bg-slate-950 px-5 font-nav text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-teal-800">
-              Save translation settings
-            </Button>
+            <div className="sticky bottom-4 z-20 flex justify-end">
+              <TranslationsFormButton />
+            </div>
           </form>
         </AdminPanel>
     </AdminPage>
   );
 }
-

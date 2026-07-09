@@ -7,9 +7,9 @@ import { MarketingHeader } from "@/components/layout/marketing-header";
 import { MarketingContainer } from "@/components/layout/marketing-container";
 import { Button } from "@/components/ui/button";
 import { getPlatformBlogArticle, getPlatformBlogArticles } from "@/data/platform-blog";
-import { getMessages, isLocale, localizePath, resolveLocalizedString, resolveLocalizedStringList, type AppLocale } from "@/i18n/locales";
+import { getMessages, isLocale, locales, localizePath, resolveLocalizedString, resolveLocalizedStringList, type AppLocale } from "@/i18n/locales";
 import { createMetadata, getLocalizedSeoUrl } from "@/lib/seo";
-import { getEnabledTranslationLocales } from "@/services/admin/admin-data";
+import { getEnabledTranslationLocales, getPlatformAppConfig } from "@/services/admin/admin-data";
 
 type PlatformBlogArticlePageProps = {
   params: Promise<{ locale: string; slug: string }>;
@@ -18,10 +18,9 @@ type PlatformBlogArticlePageProps = {
 export const revalidate = 3600;
 
 export function generateStaticParams() {
-  return getPlatformBlogArticles().flatMap((article) => [
-    { locale: "en", slug: article.slug },
-    { locale: "ur", slug: article.slug }
-  ]);
+  return getPlatformBlogArticles().flatMap((article) =>
+    locales.map((locale) => ({ locale, slug: article.slug }))
+  );
 }
 
 export async function generateMetadata({ params }: PlatformBlogArticlePageProps): Promise<Metadata> {
@@ -53,7 +52,7 @@ export default async function PlatformBlogArticlePage({ params }: PlatformBlogAr
     notFound();
   }
 
-  const [enabledLocales] = await Promise.all([getEnabledTranslationLocales()]);
+  const [enabledLocales, appConfig] = await Promise.all([getEnabledTranslationLocales(), getPlatformAppConfig()]);
   const messages = getMessages(locale);
   const title = resolveLocalizedString(article.title, locale);
   const excerpt = resolveLocalizedString(article.excerpt, locale);
@@ -79,12 +78,12 @@ export default async function PlatformBlogArticlePage({ params }: PlatformBlogAr
 
   return (
     <>
-      <MarketingHeader locale={locale} messages={messages} variant="solid" enabledLocales={enabledLocales} />
+      <MarketingHeader locale={locale} messages={messages} variant="solid" enabledLocales={enabledLocales} brandName={appConfig.brandName} brandFontSize={appConfig.brandFontSize} />
       <main className="bg-[#f7f8f6] text-[#101418]">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
         <article>
           <MarketingContainer className="py-12 sm:py-16">
-            <Button asChild variant="ghost" className="rounded-none px-0 font-nav text-xs uppercase tracking-[0.18em] hover:bg-transparent hover:text-teal-700">
+            <Button asChild variant="ghost" className="rounded-none px-0 font-nav text-xs uppercase tracking-[0.18em] hover:bg-transparent hover:text-primary">
               <Link href={localizePath(locale, "/blog")}>
                 <ArrowLeft className="size-4" aria-hidden="true" />
                 Back to blog
@@ -93,7 +92,7 @@ export default async function PlatformBlogArticlePage({ params }: PlatformBlogAr
 
             <header className="mt-8 grid gap-8 border-b border-[#d7dedb] pb-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] lg:items-end">
               <div>
-                <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-700">
+                <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-primary">
                   {new Intl.DateTimeFormat(locale, { month: "long", day: "numeric", year: "numeric" }).format(new Date(article.publishedAt))} / {article.readTime}
                 </p>
                 <h1 className="mt-4 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.06em] sm:text-7xl">

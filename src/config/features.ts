@@ -1,28 +1,86 @@
 export const featureKeys = [
-  "blogs",
-  "customDomains",
-  "premiumThemes",
-  "watermarks",
-  "clientProofing",
+  // Core platform
+  "adminDashboard",
+  "responsiveDesign",
+
+  // Content limits
   "photos.total",
-  "heroImages.total",
-  "pageHeaderImages",
   "photos.perCategory",
+  "photos.perGallery",
+  "heroImages.total",
+  "galleries.total",
   "categories.total",
   "subcategories.perCategory",
-  "galleries.total",
-  "photos.perGallery",
+  "blogs",
+  "categoryRequests.total",
+
+  // Appearance & branding
+  "premiumThemes",
   "premiumThemes.limit",
   "themeComponents",
   "advancedCustomization",
+  "pageHeaderImages",
+  "watermarks",
+
+  // Domain & localization
+  "customDomains",
   "anyLanguageLocalization",
-  "freeMaintenance.months",
-  "adminDashboard",
-  "responsiveDesign",
-  "categoryRequests.total"
+
+  // Ownership extras
+  "freeMaintenance.months"
 ] as const;
 
 export type FeatureKey = (typeof featureKeys)[number];
+
+/** Features that are just on/off toggles — no numeric limit input should be shown. */
+export const booleanOnlyFeatures: ReadonlySet<string> = new Set([
+  "adminDashboard",
+  "responsiveDesign",
+  "premiumThemes",
+  "themeComponents",
+  "advancedCustomization",
+  "pageHeaderImages",
+  "watermarks",
+  "customDomains",
+  "anyLanguageLocalization"
+]);
+
+/** Preferred display order for features in the package editor. Features not listed appear at the end. */
+export const featureDisplayOrder: readonly string[] = [
+  // Core platform
+  "adminDashboard",
+  "responsiveDesign",
+
+  // Photo & media limits
+  "photos.total",
+  "photos.perCategory",
+  "photos.perGallery",
+  "heroImages.total",
+
+  // Organization limits
+  "galleries.total",
+  "categories.total",
+  "subcategories.perCategory",
+  "categoryRequests.total",
+
+  // Content
+  "blogs",
+
+  // Themes & appearance
+  "premiumThemes",
+  "premiumThemes.limit",
+  "themeComponents",
+  "advancedCustomization",
+  "pageHeaderImages",
+  "watermarks",
+
+  // Domain & localization
+  "customDomains",
+  "anyLanguageLocalization",
+
+  // Ownership
+  "freeMaintenance.months"
+];
 
 export const defaultPlanFeatures: Record<string, Partial<Record<FeatureKey, boolean>>> = {
   free: {
@@ -30,7 +88,6 @@ export const defaultPlanFeatures: Record<string, Partial<Record<FeatureKey, bool
     customDomains: false,
     premiumThemes: false,
     watermarks: false,
-    clientProofing: false,
     "photos.total": true,
     "heroImages.total": true,
     pageHeaderImages: false,
@@ -50,7 +107,6 @@ export const defaultPlanFeatures: Record<string, Partial<Record<FeatureKey, bool
     customDomains: true,
     premiumThemes: true,
     watermarks: false,
-    clientProofing: false,
     "photos.total": true,
     "heroImages.total": true,
     pageHeaderImages: true,
@@ -73,7 +129,6 @@ export const defaultPlanFeatures: Record<string, Partial<Record<FeatureKey, bool
     customDomains: true,
     premiumThemes: true,
     watermarks: true,
-    clientProofing: true,
     "photos.total": true,
     "heroImages.total": true,
     pageHeaderImages: true,
@@ -96,7 +151,6 @@ export const defaultPlanFeatures: Record<string, Partial<Record<FeatureKey, bool
     customDomains: true,
     premiumThemes: true,
     watermarks: true,
-    clientProofing: true,
     "photos.total": true,
     "heroImages.total": true,
     pageHeaderImages: true,

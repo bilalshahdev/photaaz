@@ -92,7 +92,7 @@ export default async function AdminModerationPage() {
                 <form action={moderateBlog.bind(null, blog.id)} className="mt-4 grid gap-3">
                   <Textarea name="moderationNote" defaultValue={blog.moderationNote ?? ""} placeholder="Moderation note" className="min-h-20 text-sm" />
                   <div className="grid grid-cols-2 gap-2">
-                    <Button name="status" value="APPROVED" className="h-10 bg-teal-700 px-3 text-sm font-semibold text-white hover:bg-teal-800">
+                    <Button name="status" value="APPROVED" className="h-10 bg-primary px-3 text-sm font-semibold text-white hover:bg-primary/90">
                       Approve
                     </Button>
                     <Button name="status" value="REJECTED" className="h-10 bg-red-600 px-3 text-sm font-semibold text-white hover:bg-red-700">
@@ -136,7 +136,7 @@ export default async function AdminModerationPage() {
                 <form action={moderatePhoto.bind(null, photo.id)} className="grid gap-3">
                   <Textarea name="moderationNote" defaultValue={photo.moderationNote ?? ""} placeholder="Moderation note" className="min-h-20 text-sm" />
                   <div className="grid grid-cols-3 gap-2">
-                    <Button name="status" value="APPROVED" className="h-10 bg-teal-700 px-3 text-sm font-semibold text-white hover:bg-teal-800">
+                    <Button name="status" value="APPROVED" className="h-10 bg-primary px-3 text-sm font-semibold text-white hover:bg-primary/90">
                       Approve
                     </Button>
                     <Button name="status" value="FLAGGED" className="h-10 bg-amber-500 px-3 text-sm font-semibold text-white hover:bg-amber-600">
@@ -182,7 +182,7 @@ function statusClass(status: string) {
   const base = "inline-flex rounded-full px-3 py-1 text-xs font-semibold";
   switch (status) {
     case "APPROVED":
-      return `${base} bg-teal-50 text-teal-800`;
+      return `${base} bg-primary/5 text-primary`;
     case "REJECTED":
       return `${base} bg-red-50 text-red-700`;
     case "FLAGGED":

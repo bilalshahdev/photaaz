@@ -1,10 +1,10 @@
-import { Mail, Save, Send } from "lucide-react";
+import { Mail, Send } from "lucide-react";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
 import { CheckboxField, SelectField, TextareaField, TextField } from "@/components/forms/form-controls";
-import { Button } from "@/components/ui/button";
 import { saveEmailDeliverySettings, saveEmailSetting } from "@/app/admin/actions";
 import { getAdminEmailDeliverySettings, getAdminEmailSettings } from "@/services/admin/admin-data";
 import type { EmailDeliveryProvider, EmailEncryption } from "@/services/email/email-service";
+import { EmailDeliveryButton, EmailSettingButton } from "./email-form-button";
 
 export default async function AdminEmailsPage() {
   const [settings, delivery] = await Promise.all([
@@ -106,11 +106,8 @@ export default async function AdminEmailsPage() {
             </section>
           </div>
 
-          <div className="flex justify-end">
-            <Button type="submit" className="h-11 bg-slate-950 px-5 font-semibold text-white hover:bg-teal-800">
-              <Save className="size-4" aria-hidden="true" />
-              Save delivery
-            </Button>
+          <div className="sticky bottom-4 z-20 flex justify-end">
+            <EmailDeliveryButton />
           </div>
         </form>
       </AdminPanel>
@@ -132,11 +129,11 @@ export default async function AdminEmailsPage() {
               }}
               className="grid gap-3 rounded-lg border border-slate-200 p-4"
             >
-              <TextField name="label" label="Label" defaultValue={setting.label} />
-              <TextField name="category" label="Category" defaultValue={setting.category} />
-              <TextareaField name="description" label="Description" defaultValue={setting.description ?? ""} className="min-h-20 resize-y" />
+              <TextField name="label" label="Label" defaultValue={setting.label} placeholder="Email name" />
+              <TextField name="category" label="Category" defaultValue={setting.category} placeholder="Category name" />
+              <TextareaField name="description" label="Description" defaultValue={setting.description ?? ""} placeholder="What this email does" className="min-h-20 resize-y" />
               <CheckboxField name="enabled" defaultChecked={setting.enabled} label="Email enabled" controlPosition="right" />
-              <Button type="submit" className="h-10 font-nav text-xs uppercase tracking-[0.18em]">Save setting</Button>
+              <EmailSettingButton />
             </form>
           ))}
         </div>

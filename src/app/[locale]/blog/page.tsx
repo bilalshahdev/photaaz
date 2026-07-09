@@ -9,7 +9,7 @@ import { getPlatformBlogArticles } from "@/data/platform-blog";
 import { getMessages, localizePath, resolveLocalizedString } from "@/i18n/locales";
 import { getRequestLocale } from "@/i18n/server";
 import { createMetadata, getLocalizedSeoUrl } from "@/lib/seo";
-import { getEnabledTranslationLocales } from "@/services/admin/admin-data";
+import { getEnabledTranslationLocales, getPlatformAppConfig } from "@/services/admin/admin-data";
 
 export const revalidate = 3600;
 
@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PlatformBlogPage() {
-  const [locale, enabledLocales] = await Promise.all([getRequestLocale(), getEnabledTranslationLocales()]);
+  const [locale, enabledLocales, appConfig] = await Promise.all([getRequestLocale(), getEnabledTranslationLocales(), getPlatformAppConfig()]);
   const articles = getPlatformBlogArticles();
   const messages = getMessages(locale);
   const blogJsonLd = {
@@ -46,12 +46,12 @@ export default async function PlatformBlogPage() {
 
   return (
     <>
-      <MarketingHeader locale={locale} messages={messages} variant="solid" enabledLocales={enabledLocales} />
+      <MarketingHeader locale={locale} messages={messages} variant="solid" enabledLocales={enabledLocales} brandName={appConfig.brandName} brandFontSize={appConfig.brandFontSize} />
       <main className="bg-[#f7f8f6] text-[#101418]">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }} />
         <MarketingContainer className="py-16 sm:py-20">
           <div className="border-b border-[#d7dedb] pb-8">
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-teal-700">Photography business notes</p>
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.24em] text-primary">Photography business notes</p>
             <h1 className="mt-4 max-w-4xl font-display text-5xl font-light leading-none tracking-[-0.06em] sm:text-7xl">
               Guides for cleaner photographer websites.
             </h1>
@@ -73,7 +73,7 @@ export default async function PlatformBlogPage() {
                   />
                 </Link>
                 <div className="flex flex-1 flex-col p-5">
-                  <p className="font-nav text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
+                  <p className="font-nav text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                     {new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(new Date(article.publishedAt))} / {article.readTime}
                   </p>
                   <h2 className="mt-4 font-display text-3xl font-light leading-tight tracking-[-0.04em]">

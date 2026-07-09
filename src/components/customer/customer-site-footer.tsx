@@ -54,14 +54,17 @@ export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSite
       <div
         className={cn(
           "grid gap-10 border-t pt-8",
+          variant === "cinematic" && "border-white/10 lg:grid-cols-[1fr_0.7fr_0.8fr]",
           variant === "luxury" && "border-[rgba(216,191,136,0.28)] text-center lg:grid-cols-[1fr_0.55fr_1fr] lg:text-left",
           variant === "monochrome" && "border-white/10 lg:grid-cols-[1.1fr_1fr_1fr]",
           variant === "panorama" && "rounded-t-[2rem] border-[#cbd3cd] bg-white/45 p-8 lg:grid-cols-[1.15fr_0.7fr_0.9fr]",
-          !["luxury", "monochrome", "panorama"].includes(variant) && cn("lg:grid-cols-[1.2fr_0.7fr_0.8fr]", isDark ? "border-white/10" : "border-current/10")
+          variant === "editorial" && "border-[#ddcdbf] lg:grid-cols-[1.2fr_0.6fr_0.8fr]",
+          variant === "masonry" && "border-[#d9dfdc] lg:grid-cols-[1fr_1fr]",
+          !["cinematic", "luxury", "monochrome", "panorama", "editorial", "masonry"].includes(variant) && cn("lg:grid-cols-[1.2fr_0.7fr_0.8fr]", isDark ? "border-white/10" : "border-current/10")
         )}
       >
         <div>
-          <p className="font-display text-3xl font-light tracking-[-0.05em]">{site.studioName}</p>
+          <p className={cn("font-display text-3xl font-light tracking-[-0.05em]", variant === "editorial" && "text-2xl", variant === "masonry" && "text-xl", variant === "cinematic" && "text-2xl")}>{site.studioName}</p>
           <p className={cn("mt-3 max-w-xl text-sm leading-6", tone.muted)}>{site.tagline}</p>
           <div className={cn("mt-6 grid gap-3 text-sm", tone.muted)}>
             <span className="inline-flex items-center gap-2">
@@ -80,7 +83,7 @@ export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSite
         </div>
         <div>
           <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>Pages</p>
-          <nav className={cn("mt-4 grid font-nav text-[10px] font-semibold uppercase tracking-[0.2em]", variant === "luxury" ? "gap-3" : "gap-2")}>
+          <nav className={cn("mt-4 grid font-nav text-[10px] font-semibold uppercase tracking-[0.2em]", variant === "luxury" ? "gap-3" : "gap-2", variant === "masonry" && "grid-cols-2", variant === "cinematic" && "gap-3")}>
             {links.map((link) => (
               <Link key={link.label} href={link.href} className={cn("transition hover:opacity-60", tone.accent)}>
                 {link.label}
@@ -88,24 +91,26 @@ export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSite
             ))}
           </nav>
         </div>
-        <div>
-          <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>Social</p>
-          {socialLinks.length ? (
-            <div className={cn("mt-4 flex flex-wrap gap-2", variant === "luxury" && "justify-center lg:justify-start")}>
-              {socialLinks.map((social) => {
-                const Icon = social.icon;
+        {variant !== "masonry" && (
+          <div>
+            <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>Social</p>
+            {socialLinks.length ? (
+              <div className={cn("mt-4 flex flex-wrap gap-2", variant === "luxury" && "justify-center lg:justify-start", variant === "cinematic" && "justify-center lg:justify-start")}>
+                {socialLinks.map((social) => {
+                  const Icon = social.icon;
 
-                return (
-                  <a key={social.label} href={social.href} aria-label={social.label} className={cn("inline-flex size-10 items-center justify-center border transition hover:-translate-y-0.5", variant === "luxury" ? "border-[rgba(216,191,136,0.28)] text-[#d8bf88] hover:bg-[#d8bf88]/10" : isDark ? "border-white/10 hover:bg-white/10" : "border-current/10 hover:bg-black/5")} target="_blank" rel="noreferrer">
-                    <Icon className="size-4" aria-hidden="true" />
-                  </a>
-                );
-              })}
-            </div>
-          ) : (
-            <p className={cn("mt-4 text-sm", tone.muted)}>Social links can be added from Settings.</p>
-          )}
-        </div>
+                  return (
+                    <a key={social.label} href={social.href} aria-label={social.label} className={cn("inline-flex size-10 items-center justify-center border transition hover:-translate-y-0.5", variant === "luxury" ? "border-[rgba(216,191,136,0.28)] text-[#d8bf88] hover:bg-[#d8bf88]/10" : variant === "cinematic" ? "border-white/10 text-teal-300 hover:bg-white/10" : isDark ? "border-white/10 hover:bg-white/10" : "border-current/10 hover:bg-black/5")} target="_blank" rel="noreferrer">
+                      <Icon className="size-4" aria-hidden="true" />
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={cn("mt-4 text-sm", tone.muted)}>Social links can be added from Settings.</p>
+            )}
+          </div>
+        )}
       </div>
       <div className={cn("mt-8 border-t pt-5 text-center text-xs", isDark ? "border-white/10" : "border-current/10", tone.muted)}>
         <p>Published with Photaaz</p>
@@ -117,11 +122,27 @@ export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSite
 function getFooterTone(variant: CustomerSiteThemeVariant) {
   const isDark = variant === "cinematic" || variant === "luxury" || variant === "monochrome";
 
-  if (isDark) {
+  if (variant === "cinematic") {
     return {
       section: cn(customerSiteContainerClass, "pb-16"),
-      muted: variant === "luxury" ? "text-[#d8cab8]" : "text-white/60",
-      accent: variant === "luxury" ? "text-[#d8bf88]" : "text-teal-300"
+      muted: "text-white/50",
+      accent: "text-teal-300"
+    };
+  }
+
+  if (variant === "luxury") {
+    return {
+      section: cn(customerSiteContainerClass, "pb-16"),
+      muted: "text-[#d8cab8]",
+      accent: "text-[#d8bf88]"
+    };
+  }
+
+  if (variant === "monochrome") {
+    return {
+      section: cn(customerSiteContainerClass, "pb-16"),
+      muted: "text-white/60",
+      accent: "text-teal-300"
     };
   }
 
@@ -141,9 +162,17 @@ function getFooterTone(variant: CustomerSiteThemeVariant) {
     };
   }
 
+  if (variant === "panorama") {
+    return {
+      section: cn(customerSiteContainerClass, "pb-16 pt-8"),
+      muted: "text-[#59645f]",
+      accent: "text-teal-700"
+    };
+  }
+
   return {
-    section: cn(customerSiteContainerClass, variant === "panorama" ? "pb-16 pt-8" : "pb-16"),
-    muted: variant === "panorama" ? "text-[#59645f]" : "text-[#59636b]",
+    section: cn(customerSiteContainerClass, "pb-16"),
+    muted: "text-[#59636b]",
     accent: "text-teal-700"
   };
 }

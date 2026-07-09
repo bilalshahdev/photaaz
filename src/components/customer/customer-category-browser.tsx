@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
 import { customerPublicSurface, isDarkCustomerVariant } from "@/components/customer/customer-public-page";
 import { ImageWatermark } from "@/components/customer/image-watermark";
 import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
+import { useNavbarVisibility } from "@/components/layout/customer-site-nav";
 import { type GalleryTaxonomyItem } from "@/data/customer-gallery-taxonomy";
 import { cn } from "@/lib/utils";
 import type { CustomerSiteCategory, CustomerSiteGallery } from "@/services/tenant/customer-site-data";
@@ -94,6 +95,9 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
   const variant = variantProp ?? resolveCustomerSiteThemeVariant(slug);
   const surface = customerPublicSurface(variant);
   const isDark = isDarkCustomerVariant(variant);
+  const { isTopHidden, navbarHeight, setLocked } = useNavbarVisibility();
+  const filterBarRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [visiblePhotos, setVisiblePhotos] = useState(initialVisiblePhotos);
@@ -110,9 +114,10 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
   const visibleEntries = filteredEntries.slice(0, visiblePhotos);
   const viewerPhoto = viewerIndex === null ? null : filteredEntries[viewerIndex];
   const hasMore = visibleEntries.length < filteredEntries.length;
-  const filterButtonIdle = isDark ? "border-white/20 bg-white/[0.06] text-white hover:bg-white/10" : "border-[#d7dedb] bg-white text-[#15120f] hover:bg-[#eef3ef]";
-  const filterButtonActive = "border-teal-700 bg-teal-700 text-white hover:bg-teal-700";
   const browserStyle = getCategoryBrowserStyle(variant, isDark, surface);
+  const theme = getCategoryFilterTheme(variant, isDark);
+  const filterBarTop = isTopHidden ? "0px" : `${navbarHeight}px`;
+
   const stepViewer = useCallback(
     (direction: "previous" | "next") => {
       setViewerIndex((currentIndex) => {
@@ -160,9 +165,20 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [filteredEntries.length, hasMore]);
 
+  function scrollToContent() {
+    if (!sectionRef.current) return;
+    setLocked(true);
+    const sectionTop = sectionRef.current.getBoundingClientRect().top + window.scrollY;
+    const filterBarH = filterBarRef.current?.offsetHeight ?? 50;
+    const navOffset = isTopHidden ? 0 : navbarHeight;
+    window.scrollTo({ top: sectionTop - navOffset - filterBarH, behavior: "smooth" });
+    setTimeout(() => setLocked(false), 700);
+  }
+
   function selectCategory(category: string) {
     setActiveCategory(category);
     setActiveSubcategory(null);
+    scrollToContent();
   }
 
   function openViewer(photo: CategoryPhotoEntry) {
@@ -170,44 +186,44 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
     setViewerIndex(nextIndex >= 0 ? nextIndex : 0);
   }
 
-  const filterOffsetClass = variant === "masonry" ? "top-16 lg:top-0" : "top-16 sm:top-[4.5rem]";
-
   return (
     <>
-      <div className={cn("sticky z-20 border-b", filterOffsetClass, isDark ? "border-white/10 bg-[#090a0a] text-white" : "border-[#d7dedb] bg-[#f7f2ea] text-[#15120f]")}>
-        <div className="pf-reveal mx-auto flex max-w-6xl flex-col gap-3 px-5 py-3 sm:px-8 lg:px-10">
-          <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain no-scrollbar">
-            <button type="button" onClick={() => selectCategory("All")} className={cn("shrink-0 border px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.2em]", activeCategory === "All" ? filterButtonActive : filterButtonIdle)}>
+      <div ref={filterBarRef} className={cn("sticky z-20 w-full border-b", theme.bar)} style={{ top: filterBarTop, transition: "top 300ms ease-out" }}>
+        <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
+          <div className={cn("pf-reveal flex overflow-x-auto overscroll-x-contain no-scrollbar", theme.row)}>
+            <button type="button" onClick={() => selectCategory("All")} className={cn(theme.btn, activeCategory === "All" ? theme.active : theme.idle)}>
               All categories
             </button>
-            {categories.map((category) => (
-              <button key={category.name} type="button" onClick={() => selectCategory(category.name)} className={cn("shrink-0 border px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.2em]", activeCategory === category.name ? filterButtonActive : filterButtonIdle)}>
-                {category.name}
-              </button>
-            ))}
+            {categories.map((category) => {
+              const hasSubs = getSubcategoryNames(category).length > 0;
+              const isActive = activeCategory === category.name;
+              return (
+                <button key={category.name} type="button" onClick={() => selectCategory(category.name)} className={cn(theme.btn, "inline-flex items-center gap-1.5", isActive ? theme.active : theme.idle)}>
+                  {category.name}
+                  {hasSubs && (
+                    <ChevronDown className={cn("size-3 shrink-0 transition-transform duration-200", isActive && "rotate-180")} aria-hidden="true" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {selectedSubcategories.length ? (
-            <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain no-scrollbar">
-              <button type="button" onClick={() => setActiveSubcategory(null)} className={cn("shrink-0 border px-3 py-2 font-nav text-[10px] font-semibold uppercase tracking-[0.18em]", activeSubcategory === null ? filterButtonActive : filterButtonIdle)}>
+          <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", selectedSubcategories.length ? "max-h-20 opacity-100" : "max-h-0 opacity-0")}>
+            <div className={cn("flex overflow-x-auto overscroll-x-contain no-scrollbar", theme.subRow)}>
+              <button type="button" onClick={() => { setActiveSubcategory(null); scrollToContent(); }} className={cn(theme.subBtn, activeSubcategory === null ? theme.subActive : theme.subIdle)}>
                 All {selectedCategory?.name}
               </button>
               {selectedSubcategories.map((subcategory) => (
-                <button key={subcategory} type="button" onClick={() => setActiveSubcategory(subcategory)} className={cn("shrink-0 border px-3 py-2 font-nav text-[10px] font-semibold uppercase tracking-[0.18em]", activeSubcategory === subcategory ? filterButtonActive : filterButtonIdle)}>
+                <button key={subcategory} type="button" onClick={() => { setActiveSubcategory(subcategory); scrollToContent(); }} className={cn(theme.subBtn, activeSubcategory === subcategory ? theme.subActive : theme.subIdle)}>
                   {subcategory}
                 </button>
               ))}
             </div>
-          ) : null}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm opacity-62">{visibleEntries.length} of {filteredEntries.length} photographs</p>
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.18em] opacity-60">{activeSubcategory ? `${activeCategory} / ${activeSubcategory}` : activeCategory === "All" ? "All photography" : activeCategory}</p>
           </div>
         </div>
       </div>
 
-      <section className={surface.section}>
+      <section ref={sectionRef} className={surface.section}>
         {visibleEntries.length ? (
           <div className={cn("pf-stagger", browserStyle.grid)}>
             {visibleEntries.map((photo, index) => (
@@ -277,6 +293,113 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
   );
 }
 
+type CategoryFilterTheme = {
+  bar: string;
+  row: string;
+  btn: string;
+  idle: string;
+  active: string;
+  subRow: string;
+  subBtn: string;
+  subIdle: string;
+  subActive: string;
+};
+
+function getCategoryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolean): CategoryFilterTheme {
+  switch (variant) {
+    case "luxury":
+      return {
+        bar: "bg-[#0d0c09]/90 text-[#fbf4e8] backdrop-blur-md",
+        row: "justify-center gap-2 py-3",
+        btn: "shrink-0 rounded-full border px-5 py-2 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition-colors",
+        idle: "border-[rgba(216,191,136,0.22)] bg-transparent text-[#fbf4e8]/70 hover:border-[rgba(216,191,136,0.5)] hover:text-[#fbf4e8]",
+        active: "border-[#d8bf88] bg-[#d8bf88] text-[#0d0c09]",
+        subRow: "justify-center gap-1.5 pb-2.5",
+        subBtn: "shrink-0 rounded-full border px-4 py-1.5 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.2em] transition-colors",
+        subIdle: "border-[rgba(216,191,136,0.16)] bg-transparent text-[#fbf4e8]/55 hover:text-[#fbf4e8]/80",
+        subActive: "border-[#d8bf88]/60 text-[#d8bf88]",
+      };
+    case "monochrome":
+      return {
+        bar: "bg-black/90 text-white backdrop-blur-md",
+        row: "gap-0",
+        btn: "shrink-0 border-0 border-r border-white/10 px-5 py-3.5 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition-colors last:border-r-0",
+        idle: "bg-transparent text-white/55 hover:bg-white/5 hover:text-white/90",
+        active: "bg-white/12 text-white",
+        subRow: "gap-0 border-t border-white/[0.06]",
+        subBtn: "shrink-0 border-0 border-r border-white/[0.06] px-5 py-2.5 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] transition-colors last:border-r-0",
+        subIdle: "bg-transparent text-white/45 hover:text-white/75",
+        subActive: "bg-white/[0.07] text-white",
+      };
+    case "cinematic":
+      return {
+        bar: "bg-black/90 text-white backdrop-blur-md",
+        row: "gap-0",
+        btn: "shrink-0 border-0 border-b-2 px-5 py-3 font-nav text-xs font-semibold uppercase tracking-[0.2em] transition-colors",
+        idle: "border-transparent text-white/60 hover:text-white/90",
+        active: "border-teal-400 text-teal-300",
+        subRow: "gap-0 pt-0.5",
+        subBtn: "shrink-0 border-0 border-b-2 px-4 py-2 font-nav text-xs font-semibold uppercase tracking-[0.18em] transition-colors",
+        subIdle: "border-transparent text-white/50 hover:text-white/75",
+        subActive: "border-teal-500/60 text-teal-400/90",
+      };
+    case "editorial":
+      return {
+        bar: "bg-[#f8f1e8]/90 text-[#211917] backdrop-blur-md",
+        row: "gap-6 py-2",
+        btn: "shrink-0 border-0 border-b-2 px-1 py-2.5 font-display text-sm tracking-[-0.02em] transition-colors",
+        idle: "border-transparent text-[#4e443c] hover:text-[#211917]",
+        active: "border-[#9a4f32] font-medium text-[#9a4f32]",
+        subRow: "gap-4 pb-2",
+        subBtn: "shrink-0 border-0 border-b px-1 py-2 font-display text-xs tracking-[-0.01em] transition-colors",
+        subIdle: "border-transparent text-[#7a6f68] hover:text-[#4e443c]",
+        subActive: "border-[#9a4f32]/60 font-medium text-[#9a4f32]/90",
+      };
+    case "masonry":
+      return {
+        bar: "bg-white/90 text-[#101418] backdrop-blur-md",
+        row: "gap-1.5 py-2.5",
+        btn: "shrink-0 rounded-full border px-4 py-1.5 font-nav text-xs font-semibold uppercase tracking-[0.16em] transition-colors",
+        idle: "border-[#d9dfdc] bg-transparent text-[#38424a]/80 hover:bg-[#eef3ef]",
+        active: "border-teal-700 bg-teal-700 text-white",
+        subRow: "gap-1 pb-2",
+        subBtn: "shrink-0 rounded-full border px-3 py-1 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.14em] transition-colors",
+        subIdle: "border-[#d9dfdc]/60 bg-transparent text-[#38424a]/65 hover:bg-[#eef3ef]",
+        subActive: "border-teal-600 bg-teal-600/10 text-teal-700",
+      };
+    case "panorama":
+      return {
+        bar: "bg-[#e4e9e2]/90 text-[#17201c] backdrop-blur-md",
+        row: "gap-3 py-3",
+        btn: "shrink-0 border-0 border-b px-4 py-2.5 font-nav text-xs font-semibold uppercase tracking-[0.2em] transition-colors",
+        idle: "border-transparent text-[#17201c]/65 hover:text-[#17201c]",
+        active: "border-teal-700 text-teal-700",
+        subRow: "gap-2 pb-2.5",
+        subBtn: "shrink-0 border-0 border-b px-3 py-2 font-nav text-xs font-semibold uppercase tracking-[0.18em] transition-colors",
+        subIdle: "border-transparent text-[#17201c]/50 hover:text-[#17201c]/80",
+        subActive: "border-teal-600/60 text-teal-700/90",
+      };
+    default:
+      return {
+        bar: isDark
+          ? "bg-[#090a0a]/90 text-white backdrop-blur-md"
+          : "bg-[#f7f2ea]/90 text-[#15120f] backdrop-blur-md",
+        row: "gap-2 py-3",
+        btn: "shrink-0 border px-4 py-2.5 font-nav text-xs font-semibold uppercase tracking-[0.2em] transition-colors",
+        idle: isDark
+          ? "border-white/[0.15] bg-transparent text-white/60 hover:bg-white/5 hover:text-white/90"
+          : "border-[#d7dedb] bg-transparent text-[#15120f]/75 hover:bg-[#eef3ef] hover:text-[#15120f]",
+        active: isDark ? "border-white bg-white text-black" : "border-teal-700 bg-teal-700 text-white",
+        subRow: "gap-1.5 pb-2.5",
+        subBtn: "shrink-0 border px-3 py-2 font-nav text-xs font-semibold uppercase tracking-[0.18em] transition-colors",
+        subIdle: isDark
+          ? "border-white/10 bg-transparent text-white/50 hover:text-white/75"
+          : "border-[#d7dedb]/60 bg-transparent text-[#15120f]/60 hover:text-[#15120f]/90",
+        subActive: isDark ? "border-white/40 text-white/90" : "border-teal-600/50 text-teal-700/90",
+      };
+  }
+}
+
 function getCategoryBrowserStyle(
   variant: CustomerSiteThemeVariant,
   isDark: boolean,
@@ -296,11 +419,11 @@ function getCategoryBrowserStyle(
 
   if (variant === "panorama") {
     return {
-      grid: "grid gap-5 lg:grid-cols-2",
-      card: "rounded-[1.35rem] border-[#cbd3cd] bg-white/75 p-2 shadow-[0_18px_50px_rgba(23,32,28,0.08)]",
-      aspect: () => "aspect-[18/9]",
-      image: "rounded-[1rem]",
-      body: "grid gap-2 px-3 pb-3 pt-4 sm:grid-cols-[1fr_auto] sm:items-end",
+      grid: "grid gap-6 lg:grid-cols-2",
+      card: "rounded-[1.5rem] border-[#cbd3cd] bg-white/90 p-3 shadow-[0_20px_60px_rgba(23,32,28,0.12)]",
+      aspect: () => "aspect-[21/9]",
+      image: "rounded-[1.25rem]",
+      body: "grid gap-2 px-4 pb-4 pt-5 sm:grid-cols-[1fr_auto] sm:items-end",
       title: "font-display text-2xl font-light tracking-[-0.05em]",
       meta: "font-nav text-[10px] font-semibold uppercase tracking-[0.22em] text-teal-700"
     };
@@ -308,11 +431,11 @@ function getCategoryBrowserStyle(
 
   if (variant === "luxury") {
     return {
-      grid: "grid gap-5 md:grid-cols-2 xl:grid-cols-3",
-      card: "border-[rgba(216,191,136,0.25)] bg-[#1a1814] text-[#fbf4e8]",
+      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      card: "border-[rgba(216,191,136,0.3)] bg-[#1a1814] text-[#fbf4e8] shadow-[0_8px_32px_rgba(216,191,136,0.08)]",
       aspect: (index: number) => (index % 3 === 0 ? "aspect-[16/11]" : "aspect-[4/5]"),
       image: "saturate-90",
-      body: "p-4 text-center",
+      body: "p-5 text-center",
       title: "font-display text-2xl font-light tracking-[-0.05em]",
       meta: "mt-3 font-nav text-[10px] font-semibold uppercase tracking-[0.24em] text-[#d8bf88]"
     };
@@ -320,18 +443,42 @@ function getCategoryBrowserStyle(
 
   if (variant === "editorial") {
     return {
-      grid: "grid gap-5 md:grid-cols-2 xl:grid-cols-3",
-      card: "border-[#ddcdbf] bg-[#fffaf2]",
+      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      card: "border-[#ddcdbf] bg-[#fffaf2] shadow-sm",
       aspect: (index: number) => (index % 4 === 0 ? "aspect-[16/11]" : "aspect-[4/5]"),
       image: "",
-      body: "p-4",
+      body: "p-5",
       title: "font-display text-2xl font-light tracking-[-0.05em]",
       meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9a4f32]"
     };
   }
 
+  if (variant === "masonry") {
+    return {
+      grid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+      card: "border-[#d9dfdc] bg-white",
+      aspect: () => "aspect-square",
+      image: "",
+      body: "p-3",
+      title: "font-display text-lg font-light tracking-[-0.04em]",
+      meta: "mt-1 font-nav text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-700"
+    };
+  }
+
+  if (variant === "cinematic") {
+    return {
+      grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+      card: "border-white/5 bg-white/5",
+      aspect: () => "aspect-[4/5]",
+      image: "contrast-125 brightness-90",
+      body: "border-t border-white/10 p-4",
+      title: "font-display text-2xl font-light tracking-[-0.05em]",
+      meta: "mt-2 font-nav text-[10px] font-semibold uppercase tracking-[0.22em] text-teal-300"
+    };
+  }
+
   return {
-    grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+    grid: "grid gap-5 sm:grid-cols-2 lg:grid-cols-3",
     card: cn("shadow-[0_18px_50px_rgba(15,23,42,0.04)]", surface.card),
     aspect: () => "aspect-[4/5]",
     image: "",

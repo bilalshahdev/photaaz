@@ -20,7 +20,7 @@ export default async function AdminCategoriesPage() {
       <section className="mb-6 rounded-lg border border-slate-300 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">Review Queue</p>
+            <p className="font-nav text-xs font-semibold uppercase tracking-[0.22em] text-primary">Review Queue</p>
             <h2 className="mt-2 font-display text-3xl font-black tracking-[-0.04em]">Category requests</h2>
           </div>
           <p className="text-sm text-slate-500">{requests.filter((request) => request.status === "PENDING").length} pending</p>
@@ -55,7 +55,7 @@ export default async function AdminCategoriesPage() {
                   className="grid gap-2 sm:grid-cols-[1fr_auto_auto]"
                 >
                   <Input name="adminNote" placeholder="Admin note" defaultValue={request.adminNote ?? ""} />
-                  <Button name="status" value="APPROVED" disabled={request.status !== "PENDING"} className="h-10 bg-teal-700 font-nav text-xs uppercase tracking-[0.16em] hover:bg-teal-800">
+                  <Button name="status" value="APPROVED" disabled={request.status !== "PENDING"} className="h-10 bg-primary font-nav text-xs uppercase tracking-[0.16em] hover:bg-primary/90">
                     Approve
                   </Button>
                   <Button name="status" value="REJECTED" variant="outline" disabled={request.status !== "PENDING"} className="h-10 font-nav text-xs uppercase tracking-[0.16em]">
@@ -89,7 +89,7 @@ function RequestThumbnail({ image, label }: { image: string; label: string }) {
 function getRequestBadgeClass(status: string) {
   switch (status) {
     case "APPROVED":
-      return "rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800";
+      return "rounded-full bg-primary/5 px-3 py-1 text-xs font-semibold text-primary";
     case "REJECTED":
       return "rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700";
     default:

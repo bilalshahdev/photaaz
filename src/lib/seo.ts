@@ -184,7 +184,7 @@ export function organizationJsonLd(config?: PlatformAppConfig) {
     url: absoluteUrl("/"),
     logo: absoluteUrl(config?.faviconUrl || "/favicon.svg"),
     image: getSeoImageUrl(config?.socialPreviewImageUrl),
-    description: config?.footerText || DEFAULT_DESCRIPTION,
+    description: resolveLocalizedString(config?.footerText ?? "", "en") || DEFAULT_DESCRIPTION,
     email: config?.supportEmail,
     telephone: config?.phone.enabled ? config.phone.value : undefined,
     address: {
@@ -217,7 +217,7 @@ export function websiteJsonLd(config?: PlatformAppConfig) {
     "@id": `${SITE_URL}/#website`,
     name,
     url: absoluteUrl("/"),
-    description: config?.footerText || DEFAULT_DESCRIPTION,
+    description: resolveLocalizedString(config?.footerText ?? "", "en") || DEFAULT_DESCRIPTION,
     publisher: {
       "@id": `${SITE_URL}/#organization`
     },
@@ -242,7 +242,7 @@ export function softwareApplicationJsonLd(config?: PlatformAppConfig, plans: Pla
     operatingSystem: "Web",
     url: absoluteUrl("/"),
     image: getSeoImageUrl(config?.socialPreviewImageUrl),
-    description: config?.footerText || DEFAULT_DESCRIPTION,
+    description: resolveLocalizedString(config?.footerText ?? "", "en") || DEFAULT_DESCRIPTION,
     creator: {
       "@id": `${SITE_URL}/#organization`
     },

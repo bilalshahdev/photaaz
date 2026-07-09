@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { locales } from "@/i18n/locales";
 import { z } from "zod";
 import { revalidateTenantDashboard, revalidateTenantPublic } from "@/lib/cache";
 import { prisma } from "@/lib/db/prisma";
@@ -148,8 +149,9 @@ async function upsertTenantCategory({
 
 function revalidateCategoryPaths(slug: string) {
   revalidatePath(`/site/${slug}/dashboard/categories`);
-  revalidatePath(`/en/site/${slug}/dashboard/categories`);
-  revalidatePath(`/ur/site/${slug}/dashboard/categories`);
+  for (const locale of locales) {
+    revalidatePath(`/${locale}/site/${slug}/dashboard/categories`);
+  }
   revalidateTenantDashboard(slug);
   revalidateTenantPublic(slug);
 }

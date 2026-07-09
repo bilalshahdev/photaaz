@@ -7,7 +7,7 @@ export type DisplayPlanFeature = {
   limit: number | null;
 };
 
-const hiddenClientFeatureKeys = new Set(["watermarks", "clientProofing"]);
+const hiddenClientFeatureKeys = new Set(["watermarks"]);
 
 const orderedFeatureKeys = [
   planLimitKeys.photosTotal,

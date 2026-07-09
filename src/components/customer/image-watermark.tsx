@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { brandFontVarMap } from "@/lib/brand-fonts";
 import type { EffectiveImageWatermark } from "@/services/platform/media-policy";
 
 type ImageWatermarkProps = {
@@ -28,7 +29,8 @@ export function ImageWatermark({ watermark, className }: ImageWatermarkProps) {
         backgroundColor: colorWithOpacity(watermark.backgroundColor, watermark.backgroundOpacity),
         borderColor: colorWithOpacity(watermark.borderColor, watermark.borderOpacity),
         color: watermark.textColor,
-        opacity: watermark.opacity
+        opacity: watermark.opacity,
+        fontFamily: brandFontVarMap[watermark.font ?? "inter"]
       }}
     >
       {watermark.text}

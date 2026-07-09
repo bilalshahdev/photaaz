@@ -1,9 +1,24 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Toaster } from "sonner";
+import { Inter, Montserrat, Cormorant_Garamond, Raleway, Whisper, Playfair_Display, Poppins, Lato, Josefin_Sans, EB_Garamond } from "next/font/google";
 import "./globals.css";
-import { resolveLocalizedStringList } from "@/i18n/locales";
+import { resolveLocalizedString, resolveLocalizedStringList } from "@/i18n/locales";
 import { createMetadata, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getPlatformAppConfig } from "@/services/admin/admin-data";
+import { brandFontVarMap } from "@/lib/brand-fonts";
+import { hexToHsl } from "@/lib/utils";
+
+const pfInter = Inter({ subsets: ["latin"], variable: "--pf-font-inter" });
+const pfMontserrat = Montserrat({ subsets: ["latin"], variable: "--pf-font-montserrat" });
+const pfCormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"], variable: "--pf-font-cormorant" });
+const pfRaleway = Raleway({ subsets: ["latin"], variable: "--pf-font-raleway" });
+const pfWhisper = Whisper({ subsets: ["latin"], weight: "400", variable: "--pf-font-whisper" });
+const pfPlayfair = Playfair_Display({ subsets: ["latin"], variable: "--pf-font-playfair" });
+const pfPoppins = Poppins({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"], variable: "--pf-font-poppins" });
+const pfLato = Lato({ subsets: ["latin"], weight: ["300", "400", "700"], variable: "--pf-font-lato" });
+const pfJosefin = Josefin_Sans({ subsets: ["latin"], variable: "--pf-font-josefin" });
+const pfGaramond = EB_Garamond({ subsets: ["latin"], variable: "--pf-font-garamond" });
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getPlatformAppConfig();
@@ -19,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const metadata = createMetadata({
     title: `${config.brandName} - Professional Photography Websites in Minutes`,
-    description: config.footerText,
+    description: resolveLocalizedString(config.footerText, "en"),
     siteName: config.brandName,
     image: config.socialPreviewImageUrl,
     faviconUrl: config.faviconUrl,
@@ -45,8 +60,26 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const config = await getPlatformAppConfig();
 
+  const fontClasses = `${pfInter.variable} ${pfMontserrat.variable} ${pfCormorant.variable} ${pfRaleway.variable} ${pfWhisper.variable} ${pfPlayfair.variable} ${pfPoppins.variable} ${pfLato.variable} ${pfJosefin.variable} ${pfGaramond.variable}`;
+  const brandFontVar = brandFontVarMap[config.brandFont ?? "inter"];
+  const sigHex = config.signatureColor ?? "#0f766e";
+  const signatureHsl = hexToHsl(sigHex);
+  const signatureLightHsl = hexToHsl(sigHex, 0.7);
+
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html
+      lang="en"
+      dir="ltr"
+      suppressHydrationWarning
+      className={fontClasses}
+      style={{
+        "--font-brand": brandFontVar,
+        "--signature-color": sigHex,
+        "--primary": signatureHsl,
+        "--primary-light": signatureLightHsl,
+        "--ring": signatureHsl,
+      } as React.CSSProperties}
+    >
       <head>
         <Script
           id="ld-organization"
@@ -61,7 +94,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd(config)) }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster richColors closeButton position="top-right" />
+      </body>
     </html>
   );
 }

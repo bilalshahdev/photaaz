@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, Save } from "lucide-react";
+import { toast } from "sonner";
 import { updateCustomerSiteSettingsWithFeedback, type CustomerSettingsActionState } from "@/actions/customer-settings-actions";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const initialState: CustomerSettingsActionState = {
   status: "idle",
@@ -16,22 +16,14 @@ const initialState: CustomerSettingsActionState = {
 export function CustomerSettingsForm({ children }: { children: ReactNode }) {
   const [state, formAction] = useActionState(updateCustomerSiteSettingsWithFeedback, initialState);
 
+  useEffect(() => {
+    if (state.status === "success") toast.success(state.message);
+    if (state.status === "error") toast.error(state.message);
+  }, [state]);
+
   return (
     <form action={formAction} className="mt-5 grid gap-5">
-      {state.status !== "idle" ? (
-        <div
-          className={cn(
-            "rounded-lg border px-4 py-3 text-sm font-semibold",
-            state.status === "success" ? "border-teal-200 bg-teal-50 text-teal-900" : "border-red-200 bg-red-50 text-red-900"
-          )}
-          role={state.status === "error" ? "alert" : "status"}
-        >
-          {state.message}
-        </div>
-      ) : null}
-
       {children}
-
       <div className="order-last sticky bottom-4 z-20 flex justify-end">
         <SaveSettingsButton />
       </div>

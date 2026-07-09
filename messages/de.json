@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "themes": "Themes",
+    "features": "Funktionen",
+    "blog": "Blog",
+    "pricing": "Preise",
+    "contact": "Kontakt",
+    "signIn": "Anmelden",
+    "start": "Starten"
+  },
+  "home": {
+    "steps": ["Design wählen", "Fotos hochladen", "Website veröffentlichen"],
+    "stepNote": "Einfacher Start",
+    "themesEyebrow": "Theme-Galerie",
+    "themesTitle": "Wählen Sie das Design, mit dem Ihr Portfolio beginnt.",
+    "themesBody": "Jedes Theme ist ein echtes Portfolio-Erlebnis mit Vorschau, Screenshots und einer Live-Demo. Die Art der Fotografie wird später beim Einrichten festgelegt.",
+    "viewAllThemes": "Alle Themes ansehen",
+    "themeDetails": "Theme-Details",
+    "liveDemo": "Live-Demo",
+    "flow": ["Design wählen", "Fotografie-Art wählen", "Website veröffentlichen"],
+    "flowNote": "Das Produkt bleibt einfach: Look auswählen, Arbeiten hinzufügen und online gehen.",
+    "featuresEyebrow": "Was Fotografen veröffentlichen können",
+    "featuresTitle": "Alles, was Sie für ein professionelles öffentliches Portfolio brauchen.",
+    "pricingEyebrow": "Preise",
+    "pricingTitle": "Kostenlos starten, upgraden wenn Sie mehr Platz brauchen.",
+    "perMonth": "/Monat",
+    "faqEyebrow": "FAQ",
+    "faqTitle": "Häufige Fragen vor der Veröffentlichung.",
+    "faqBody": "Kurze Antworten für Fotografen, die zum ersten Mal ein öffentliches Portfolio erstellen.",
+    "contactSuccess": "Frage gespeichert. Sie erscheint im Support-Posteingang des Administrators.",
+    "contactError": "Konnte noch nicht gespeichert werden. Überprüfen Sie Ihre lokale Datenbankverbindung und versuchen Sie es erneut.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Ihr Name",
+    "emailLabel": "E-Mail",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "Nachricht",
+    "messagePlaceholder": "Ich fotografiere Hochzeiten und möchte ein Portfolio mit Galerien, Blogbeiträgen und einer eigenen Domain.",
+    "launchEyebrow": "Heute starten",
+    "launchTitle": "Beginnen Sie mit dem Aufbau Ihrer Fotografie-Website."
+  },
+  "language": {
+    "select": "Sprache auswählen",
+    "english": "Englisch",
+    "spanish": "Spanisch",
+    "arabic": "Arabisch",
+    "turkish": "Türkisch",
+    "hindi": "Hindi",
+    "portuguese": "Portugiesisch",
+    "german": "Deutsch",
+    "french": "Französisch"
+  }
+}

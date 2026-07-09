@@ -45,7 +45,7 @@ export default async function AdminNewCustomerPage() {
             <TextField name="email" required label="Owner email" type="email" placeholder="client@example.com" className="h-11" />
             <SelectField name="planId" label="Starting package" defaultValue={plans[0]?.id} triggerClassName="h-11" options={plans.map((plan) => ({ label: plan.name, value: plan.id }))} />
             <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-5">
-              <Button type="submit" className="bg-slate-950 text-white hover:bg-teal-800">
+              <Button type="submit" className="bg-slate-950 text-white hover:bg-primary/90">
                 <UserPlus className="size-4" aria-hidden="true" />
                 Create customer
               </Button>

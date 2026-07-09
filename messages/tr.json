@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "themes": "Temalar",
+    "features": "Özellikler",
+    "blog": "Blog",
+    "pricing": "Fiyatlandırma",
+    "contact": "İletişim",
+    "signIn": "Giriş yap",
+    "start": "Başla"
+  },
+  "home": {
+    "steps": ["Tasarım seç", "Fotoğrafları yükle", "Web sitesini yayınla"],
+    "stepNote": "Basit başlangıç adımları",
+    "themesEyebrow": "Tema vitrini",
+    "themesTitle": "Portföyünüzün başlayacağı tasarımı seçin.",
+    "themesBody": "Her tema; önizleme, ekran görüntüleri ve canlı demo içeren gerçek bir portföy deneyimidir. Fotoğrafçılık türü, kurulum sırasında daha sonra belirlenir.",
+    "viewAllThemes": "Tüm temaları gör",
+    "themeDetails": "Tema detayları",
+    "liveDemo": "Canlı demo",
+    "flow": ["Tasarım seç", "Fotoğrafçılık türünü seç", "Web sitesini yayınla"],
+    "flowNote": "Ürün basit: görünümü seçin, çalışmalarınızı ekleyin ve yayına alın.",
+    "featuresEyebrow": "Fotoğrafçıların yayınlayabilecekleri",
+    "featuresTitle": "Temiz bir portföy için gereken her şey.",
+    "pricingEyebrow": "Fiyatlandırma",
+    "pricingTitle": "Ücretsiz başlayın, daha fazla alana ihtiyaç duyduğunuzda yükseltin.",
+    "perMonth": "/ay",
+    "faqEyebrow": "SSS",
+    "faqTitle": "Yayınlamadan önce sık sorulan sorular.",
+    "faqBody": "İlk kez portföy oluşturan fotoğrafçılar için kısa yanıtlar.",
+    "contactSuccess": "Soru kaydedildi. Yönetici destek gelen kutusunda görünecektir.",
+    "contactError": "Henüz kaydedilemedi. Yerel veritabanı bağlantınızı kontrol edip tekrar deneyin.",
+    "nameLabel": "Ad",
+    "namePlaceholder": "Adınız",
+    "emailLabel": "E-posta",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "Mesaj",
+    "messagePlaceholder": "Düğün fotoğrafçılığı yapıyorum ve galeriler, blog yazıları ve özel alan adı içeren bir portföy istiyorum.",
+    "launchEyebrow": "Bugün başlayın",
+    "launchTitle": "Fotoğrafçılık web sitenizi oluşturmaya başlayın."
+  },
+  "language": {
+    "select": "Dil seçin",
+    "english": "İngilizce",
+    "spanish": "İspanyolca",
+    "arabic": "Arapça",
+    "turkish": "Türkçe",
+    "hindi": "Hintçe",
+    "portuguese": "Portekizce",
+    "german": "Almanca",
+    "french": "Fransızca"
+  }
+}
