@@ -12,3 +12,15 @@ public/uploads
 tmp/
 test-results/
 *.log
+
+# Local editor and AI-assistant configuration
+.claude/
+.codex/
+.cursor/
+.vscode/
+CLAUDE.md
+AGENTS.md
+PROJECT_CONTEXT.md
+
+# Generated reports and exports
+output/

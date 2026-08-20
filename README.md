@@ -23,8 +23,6 @@ Modern multi-tenant SaaS foundation for photographers to publish SEO-friendly po
 
 ## Product Rules
 
-Full product direction is preserved in `PROJECT_CONTEXT.md`.
-
 Key decisions:
 
 - Themes are coded layouts built by the developer, then enabled/configured from super admin.
