@@ -225,7 +225,7 @@ export default function GetStartedPage() {
         return;
       }
 
-      router.push(localizePath(locale, customerDashboardPath(result.slug)));
+      router.push(customerDashboardPath(result.slug));
     });
   }
 

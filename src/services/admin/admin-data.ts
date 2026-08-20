@@ -1,9 +1,49 @@
 import { prisma } from "@/lib/db/prisma";
 import { getPublicEmailDeliverySettings } from "@/services/email/email-service";
 import type { AppLocale } from "@/i18n/locales";
+import { localizedPlatformCopy } from "@/i18n/platform-copy";
 import { syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
 import type { LocalizedString, LocalizedStringList } from "@/services/platform/platform-data";
 import { defaultPlatformMediaPolicy, type PlatformMediaPolicy } from "@/services/platform/media-policy";
+
+function localizedFromJson(value: unknown, fallback: string): LocalizedString {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return localizedPlatformCopy(fallback, value as Record<string, string>);
+  }
+
+  return localizedPlatformCopy(fallback);
+}
+
+function localizePlan<T extends { name: string; description: string; nameI18n?: unknown; descriptionI18n?: unknown }>(plan: T) {
+  return {
+    ...plan,
+    name: localizedFromJson(plan.nameI18n, plan.name),
+    description: localizedFromJson(plan.descriptionI18n, plan.description)
+  };
+}
+
+function localizeFeature<T extends { name: string; description: string | null; nameI18n?: unknown; descriptionI18n?: unknown }>(feature: T) {
+  return {
+    ...feature,
+    name: localizedFromJson(feature.nameI18n, feature.name),
+    description: localizedFromJson(feature.descriptionI18n, feature.description ?? "")
+  };
+}
+
+function localizePhotographyType<T extends { name: string; nameI18n?: unknown }>(type: T) {
+  return {
+    ...type,
+    name: localizedFromJson(type.nameI18n, type.name)
+  };
+}
+
+function localizeEmailSetting<T extends { label: string; description: string | null; labelI18n?: unknown; descriptionI18n?: unknown }>(setting: T) {
+  return {
+    ...setting,
+    label: localizedFromJson(setting.labelI18n, setting.label),
+    description: localizedFromJson(setting.descriptionI18n, setting.description ?? "")
+  };
+}
 
 export async function getAdminDashboardStats() {
   await syncSubscriptionLifecycle();
@@ -60,7 +100,7 @@ export async function getAdminDashboardStats() {
 export async function getAdminCustomers() {
   await syncSubscriptionLifecycle();
 
-  return prisma.tenant.findMany({
+  const customers = await prisma.tenant.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       owner: true,
@@ -76,12 +116,22 @@ export async function getAdminCustomers() {
       }
     }
   });
+
+  return customers.map((customer) => ({
+    ...customer,
+    subscription: customer.subscription
+      ? {
+          ...customer.subscription,
+          plan: localizePlan(customer.subscription.plan)
+        }
+      : null
+  }));
 }
 
 export async function getAdminCustomerById(id: string) {
   await syncSubscriptionLifecycle();
 
-  return prisma.tenant.findUnique({
+  const customer = await prisma.tenant.findUnique({
     where: { id },
     include: {
       owner: true,
@@ -116,6 +166,26 @@ export async function getAdminCustomerById(id: string) {
       }
     }
   });
+
+  if (!customer) {
+    return null;
+  }
+
+  return {
+    ...customer,
+    subscription: customer.subscription
+      ? {
+          ...customer.subscription,
+          plan: {
+            ...localizePlan(customer.subscription.plan),
+            features: customer.subscription.plan.features.map((access) => ({
+              ...access,
+              feature: localizeFeature(access.feature)
+            }))
+          }
+        }
+      : null
+  };
 }
 
 export async function getAdminConversationInbox() {
@@ -141,17 +211,26 @@ export async function getAdminConversationInbox() {
 }
 
 export async function getAdminPlans() {
-  return prisma.plan.findMany({
+  const plans = await prisma.plan.findMany({
     orderBy: [{ displayOrder: "asc" }, { monthlyPrice: "asc" }, { name: "asc" }],
     include: {
       features: { include: { feature: true }, orderBy: { createdAt: "asc" } },
       _count: { select: { subscriptions: true } }
     }
   });
+
+  return plans.map((plan) => ({
+    ...plan,
+    ...localizePlan(plan),
+    features: plan.features.map((access) => ({
+      ...access,
+      feature: localizeFeature(access.feature)
+    }))
+  }));
 }
 
 export async function getAdminFeatures() {
-  return prisma.feature.findMany({
+  const features = await prisma.feature.findMany({
     orderBy: [{ name: "asc" }],
     include: {
       _count: {
@@ -161,6 +240,10 @@ export async function getAdminFeatures() {
       }
     }
   });
+
+  return features.map((feature) => ({
+    ...localizeFeature(feature)
+  }));
 }
 
 export async function getAdminCoupons() {
@@ -170,7 +253,7 @@ export async function getAdminCoupons() {
 }
 
 export async function getAdminCategoryRequests() {
-  return prisma.platformCategoryRequest.findMany({
+  const requests = await prisma.platformCategoryRequest.findMany({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: {
       tenant: {
@@ -188,6 +271,20 @@ export async function getAdminCategoryRequests() {
       parentType: true
     }
   });
+
+  return requests.map((request) => ({
+    ...request,
+    parentType: request.parentType ? localizePhotographyType(request.parentType) : null,
+    tenant: {
+      ...request.tenant,
+      subscription: request.tenant.subscription
+        ? {
+            ...request.tenant.subscription,
+            plan: localizePlan(request.tenant.subscription.plan)
+          }
+        : null
+    }
+  }));
 }
 
 export async function getAdminEmailSettings() {
@@ -196,7 +293,7 @@ export async function getAdminEmailSettings() {
   });
 
   if (settings.length) {
-    return settings;
+    return settings.map(localizeEmailSetting);
   }
 
   return [
@@ -206,7 +303,7 @@ export async function getAdminEmailSettings() {
     { id: "support-inquiry", key: "support.inquiry", label: "Platform support inquiry", description: "Notify the platform owner when someone submits the main-site support form.", enabled: true, category: "support", createdAt: new Date(), updatedAt: new Date() },
     { id: "tenant-inquiry", key: "tenant.inquiry", label: "Portfolio visitor inquiry", description: "Notify a client when a visitor submits their portfolio contact form.", enabled: true, category: "support", createdAt: new Date(), updatedAt: new Date() },
     { id: "manual-email", key: "manual.email", label: "Manual emails", description: "Allow super admin to send manual emails.", enabled: true, category: "manual", createdAt: new Date(), updatedAt: new Date() }
-  ];
+  ].map(localizeEmailSetting);
 }
 
 export async function getAdminEmailDeliverySettings() {
@@ -268,10 +365,10 @@ export const defaultPlatformAppConfig: PlatformAppConfig = {
   },
   supportEmail: "bilalshah.dev@gmail.com",
   salesEmail: "bilalshah.dev@gmail.com",
-  footerText: { en: "Clean websites for photographers, built to showcase visual work." },
-  copyrightText: { en: "Copyright (c) {year} Photaaz. All rights reserved." },
+  footerText: localizedPlatformCopy("Clean websites for photographers, built to showcase visual work."),
+  copyrightText: localizedPlatformCopy("Copyright (c) {year} Photaaz. All rights reserved."),
   companyAddress: "Islamabad, Pakistan",
-  dashboardNotice: { en: "" },
+  dashboardNotice: localizedPlatformCopy(""),
   themeSwitchCooldownDays: 14,
   media: defaultPlatformMediaPolicy,
   phone: {

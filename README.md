@@ -59,3 +59,11 @@ Key decisions:
 5. Apply a migration with `npm run prisma:migrate`.
 6. Seed plans, features, and demo tenant data with `npm run db:seed`.
 7. Start development with `npm run dev`.
+
+## Staging
+
+Before production, use an isolated Supabase database, Paddle Sandbox, a Cloudinary `photaaz/staging` folder (or separate cloud), controlled email sender/inbox, and a separate Vercel staging hostname. See [the staging setup guide](docs/staging-setup.md), copy `.env.staging.example`, and validate exported variables with:
+
+```powershell
+npm run staging:check -- .env.staging.local
+```

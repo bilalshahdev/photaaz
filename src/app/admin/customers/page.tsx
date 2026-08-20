@@ -3,6 +3,7 @@ import { Edit3, Eye, UsersRound } from "lucide-react";
 import { AdminTable, AdminTableEmptyRow } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminIconLink, AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
 import { getAdminCustomers } from "@/services/admin/admin-data";
+import type { LocalizedString } from "@/services/platform/platform-data";
 import { formatSubscriptionDate, getSubscriptionLifecycle, getSubscriptionTextClass } from "@/services/subscription/lifecycle";
 
 export default async function AdminCustomersPage() {
@@ -49,7 +50,7 @@ export default async function AdminCustomersPage() {
                           <p className="mt-1 text-xs text-slate-500">{customer.owner?.email ?? "-"}</p>
                         </td>
                         <td className="p-4">
-                          <p className="font-semibold text-slate-950">{customer.subscription?.plan.name ?? "No package"}</p>
+                          <p className="font-semibold text-slate-950">{customer.subscription?.plan ? displayLocalized(customer.subscription.plan.name) : "No package"}</p>
                           <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{customer.subscription?.status ?? "No subscription"}</p>
                         </td>
                         <td className="p-4 text-slate-600">
@@ -97,4 +98,9 @@ function getStatusBadgeClass(status: string) {
     default:
       return "inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
   }
+}
+
+function displayLocalized(value: LocalizedString) {
+  if (typeof value === "string") return value;
+  return value.en || Object.values(value).find(Boolean) || "";
 }

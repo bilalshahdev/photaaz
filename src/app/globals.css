@@ -91,6 +91,12 @@ html {
   scroll-padding-top: 6rem;
 }
 
+@media (min-width: 1024px) {
+  html {
+    font-size: 15.5px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -248,19 +254,40 @@ img {
   animation: pf-fade-scale 220ms ease-out both;
 }
 
+body:has([data-photo-viewer]) [data-scroll-to-top],
+body:has([role="dialog"][aria-modal="true"]) [data-scroll-to-top] {
+  display: none !important;
+}
+
+@keyframes payment-confetti {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.75) rotate(0deg);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-38px) scale(1) rotate(22deg);
+  }
+}
+
 .pf-fluid-title {
   overflow-wrap: anywhere;
-  font-size: clamp(2.75rem, 10vw, 5.85rem);
+  font-size: clamp(2.35rem, 7.5vw, 4.95rem);
 }
 
 .pf-fluid-title-xl {
   overflow-wrap: anywhere;
-  font-size: clamp(3rem, 11vw, 6.75rem);
+  font-size: clamp(2.6rem, 8.5vw, 5.65rem);
 }
 
 .pf-fluid-title-page {
   overflow-wrap: anywhere;
-  font-size: clamp(2.6rem, 8.5vw, 4.65rem);
+  font-size: clamp(2.25rem, 6.5vw, 4rem);
 }
 
 @media (prefers-reduced-motion: reduce) {

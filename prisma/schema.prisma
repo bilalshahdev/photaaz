@@ -75,31 +75,50 @@ enum ConversationStatus {
   CLOSED
 }
 
+enum LegalRequestType {
+  ACCESS
+  EXPORT
+  CORRECTION
+  DELETION
+  OBJECTION
+  COPYRIGHT
+  COUNTER_NOTICE
+}
+
+enum LegalRequestStatus {
+  OPEN
+  VERIFYING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
 model Tenant {
-  id            String         @id @default(cuid())
-  ownerUserId   String?
-  name          String
-  slug          String         @unique
-  status        TenantStatus   @default(ACTIVE)
-  defaultLocale String         @default("en")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  albums        Album[]
-  photos        Photo[]
-  blogs         BlogPost[]
-  blogCategories BlogCategory[]
-  categories    Category[]
-  pages         Page[]
-  settings      TenantSetting?
-  domains       Domain[]
-  subscription  Subscription?
-  notifications ClientNotification[]
-  conversations ConversationThread[]
+  id               String                    @id @default(cuid())
+  ownerUserId      String?
+  name             String
+  slug             String                    @unique
+  status           TenantStatus              @default(ACTIVE)
+  defaultLocale    String                    @default("en")
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  albums           Album[]
+  photos           Photo[]
+  blogs            BlogPost[]
+  blogCategories   BlogCategory[]
+  categories       Category[]
+  pages            Page[]
+  settings         TenantSetting?
+  domains          Domain[]
+  subscription     Subscription?
+  notifications    ClientNotification[]
+  conversations    ConversationThread[]
   visitorInquiries TenantInquiry[]
   categoryRequests PlatformCategoryRequest[]
-  owner         User?          @relation("TenantOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  owner            User?                     @relation("TenantOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   @@index([ownerUserId])
+  @@index([status, createdAt])
 }
 
 model User {
@@ -113,6 +132,46 @@ model User {
   sessions      Session[]
   accounts      Account[]
   tenants       Tenant[]  @relation("TenantOwner")
+  legalAcceptances LegalAcceptance[]
+  legalRequests LegalRequest[]
+}
+
+model LegalAcceptance {
+  id             String   @id @default(cuid())
+  userId         String
+  termsVersion   String
+  privacyVersion String
+  locale         String
+  ipAddressHash  String?
+  userAgent      String?
+  acceptedAt     DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, termsVersion, privacyVersion])
+  @@index([acceptedAt])
+}
+
+model LegalRequest {
+  id              String             @id @default(cuid())
+  userId          String?
+  type            LegalRequestType
+  status          LegalRequestStatus @default(OPEN)
+  email           String
+  name            String
+  subject         String?
+  details         String
+  declaration     Boolean            @default(false)
+  sourceUrl       String?
+  workDescription String?
+  locale          String             @default("en")
+  ipAddressHash   String?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type, status, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Session {
@@ -127,6 +186,7 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
 }
 
 model Account {
@@ -145,6 +205,7 @@ model Account {
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([providerId, accountId])
   @@index([userId])
 }
 
@@ -157,75 +218,76 @@ model Verification {
   updatedAt  DateTime? @updatedAt
 
   @@index([identifier])
+  @@index([expiresAt])
 }
 
 model TenantSetting {
-  id              String   @id @default(cuid())
-  tenantId        String   @unique
-  themeKey        String   @default("minimal")
-  primaryColor    String   @default("#207567")
-  secondaryColor  String   @default("#E9EEF4")
-  accentColor     String   @default("#E86845")
-  headingFont     String   @default("Playfair Display")
-  bodyFont        String   @default("Inter")
-  navbarStyle     String   @default("centered")
-  galleryStyle    String   @default("grid")
-  cardStyle       String   @default("minimal")
-  footerStyle     String   @default("simple")
+  id              String    @id @default(cuid())
+  tenantId        String    @unique
+  themeKey        String    @default("minimal")
+  primaryColor    String    @default("#207567")
+  secondaryColor  String    @default("#E9EEF4")
+  accentColor     String    @default("#E86845")
+  headingFont     String    @default("Playfair Display")
+  bodyFont        String    @default("Inter")
+  navbarStyle     String    @default("centered")
+  galleryStyle    String    @default("grid")
+  cardStyle       String    @default("minimal")
+  footerStyle     String    @default("simple")
   themeChangedAt  DateTime?
-  socialLinks     Json     @default("{}")
-  businessDetails Json     @default("{}")
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  businessDetails Json      @default("{}")
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Album {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   tenantId    String
   title       String
   slug        String
   description String?
   categoryId  String?
-  featured    Boolean  @default(false)
-  published   Boolean  @default(false)
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  featured    Boolean   @default(false)
+  published   Boolean   @default(false)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   photos      Photo[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([tenantId, slug])
   @@index([tenantId, published])
 }
 
 model Photo {
-  id              String   @id @default(cuid())
-  tenantId        String
-  albumId         String?
-  categoryId      String?
-  title           String?
-  alt             String
-  cloudinaryId    String
-  secureUrl       String
-  width           Int?
-  height          Int?
-  dominantColor   String?
+  id               String                @id @default(cuid())
+  tenantId         String
+  albumId          String?
+  categoryId       String?
+  title            String?
+  alt              String
+  cloudinaryId     String                @unique
+  secureUrl        String
+  width            Int?
+  height           Int?
+  dominantColor    String?
   moderationStatus PhotoModerationStatus @default(APPROVED)
   moderationNote   String?
-  rightsConfirmed  Boolean  @default(false)
+  rightsConfirmed  Boolean               @default(false)
   rightsAcceptedAt DateTime?
   uploadIp         String?
   uploadUserAgent  String?
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  album           Album?   @relation(fields: [albumId], references: [id], onDelete: SetNull)
-  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  album            Album?                @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  category         Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@index([tenantId, albumId])
   @@index([tenantId, categoryId])
   @@index([moderationStatus, createdAt])
+  @@index([tenantId, moderationStatus, createdAt])
 }
 
 model Category {
@@ -249,46 +311,47 @@ model Category {
 }
 
 model BlogCategory {
-  id        String     @id @default(cuid())
-  tenantId  String
-  name      String
-  slug      String
-  description String?
-  displayOrder Int     @default(0)
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  posts     BlogPost[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  tenantId     String
+  name         String
+  slug         String
+  description  String?
+  displayOrder Int        @default(0)
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  posts        BlogPost[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@unique([tenantId, slug])
   @@index([tenantId, displayOrder])
 }
 
 model BlogPost {
-  id              String    @id @default(cuid())
-  tenantId        String
-  categoryId      String?
-  blogCategoryId  String?
-  title           String
-  slug            String
-  excerpt         String?
-  content         Json
-  featuredImage   String?
-  metaTitle       String?
-  metaDescription String?
-  tags            String[]  @default([])
-  featured        Boolean   @default(false)
-  publishedAt     DateTime?
+  id               String               @id @default(cuid())
+  tenantId         String
+  categoryId       String?
+  blogCategoryId   String?
+  title            String
+  slug             String
+  excerpt          String?
+  content          Json
+  featuredImage    String?
+  metaTitle        String?
+  metaDescription  String?
+  tags             String[]             @default([])
+  featured         Boolean              @default(false)
+  publishedAt      DateTime?
   moderationStatus BlogModerationStatus @default(DRAFT)
   moderationNote   String?
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  blogCategory    BlogCategory? @relation(fields: [blogCategoryId], references: [id], onDelete: SetNull)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category         Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  blogCategory     BlogCategory?        @relation(fields: [blogCategoryId], references: [id], onDelete: SetNull)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   @@unique([tenantId, slug])
   @@index([tenantId, publishedAt])
+  @@index([tenantId, moderationStatus, publishedAt])
   @@index([tenantId, blogCategoryId])
   @@index([moderationStatus, createdAt])
 }
@@ -322,34 +385,46 @@ model Domain {
   updatedAt       DateTime     @updatedAt
 
   @@unique([tenantId])
+  @@index([status, updatedAt])
 }
 
 model Plan {
-  id             String         @id @default(cuid())
-  key            String         @unique
-  name           String
-  description    String         @default("")
-  monthlyPrice   Int?
-  annualPrice    Int?
-  lifetimePrice  Int?
-  gracePeriodDays Int            @default(0)
-  enabled        Boolean        @default(true)
-  featured       Boolean        @default(false)
-  displayOrder   Int            @default(0)
-  features       PlanFeature[]
-  subscriptions  Subscription[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                    String         @id @default(cuid())
+  key                   String         @unique
+  name                  String
+  nameI18n              Json?
+  description           String         @default("")
+  descriptionI18n       Json?
+  currency              String         @default("USD")
+  monthlyPrice          Int?
+  annualPrice           Int?
+  lifetimePrice         Int?
+  paddleProductId       String?        @unique
+  paddleMonthlyPriceId  String?        @unique
+  paddleAnnualPriceId   String?        @unique
+  paddleLifetimePriceId String?        @unique
+  gracePeriodDays       Int            @default(0)
+  enabled               Boolean        @default(true)
+  featured              Boolean        @default(false)
+  displayOrder          Int            @default(0)
+  features              PlanFeature[]
+  subscriptions         Subscription[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([enabled, displayOrder])
 }
 
 model Feature {
-  id          String        @id @default(cuid())
-  key         String        @unique
-  name        String
-  description String?
-  plans       PlanFeature[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  key             String        @unique
+  name            String
+  nameI18n        Json?
+  description     String?
+  descriptionI18n Json?
+  plans           PlanFeature[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model PlanFeature {
@@ -364,49 +439,73 @@ model PlanFeature {
   updatedAt DateTime @updatedAt
 
   @@unique([planId, featureId])
+  @@index([featureId])
 }
 
 model Subscription {
-  id                String             @id @default(cuid())
-  tenantId          String             @unique
-  planId            String
-  paddleCustomerId  String?
-  paddleSubscriptionId String?         @unique
-  status            SubscriptionStatus @default(TRIALING)
-  currentPeriodEnds DateTime?
-  adminNote         String?
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan              Plan               @relation(fields: [planId], references: [id])
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id                   String             @id @default(cuid())
+  tenantId             String             @unique
+  planId               String
+  paddleCustomerId     String?
+  paddleSubscriptionId String?            @unique
+  paddleTransactionId  String?            @unique
+  paddlePriceId        String?
+  paddleStatus         String?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodEnds    DateTime?
+  adminNote            String?
+  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan                 Plan               @relation(fields: [planId], references: [id])
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([status, currentPeriodEnds])
+  @@index([planId])
+}
+
+model SecurityRateLimitBucket {
+  id          String   @id @default(cuid())
+  bucketKey   String   @unique
+  scope       String
+  hits        Int      @default(1)
+  windowStart DateTime
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([scope, windowStart])
 }
 
 model Coupon {
-  id          String     @id @default(cuid())
-  code        String     @unique
-  type        CouponType
-  amount      Int
-  enabled     Boolean    @default(true)
+  id             String     @id @default(cuid())
+  code           String     @unique
+  type           CouponType
+  amount         Int
+  enabled        Boolean    @default(true)
   maxRedemptions Int?
-  redeemedCount  Int     @default(0)
-  startsAt    DateTime?
-  expiresAt   DateTime?
-  notes       String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  redeemedCount  Int        @default(0)
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   @@index([enabled, expiresAt])
 }
 
 model EmailSetting {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  label       String
-  description String?
-  enabled     Boolean  @default(true)
-  category    String   @default("system")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  key             String   @unique
+  label           String
+  labelI18n       Json?
+  description     String?
+  descriptionI18n Json?
+  enabled         Boolean  @default(true)
+  category        String   @default("system")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model ClientNotification {
@@ -424,14 +523,14 @@ model ClientNotification {
 }
 
 model ConversationThread {
-  id        String             @id @default(cuid())
+  id        String                @id @default(cuid())
   tenantId  String
   subject   String
-  status    ConversationStatus @default(OPEN)
-  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status    ConversationStatus    @default(OPEN)
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages  ConversationMessage[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 
   @@index([tenantId, updatedAt])
   @@index([status, updatedAt])
@@ -470,126 +569,95 @@ model TenantInquiry {
 }
 
 model Announcement {
-  id           String   @id @default(cuid())
-  title        String
-  titleI18n    Json?
-  body         String
-  bodyI18n     Json?
-  linkLabel    String?
+  id            String   @id @default(cuid())
+  title         String
+  titleI18n     Json?
+  body          String
+  bodyI18n      Json?
+  linkLabel     String?
   linkLabelI18n Json?
-  linkHref     String?
-  enabled      Boolean  @default(false)
-  marquee      Boolean  @default(false)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  linkHref      String?
+  enabled       Boolean  @default(false)
+  marquee       Boolean  @default(false)
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([enabled, displayOrder])
 }
 
-model Badge {
+model PlatformSetting {
   id        String   @id @default(cuid())
-  label     String
-  position  String   @default("top-right")
-  enabled   Boolean  @default(true)
+  key       String   @unique
+  value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model PlatformSetting {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
 model PlatformTheme {
-  id              String   @id @default(cuid())
-  name            String
-  nameI18n        Json?
-  slug            String   @unique
-  description     String
-  descriptionI18n Json?
-  image           String
-  features        String[] @default([])
-  featuresI18n    Json?
-  iconKey         String   @default("camera")
-  enabled         Boolean  @default(true)
-  premium         Boolean  @default(false)
-  demoPath        String
-  displayOrder    Int      @default(0)
-  customization   Json     @default("{}")
-  seoTitle        String?
-  seoTitleI18n    Json?
-  seoDescription  String?
+  id                 String   @id @default(cuid())
+  name               String
+  nameI18n           Json?
+  slug               String   @unique
+  description        String
+  descriptionI18n    Json?
+  image              String
+  features           String[] @default([])
+  featuresI18n       Json?
+  iconKey            String   @default("camera")
+  enabled            Boolean  @default(true)
+  premium            Boolean  @default(false)
+  demoPath           String
+  displayOrder       Int      @default(0)
+  customization      Json     @default("{}")
+  seoTitle           String?
+  seoTitleI18n       Json?
+  seoDescription     String?
   seoDescriptionI18n Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([enabled, displayOrder])
 }
 
 model PlatformPhotographyType {
-  id           String   @id @default(cuid())
-  parentId     String?
-  name         String
-  nameI18n     Json?
-  slug         String   @unique
-  image        String   @default("")
-  enabled      Boolean  @default(true)
-  categorySeed Boolean  @default(true)
-  displayOrder Int      @default(0)
-  parent       PlatformPhotographyType? @relation("PlatformPhotographyTypeChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  children     PlatformPhotographyType[] @relation("PlatformPhotographyTypeChildren")
+  id               String                    @id @default(cuid())
+  parentId         String?
+  name             String
+  nameI18n         Json?
+  slug             String                    @unique
+  image            String                    @default("")
+  enabled          Boolean                   @default(true)
+  categorySeed     Boolean                   @default(true)
+  displayOrder     Int                       @default(0)
+  parent           PlatformPhotographyType?  @relation("PlatformPhotographyTypeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children         PlatformPhotographyType[] @relation("PlatformPhotographyTypeChildren")
   categoryRequests PlatformCategoryRequest[] @relation("CategoryRequestParentType")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
 
   @@index([enabled, displayOrder])
   @@index([parentId])
 }
 
 model PlatformCategoryRequest {
-  id           String                @id @default(cuid())
+  id           String                   @id @default(cuid())
   tenantId     String
   parentTypeId String?
   name         String
   slug         String
-  image        String        @default("")
+  image        String                   @default("")
   note         String?
-  status       CategoryRequestStatus @default(PENDING)
+  status       CategoryRequestStatus    @default(PENDING)
   adminNote    String?
-  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parentType   PlatformPhotographyType? @relation("CategoryRequestParentType", fields: [parentTypeId], references: [id], onDelete: SetNull)
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
 
   @@index([status, createdAt])
   @@index([tenantId, status])
   @@index([parentTypeId])
-}
-
-model PlatformPricingPlan {
-  id             String   @id @default(cuid())
-  key            String   @unique
-  name           String
-  nameI18n       Json?
-  price          String
-  priceI18n      Json?
-  description    String
-  descriptionI18n Json?
-  features       String[] @default([])
-  featuresI18n   Json?
-  enabled        Boolean  @default(true)
-  featured       Boolean  @default(false)
-  displayOrder   Int      @default(0)
-  seoTitle       String?
-  seoDescription String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([enabled, displayOrder])
 }
 
 model PlatformSupportRequest {
@@ -603,4 +671,24 @@ model PlatformSupportRequest {
   updatedAt DateTime @updatedAt
 
   @@index([status, createdAt])
+}
+
+model PlatformBlogPost {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  title        Json
+  excerpt      Json
+  coverImage   String
+  readTime     Json
+  keywords     Json      @default("{}")
+  sections     Json      @default("[]")
+  enabled      Boolean   @default(false)
+  featured     Boolean   @default(false)
+  displayOrder Int       @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([enabled, publishedAt])
+  @@index([featured, displayOrder])
 }

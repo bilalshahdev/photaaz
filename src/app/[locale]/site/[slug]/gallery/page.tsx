@@ -3,8 +3,12 @@ import { CustomerGalleryBrowser } from "@/components/customer/customer-gallery-b
 import { CustomerPublicPage } from "@/components/customer/customer-public-page";
 import { customerDemos } from "@/data/customer-demos";
 import { isLocale, type AppLocale } from "@/i18n/locales";
-import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
-import { getCustomerSiteView, type CustomerSiteView } from "@/services/tenant/customer-site-data";
+import { resolveCustomerSiteThemeVariant } from "@/lib/customer-theme";
+import { resolveNewThemeKey } from "@/lib/new-themes";
+import {
+  getCustomerSiteView,
+  type CustomerSiteView,
+} from "@/services/tenant/customer-site-data";
 
 export const revalidate = 300;
 
@@ -12,16 +16,20 @@ type CustomerGalleryPageProps = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
-export default async function CustomerGalleryPage({ params }: CustomerGalleryPageProps) {
+export default async function CustomerGalleryPage({
+  params,
+}: CustomerGalleryPageProps) {
   const { locale: rawLocale, slug } = await params;
   const locale: AppLocale = isLocale(rawLocale) ? rawLocale : "en";
-  const site = ((await getCustomerSiteView(slug)) ?? customerDemos[slug]) as CustomerSiteView | undefined;
+  const site = ((await getCustomerSiteView(slug)) ?? customerDemos[slug]) as
+    | CustomerSiteView
+    | undefined;
 
   if (!site) {
     notFound();
   }
 
-  const variant = (site.themeKey as CustomerSiteThemeVariant | undefined) ?? resolveCustomerSiteThemeVariant(slug);
+  const variant = resolveCustomerSiteThemeVariant(site.themeKey ?? slug);
   const isDemo = site.isDemo ?? !site.photos;
 
   return (
@@ -35,7 +43,18 @@ export default async function CustomerGalleryPage({ params }: CustomerGalleryPag
       heroImageAlt={`${site.studioName} gallery cover`}
       pageKey="gallery"
     >
-      <CustomerGalleryBrowser slug={slug} galleries={site.galleries} variant={variant} imageWatermark={site.imageWatermark} isDemo={isDemo} />
+      <CustomerGalleryBrowser
+        slug={slug}
+        galleries={site.galleries}
+        variant={variant}
+        imageWatermark={site.imageWatermark}
+        isDemo={isDemo}
+        presentation={
+          site.themeKey === "velvet"
+            ? "velvet"
+            : resolveNewThemeKey(site.themeKey, slug)
+        }
+      />
     </CustomerPublicPage>
   );
 }

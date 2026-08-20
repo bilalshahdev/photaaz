@@ -51,26 +51,30 @@ export function formatPlanFeatureSummary(feature: DisplayPlanFeature) {
 
 export function formatPlanAmount(value: number | null) {
   if (value == null || value === 0) {
-    return "0";
+    return "$0";
   }
 
-  return Math.round(value).toLocaleString("en-PK");
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value % 100 === 0 ? 0 : 2
+  }).format(value / 100);
 }
 
 export function getPrimaryPlanPrice(plan: { monthlyPrice: number | null; annualPrice: number | null; lifetimePrice: number | null }) {
   if (plan.monthlyPrice && plan.monthlyPrice > 0) {
-    return { amount: formatPlanAmount(plan.monthlyPrice), prefix: "Rs", suffix: "/ month" };
+    return { amount: formatPlanAmount(plan.monthlyPrice), prefix: "", suffix: "/ month" };
   }
 
   if (plan.annualPrice && plan.annualPrice > 0) {
-    return { amount: formatPlanAmount(plan.annualPrice), prefix: "Rs", suffix: "/ year" };
+    return { amount: formatPlanAmount(plan.annualPrice), prefix: "", suffix: "/ year" };
   }
 
   if (plan.lifetimePrice && plan.lifetimePrice > 0) {
-    return { amount: formatPlanAmount(plan.lifetimePrice), prefix: "Rs", suffix: "one time" };
+    return { amount: formatPlanAmount(plan.lifetimePrice), prefix: "", suffix: "one time" };
   }
 
-  return { amount: "0", prefix: "Rs", suffix: "/ month" };
+  return { amount: "$0", prefix: "", suffix: "/ month" };
 }
 
 function normalizePlanFeature<T extends DisplayPlanFeature>(feature: T): T {

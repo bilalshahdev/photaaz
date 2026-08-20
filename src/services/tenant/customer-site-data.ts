@@ -4,12 +4,31 @@ import { customerDemos } from "@/data/customer-demos";
 import { cacheDurations, cacheTags } from "@/lib/cache";
 import { getPlatformAppConfig } from "@/services/admin/admin-data";
 import { getEffectivePlanKey } from "@/services/subscription/lifecycle";
-import { normalizeTenantWatermark, resolveEffectiveImageWatermark, type EffectiveImageWatermark } from "@/services/platform/media-policy";
-import { getTenantPlanAccess, hasFeatureInAccess, planLimitKeys } from "@/services/subscription/plan-limits";
-import { canPlanUseThemeWithLimit, themes, type ThemeKey } from "@/config/themes";
+import {
+  normalizeTenantWatermark,
+  resolveEffectiveImageWatermark,
+  type EffectiveImageWatermark,
+} from "@/services/platform/media-policy";
+import {
+  getTenantPlanAccess,
+  hasFeatureInAccess,
+  planLimitKeys,
+} from "@/services/subscription/plan-limits";
+import {
+  canPlanUseThemeWithLimit,
+  themes,
+  type ThemeKey,
+} from "@/config/themes";
 import { applyCloudinaryImageWatermark } from "@/services/storage/cloudinary-delivery";
 
-const homeSectionKeys = ["hero", "featuredPhotos", "categories", "galleries", "contact", "footer"] as const;
+const homeSectionKeys = [
+  "hero",
+  "featuredPhotos",
+  "categories",
+  "galleries",
+  "contact",
+  "footer",
+] as const;
 type HomeSectionKey = (typeof homeSectionKeys)[number];
 
 export type CustomerSiteView = {
@@ -34,7 +53,17 @@ export type CustomerSiteView = {
     phone: string;
     location: string;
   };
-  socialLinks?: Record<"instagram" | "facebook" | "youtube" | "linkedin" | "snapchat" | "pinterest" | "behance" | "tiktok", { href: string; enabled: boolean }>;
+  socialLinks?: Record<
+    | "instagram"
+    | "facebook"
+    | "youtube"
+    | "linkedin"
+    | "snapchat"
+    | "pinterest"
+    | "behance"
+    | "tiktok",
+    { href: string; enabled: boolean }
+  >;
   sections?: {
     hero: boolean;
     featuredPhotos: boolean;
@@ -45,6 +74,13 @@ export type CustomerSiteView = {
   };
   sectionOrder?: HomeSectionKey[];
   homepage?: {
+    copy: {
+      welcomeTitle: string;
+      featuredTitle: string;
+      galleriesTitle: string;
+      contactTitle: string;
+      contactBody: string;
+    };
     featuredPhotos: {
       source: "selected" | "all" | "category" | "subcategory" | "gallery";
       sourceId: string;
@@ -118,10 +154,12 @@ export type CustomerPublicBlogPost = {
   publishedAt?: Date | null;
 };
 
-async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView | null> {
+async function getCustomerSiteViewFromDb(
+  slug: string,
+): Promise<CustomerSiteView | null> {
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       settings: true,
@@ -131,96 +169,96 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
             include: {
               features: {
                 include: {
-                  feature: true
-                }
-              }
-            }
-          }
-        }
+                  feature: true,
+                },
+              },
+            },
+          },
+        },
       },
       categories: {
         where: {
-          parentId: null
+          parentId: null,
         },
         include: {
           photos: {
             where: {
-              moderationStatus: "APPROVED"
+              moderationStatus: "APPROVED",
             },
             include: {
               category: {
                 include: {
-                  parent: true
-                }
-              }
+                  parent: true,
+                },
+              },
             },
             orderBy: {
-              createdAt: "asc"
-            }
+              createdAt: "asc",
+            },
           },
           children: {
             include: {
               photos: {
                 where: {
-                  moderationStatus: "APPROVED"
+                  moderationStatus: "APPROVED",
                 },
                 include: {
                   category: {
                     include: {
-                      parent: true
-                    }
-                  }
+                      parent: true,
+                    },
+                  },
                 },
                 orderBy: {
-                  createdAt: "asc"
-                }
-              }
+                  createdAt: "asc",
+                },
+              },
             },
             orderBy: {
-              createdAt: "asc"
-            }
-          }
+              createdAt: "asc",
+            },
+          },
         },
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       albums: {
         where: {
-          published: true
+          published: true,
         },
         include: {
           category: {
             include: {
-              parent: true
-            }
+              parent: true,
+            },
           },
           photos: {
             where: {
-              moderationStatus: "APPROVED"
+              moderationStatus: "APPROVED",
             },
             include: {
               category: {
                 include: {
-                  parent: true
-                }
-              }
+                  parent: true,
+                },
+              },
             },
             orderBy: {
-              createdAt: "asc"
-            }
-          }
+              createdAt: "asc",
+            },
+          },
         },
         orderBy: [
           {
-            featured: "desc"
+            featured: "desc",
           },
           {
-            createdAt: "asc"
-          }
+            createdAt: "asc",
+          },
         ],
-      }
-    }
+      },
+    },
   });
 
   if (!tenant || tenant.status !== "ACTIVE") {
@@ -240,9 +278,14 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
   const socialLinks = normalizeSocialLinks(businessDetails.socialLinks);
   const sections = normalizeRecord(businessDetails.sections);
   const homepage = normalizeRecord(businessDetails.homepage);
+  const homepageCopy = normalizeRecord(homepage.copy);
   const homepageFeaturedPhotos = normalizeRecord(homepage.featuredPhotos);
-  const [appConfig, planAccess] = await Promise.all([getPlatformAppConfig(), getTenantPlanAccess(slug)]);
-  const planKey = planAccess?.planKey ?? getEffectivePlanKey(tenant.subscription);
+  const [appConfig, planAccess] = await Promise.all([
+    getPlatformAppConfig(),
+    getTenantPlanAccess(slug),
+  ]);
+  const planKey =
+    planAccess?.planKey ?? getEffectivePlanKey(tenant.subscription);
   const canHideFooter = !["basic", "free", "plus"].includes(planKey);
   const tenantWatermark = hasFeatureInAccess(planAccess, "watermarks")
     ? normalizeTenantWatermark(businessDetails.watermark)
@@ -250,25 +293,41 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
   const imageWatermark = resolveEffectiveImageWatermark({
     planKey,
     platformPolicy: appConfig.media,
-    tenantWatermark
+    tenantWatermark,
   });
   const photosTotalLimit = planAccess?.limits[planLimitKeys.photosTotal];
-  const photosPerCategoryLimit = planAccess?.limits[planLimitKeys.photosPerCategory];
+  const photosPerCategoryLimit =
+    planAccess?.limits[planLimitKeys.photosPerCategory];
   const galleriesTotalLimit = planAccess?.limits[planLimitKeys.galleriesTotal];
-  const photosPerGalleryLimit = planAccess?.limits[planLimitKeys.photosPerGallery];
-  const categoriesTotalLimit = planAccess?.limits[planLimitKeys.categoriesTotal];
-  const subcategoriesPerCategoryLimit = planAccess?.limits[planLimitKeys.subcategoriesPerCategory];
-  const premiumThemeLimit = planAccess?.limits[planLimitKeys.premiumThemesLimit];
+  const photosPerGalleryLimit =
+    planAccess?.limits[planLimitKeys.photosPerGallery];
+  const categoriesTotalLimit =
+    planAccess?.limits[planLimitKeys.categoriesTotal];
+  const subcategoriesPerCategoryLimit =
+    planAccess?.limits[planLimitKeys.subcategoriesPerCategory];
+  const premiumThemeLimit =
+    planAccess?.limits[planLimitKeys.premiumThemesLimit];
   const savedThemeKey = (tenant.settings?.themeKey ?? "minimal") as ThemeKey;
-  const savedTheme = themes.find((theme) => theme.key === savedThemeKey) ?? themes[0];
-  const themeKey = canPlanUseThemeWithLimit(planKey, savedTheme, premiumThemeLimit) ? savedTheme.key : "minimal";
+  const savedTheme =
+    themes.find((theme) => theme.key === savedThemeKey) ?? themes[0];
+  const themeKey = canPlanUseThemeWithLimit(
+    planKey,
+    savedTheme,
+    premiumThemeLimit,
+  )
+    ? savedTheme.key
+    : "minimal";
   const storedHeroImages = normalizeStringList(hero.images);
   const storedHeroLinks = normalizeStringList(hero.links);
-  const heroImage = readString(hero.image) ?? storedHeroImages[0] ?? firstPhoto?.secureUrl ?? fallback.heroImage;
+  const heroImage =
+    readString(hero.image) ??
+    storedHeroImages[0] ??
+    firstPhoto?.secureUrl ??
+    fallback.heroImage;
   const galleryItems = tenant.albums.map((album) => {
     const photos = limitList(
       album.photos.map((photo) => mapPhoto(photo, album.title, imageWatermark)),
-      photosPerGalleryLimit
+      photosPerGalleryLimit,
     );
 
     const coverImage = photos[0]?.image ?? heroImage;
@@ -278,23 +337,29 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
       id: album.id,
       title: album.title,
       slug: album.slug,
-      location: album.category?.parent ? `${album.category.parent.name} / ${album.category.name}` : album.category?.name ?? album.description ?? "Featured",
+      location: album.category?.parent
+        ? `${album.category.parent.name} / ${album.category.name}`
+        : (album.category?.name ?? album.description ?? "Featured"),
       image: coverImage,
       watermarkApplied: coverWatermarkApplied,
-      photos
+      photos,
     };
   });
 
   const categoryItems = tenant.categories.map((category) => {
     const directPhotos = limitList(
-      category.photos.map((photo) => mapPhoto(photo, undefined, imageWatermark)),
-      photosPerCategoryLimit
+      category.photos.map((photo) =>
+        mapPhoto(photo, undefined, imageWatermark),
+      ),
+      photosPerCategoryLimit,
     );
     const subcategories = limitList(
       category.children.map((child) => {
         const childPhotos = limitList(
-          child.photos.map((photo) => mapPhoto(photo, undefined, imageWatermark)),
-          photosPerCategoryLimit
+          child.photos.map((photo) =>
+            mapPhoto(photo, undefined, imageWatermark),
+          ),
+          photosPerCategoryLimit,
         );
 
         return {
@@ -302,24 +367,32 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
           name: child.name,
           slug: child.slug,
           image: child.image || childPhotos[0]?.image || heroImage,
-          photos: childPhotos
+          photos: childPhotos,
         };
       }),
-      subcategoriesPerCategoryLimit
+      subcategoriesPerCategoryLimit,
     );
 
     return {
       id: category.id,
       name: category.name,
       slug: category.slug,
-      image: category.image || directPhotos[0]?.image || subcategories[0]?.image || heroImage,
+      image:
+        category.image ||
+        directPhotos[0]?.image ||
+        subcategories[0]?.image ||
+        heroImage,
       photos: directPhotos,
-      subcategories
+      subcategories,
     };
   });
 
-  const publicGalleries = isSeededDemoTenant ? buildDemoGalleries(galleryItems, fallback.galleries) : limitList(galleryItems, galleriesTotalLimit);
-  const publicCategories = isSeededDemoTenant ? undefined : limitList(categoryItems, categoriesTotalLimit);
+  const publicGalleries = isSeededDemoTenant
+    ? buildDemoGalleries(galleryItems, fallback.galleries)
+    : limitList(galleryItems, galleriesTotalLimit);
+  const publicCategories = isSeededDemoTenant
+    ? undefined
+    : limitList(categoryItems, categoriesTotalLimit);
   const photosById = new Map<string, CustomerSitePhoto>();
 
   publicGalleries.forEach((gallery) => {
@@ -336,7 +409,9 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
     studioName: tenant.name,
     themeKey,
     specialty: readString(hero.specialty) ?? `${primaryCategory} photography`,
-    tagline: readString(hero.tagline) ?? `Selected work, stories, and visual collections by ${tenant.name}.`,
+    tagline:
+      readString(hero.tagline) ??
+      `Selected work, stories, and visual collections by ${tenant.name}.`,
     heroTitle: readString(hero.title),
     heroImage,
     heroImages: storedHeroImages.length ? storedHeroImages : [heroImage],
@@ -347,12 +422,15 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
     location: readString(profile.location) ?? readString(contact.location),
     ownerProfile: {
       displayName: readString(profile.displayName) ?? tenant.name,
-      headline: readString(profile.headline) ?? `The photographer behind ${tenant.name}.`,
+      headline:
+        readString(profile.headline) ??
+        `The photographer behind ${tenant.name}.`,
       avatarUrl: readString(profile.avatarUrl) ?? "",
       bio: readString(profile.bio) ?? "",
       email: readString(profile.email) ?? readString(contact.email) ?? "",
       phone: readString(profile.phone) ?? readString(contact.phone) ?? "",
-      location: readString(profile.location) ?? readString(contact.location) ?? ""
+      location:
+        readString(profile.location) ?? readString(contact.location) ?? "",
     },
     socialLinks,
     sections: {
@@ -361,25 +439,54 @@ async function getCustomerSiteViewFromDb(slug: string): Promise<CustomerSiteView
       categories: readSectionEnabled(sections.categories, true),
       galleries: readSectionEnabled(sections.galleries, true),
       contact: readSectionEnabled(sections.contact, true),
-      footer: canHideFooter ? readSectionEnabled(sections.footer, true) : true
+      footer: canHideFooter ? readSectionEnabled(sections.footer, true) : true,
     },
     sectionOrder: getSectionOrder(sections),
     homepage: {
+      copy: {
+        welcomeTitle:
+          readString(homepageCopy.welcomeTitle) ??
+          "Images with history, energy and a point of view.",
+        featuredTitle:
+          readString(homepageCopy.featuredTitle) ?? "Featured photographs",
+        galleriesTitle:
+          readString(homepageCopy.galleriesTitle) ?? "Inside the work",
+        contactTitle:
+          readString(homepageCopy.contactTitle) ??
+          "Bring the next story into focus.",
+        contactBody:
+          readString(homepageCopy.contactBody) ??
+          "Available for editorial assignments, campaigns, portraits, events and image licensing.",
+      },
       featuredPhotos: {
-        source: readEnum(homepageFeaturedPhotos.source, ["selected", "all", "category", "subcategory", "gallery"], "selected"),
+        source: readEnum(
+          homepageFeaturedPhotos.source,
+          ["selected", "all", "category", "subcategory", "gallery"],
+          "selected",
+        ),
         sourceId: readString(homepageFeaturedPhotos.sourceId) ?? "",
-        selectedPhotoIds: normalizeStringList(homepageFeaturedPhotos.selectedPhotoIds),
+        selectedPhotoIds: normalizeStringList(
+          homepageFeaturedPhotos.selectedPhotoIds,
+        ),
         limit: readNumber(homepageFeaturedPhotos.limit, 12),
-        columns: readEnum(homepageFeaturedPhotos.columns, ["1", "2", "3", "4", "masonry"], "3"),
-        gridStyle: readEnum(homepageFeaturedPhotos.gridStyle, ["square", "portrait", "landscape", "tiles", "mixed"], "mixed"),
-        pagination: "infinite"
-      }
+        columns: readEnum(
+          homepageFeaturedPhotos.columns,
+          ["1", "2", "3", "4", "masonry"],
+          "3",
+        ),
+        gridStyle: readEnum(
+          homepageFeaturedPhotos.gridStyle,
+          ["square", "portrait", "landscape", "tiles", "mixed"],
+          "mixed",
+        ),
+        pagination: "infinite",
+      },
     },
     imageWatermark,
     photos: limitList(Array.from(photosById.values()), photosTotalLimit),
     galleries: publicGalleries,
     categories: publicCategories,
-    isDemo: isSeededDemoTenant
+    isDemo: isSeededDemoTenant,
   };
 }
 
@@ -390,7 +497,7 @@ function normalizePageHeaders(value: unknown): CustomerPageHeaders {
     gallery: normalizePageHeader(headers.gallery),
     categories: normalizePageHeader(headers.categories),
     blog: normalizePageHeader(headers.blog),
-    about: normalizePageHeader(headers.about)
+    about: normalizePageHeader(headers.about),
   };
 }
 
@@ -399,7 +506,7 @@ function normalizePageHeader(value: unknown): CustomerPageHeader {
     return {
       image: readString(value) ?? "",
       title: "",
-      description: ""
+      description: "",
     };
   }
 
@@ -408,11 +515,14 @@ function normalizePageHeader(value: unknown): CustomerPageHeader {
   return {
     image: readString(header.image) ?? "",
     title: readString(header.title) ?? "",
-    description: readString(header.description) ?? ""
+    description: readString(header.description) ?? "",
   };
 }
 
-function buildDemoGalleries(galleries: CustomerSiteGallery[], fallbackGalleries: CustomerSiteGallery[]) {
+function buildDemoGalleries(
+  galleries: CustomerSiteGallery[],
+  fallbackGalleries: CustomerSiteGallery[],
+) {
   const merged = new Map<string, CustomerSiteGallery>();
 
   [...galleries, ...fallbackGalleries].forEach((gallery) => {
@@ -426,23 +536,27 @@ function buildDemoGalleries(galleries: CustomerSiteGallery[], fallbackGalleries:
   return Array.from(merged.values());
 }
 
-export function getCustomerSiteView(slug: string): Promise<CustomerSiteView | null> {
+export function getCustomerSiteView(
+  slug: string,
+): Promise<CustomerSiteView | null> {
   return unstable_cache(
     () => getCustomerSiteViewFromDb(slug),
     ["customer-site-view", slug],
     {
       revalidate: cacheDurations.tenantPublic,
-      tags: [cacheTags.tenant(slug), cacheTags.tenantPublic(slug)]
-    }
+      tags: [cacheTags.tenant(slug), cacheTags.tenantPublic(slug)],
+    },
   )();
 }
 
-async function getCustomerPublicBlogsFromDb(slug: string): Promise<CustomerPublicBlogPost[]> {
+async function getCustomerPublicBlogsFromDb(
+  slug: string,
+): Promise<CustomerPublicBlogPost[]> {
   const planAccess = await getTenantPlanAccess(slug);
   const blogLimit = planAccess?.limits[planLimitKeys.blogsTotal];
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     select: {
       id: true,
@@ -451,15 +565,15 @@ async function getCustomerPublicBlogsFromDb(slug: string): Promise<CustomerPubli
         where: {
           moderationStatus: "APPROVED",
           publishedAt: {
-            not: null
-          }
+            not: null,
+          },
         },
         orderBy: {
-          publishedAt: "desc"
+          publishedAt: "desc",
         },
-        take: blogLimit == null ? undefined : Math.max(blogLimit, 0)
-      }
-    }
+        take: blogLimit == null ? undefined : Math.max(blogLimit, 0),
+      },
+    },
   });
 
   if (!tenant || tenant.status !== "ACTIVE") {
@@ -473,28 +587,41 @@ async function getCustomerPublicBlogsFromDb(slug: string): Promise<CustomerPubli
     featuredImage: blog.featuredImage,
     contentHtml: readBlogHtml(blog.content),
     tags: blog.tags,
-    publishedAt: blog.publishedAt
+    publishedAt: blog.publishedAt,
   }));
 }
 
-export function getCustomerPublicBlogs(slug: string): Promise<CustomerPublicBlogPost[]> {
+export function getCustomerPublicBlogs(
+  slug: string,
+): Promise<CustomerPublicBlogPost[]> {
   return unstable_cache(
     () => getCustomerPublicBlogsFromDb(slug),
     ["customer-public-blogs", slug],
     {
       revalidate: cacheDurations.tenantPublic,
-      tags: [cacheTags.tenant(slug), cacheTags.tenantPublic(slug)]
-    }
+      tags: [cacheTags.tenant(slug), cacheTags.tenantPublic(slug)],
+    },
   )();
 }
 
 function normalizeRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function normalizeSocialLinks(value: unknown) {
   const savedLinks = normalizeRecord(value);
-  const keys = ["instagram", "facebook", "youtube", "linkedin", "snapchat", "pinterest", "behance", "tiktok"] as const;
+  const keys = [
+    "instagram",
+    "facebook",
+    "youtube",
+    "linkedin",
+    "snapchat",
+    "pinterest",
+    "behance",
+    "tiktok",
+  ] as const;
 
   return Object.fromEntries(
     keys.map((key) => {
@@ -506,15 +633,20 @@ function normalizeSocialLinks(value: unknown) {
         key,
         {
           href: href ?? "",
-          enabled: readBoolean(link.enabled, Boolean(href))
-        }
+          enabled: readBoolean(link.enabled, Boolean(href)),
+        },
       ];
-    })
+    }),
   ) as Record<(typeof keys)[number], { href: string; enabled: boolean }>;
 }
 
 function normalizeStringList(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === "string" && Boolean(item.trim()),
+      )
+    : [];
 }
 
 function limitList<T>(items: T[], limit: number | null | undefined) {
@@ -555,7 +687,10 @@ function readSectionOrder(value: unknown, fallback: number) {
 
 function getSectionOrder(sections: Record<string, unknown>): HomeSectionKey[] {
   return [...homeSectionKeys].sort((first, second) => {
-    return readSectionOrder(sections[first], homeSectionKeys.indexOf(first) + 1) - readSectionOrder(sections[second], homeSectionKeys.indexOf(second) + 1);
+    return (
+      readSectionOrder(sections[first], homeSectionKeys.indexOf(first) + 1) -
+      readSectionOrder(sections[second], homeSectionKeys.indexOf(second) + 1)
+    );
   });
 }
 
@@ -563,8 +698,14 @@ function readNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function readEnum<T extends string>(value: unknown, options: readonly T[], fallback: T) {
-  return typeof value === "string" && options.includes(value as T) ? (value as T) : fallback;
+function readEnum<T extends string>(
+  value: unknown,
+  options: readonly T[],
+  fallback: T,
+) {
+  return typeof value === "string" && options.includes(value as T)
+    ? (value as T)
+    : fallback;
 }
 
 function mapPhoto(
@@ -581,20 +722,23 @@ function mapPhoto(
     } | null;
   },
   galleryTitle?: string,
-  watermark?: EffectiveImageWatermark | null
+  watermark?: EffectiveImageWatermark | null,
 ): CustomerSitePhoto {
-  const categoryName = photo.category?.parent?.name ?? photo.category?.name ?? null;
+  const categoryName =
+    photo.category?.parent?.name ?? photo.category?.name ?? null;
   const subcategoryName = photo.category?.parent ? photo.category.name : null;
   const image = applyCloudinaryImageWatermark(photo.secureUrl, watermark);
 
   return {
     id: photo.id,
     title: photo.title ?? photo.alt,
-    location: subcategoryName ? `${categoryName} / ${subcategoryName}` : categoryName ?? galleryTitle ?? "Photography",
+    location: subcategoryName
+      ? `${categoryName} / ${subcategoryName}`
+      : (categoryName ?? galleryTitle ?? "Photography"),
     image: image.url,
     watermarkApplied: image.applied,
     galleryTitle,
     categoryName,
-    subcategoryName
+    subcategoryName,
   };
 }

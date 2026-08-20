@@ -1,15 +1,29 @@
 import Image from "next/image";
+import Link from "next/link";
 import { type ReactNode } from "react";
 import { ImageWatermark } from "@/components/customer/image-watermark";
 import { CustomerSiteFooter } from "@/components/customer/customer-site-footer";
-import { CustomerNavProvider, CustomerSiteNav } from "@/components/layout/customer-site-nav";
+import {
+  CustomerNavProvider,
+  CustomerSiteNav,
+} from "@/components/layout/customer-site-nav";
 import { ScrollToTop } from "@/components/marketing/scroll-to-top";
-import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
-import { type AppLocale } from "@/i18n/locales";
+import {
+  resolveCustomerSiteThemeVariant,
+  type CustomerSiteThemeVariant,
+} from "@/lib/customer-theme";
+import { localizePath, type AppLocale } from "@/i18n/locales";
+import { customerPath } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import { type CustomerSiteView } from "@/services/tenant/customer-site-data";
+import {
+  VelvetContactTrigger,
+  VelvetSiteControls,
+} from "@/components/customer/velvet-site-controls";
+import { NewThemePublicShell } from "@/components/customer/new-theme-public-shells";
+import { isNewThemeKey } from "@/lib/new-themes";
 
-type CustomerPublicPageProps = {
+export type CustomerPublicPageProps = {
   slug: string;
   locale: AppLocale;
   site: CustomerSiteView;
@@ -29,7 +43,9 @@ type CustomerSectionHeaderProps = {
 };
 
 export function isDarkCustomerVariant(variant: CustomerSiteThemeVariant) {
-  return variant === "cinematic" || variant === "luxury" || variant === "monochrome";
+  return (
+    variant === "cinematic" || variant === "luxury" || variant === "monochrome"
+  );
 }
 
 export function customerPublicSurface(variant: CustomerSiteThemeVariant) {
@@ -40,7 +56,7 @@ export function customerPublicSurface(variant: CustomerSiteThemeVariant) {
       border: "border-white/10",
       muted: "text-white/60",
       card: "border-white/10 bg-white/[0.06]",
-      accent: variant === "luxury" ? "text-[#d8bf88]" : "text-teal-300"
+      accent: variant === "luxury" ? "text-[#d8bf88]" : "text-teal-300",
     };
   }
 
@@ -51,7 +67,7 @@ export function customerPublicSurface(variant: CustomerSiteThemeVariant) {
       border: "border-[#ddcdbf]",
       muted: "text-[#655b53]",
       card: "border-[#ddcdbf] bg-[#fffaf2]",
-      accent: "text-[#9a4f32]"
+      accent: "text-[#9a4f32]",
     };
   }
 
@@ -61,39 +77,211 @@ export function customerPublicSurface(variant: CustomerSiteThemeVariant) {
     border: "border-[#d7dedb]",
     muted: "text-[#59636b]",
     card: "border-[#d7dedb] bg-white",
-    accent: "text-teal-700"
+    accent: "text-teal-700",
   };
 }
 
-export function CustomerSectionHeader({ eyebrow, title, description, dark = false }: CustomerSectionHeaderProps) {
+export function CustomerSectionHeader({
+  eyebrow,
+  title,
+  description,
+  dark = false,
+}: CustomerSectionHeaderProps) {
   return (
     <div className="mb-8 flex flex-col justify-between gap-4 border-b border-current/10 pb-5 sm:flex-row sm:items-end">
       <div>
-        <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.26em]", dark ? "text-white/50" : "text-teal-700")}>{eyebrow}</p>
-        <h2 className="mt-2 font-display text-4xl font-light tracking-[-0.05em] break-words">{title}</h2>
+        <p
+          className={cn(
+            "font-nav text-xs font-semibold uppercase tracking-[0.26em]",
+            dark ? "text-white/50" : "text-teal-700",
+          )}
+        >
+          {eyebrow}
+        </p>
+        <h2 className="mt-2 font-display text-4xl font-light tracking-[-0.05em] break-words">
+          {title}
+        </h2>
       </div>
-      {description ? <p className={cn("max-w-md text-sm leading-6", dark ? "text-white/60" : "text-[#59636b]")}>{description}</p> : null}
+      {description ? (
+        <p
+          className={cn(
+            "max-w-md text-sm leading-6",
+            dark ? "text-white/60" : "text-[#59636b]",
+          )}
+        >
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-export function CustomerPublicPage({ slug, locale, site, eyebrow, title, description, children, heroImageAlt, pageKey }: CustomerPublicPageProps) {
-  const variant = (site.themeKey as CustomerSiteThemeVariant | undefined) ?? resolveCustomerSiteThemeVariant(slug);
+export function CustomerPublicPage({
+  slug,
+  locale,
+  site,
+  eyebrow,
+  title,
+  description,
+  children,
+  heroImageAlt,
+  pageKey,
+}: CustomerPublicPageProps) {
+  const variant = resolveCustomerSiteThemeVariant(site.themeKey ?? slug);
   const surface = customerPublicSurface(variant);
   const pageHeader = pageKey ? site.pageHeaders?.[pageKey] : null;
   const headerImage = pageHeader?.image || (!pageKey ? site.heroImage : "");
   const headerTitle = title;
   const headerDescription = pageHeader?.description || description;
 
+  if (isNewThemeKey(site.themeKey)) {
+    return (
+      <CustomerNavProvider>
+        <NewThemePublicShell
+          theme={site.themeKey}
+          slug={slug}
+          locale={locale}
+          site={site}
+          eyebrow={eyebrow}
+          title={title}
+          description={description}
+          heroImageAlt={heroImageAlt}
+          pageKey={pageKey}
+        >
+          {children}
+        </NewThemePublicShell>
+      </CustomerNavProvider>
+    );
+  }
+
+  if (site.themeKey === "velvet") {
+    const homeHref = localizePath(locale, customerPath(slug));
+    const navigation = [
+      ["Galleries", localizePath(locale, customerPath(slug, "/gallery"))],
+      ["Categories", localizePath(locale, customerPath(slug, "/categories"))],
+      ["Blog", localizePath(locale, customerPath(slug, "/blog"))],
+      ["About", localizePath(locale, customerPath(slug, "/about"))],
+    ] as const;
+
+    return (
+      <CustomerNavProvider>
+        <main className="min-h-screen bg-[#101010] text-white">
+          <header className="sticky top-0 z-40 border-b border-white/20 bg-[#0b0b0b]">
+            <div className="grid min-h-20 grid-cols-[1fr_auto] items-center px-5 sm:px-8 lg:grid-cols-[auto_1fr_auto] lg:px-12">
+              <Link
+                href={homeHref}
+                className="font-display text-3xl font-black uppercase tracking-[-0.055em]"
+              >
+                {site.studioName}
+              </Link>
+              <VelvetSiteControls slug={slug} links={navigation} />
+            </div>
+          </header>
+          <section className="relative min-h-[58vh] overflow-hidden bg-black">
+            {headerImage ? (
+              <>
+                <Image
+                  src={headerImage}
+                  alt={heroImageAlt ?? `${site.studioName} cover`}
+                  fill
+                  priority
+                  className="object-cover grayscale opacity-65"
+                />
+                <ImageWatermark
+                  watermark={site.imageWatermark}
+                  className="bottom-5"
+                />
+              </>
+            ) : null}
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/55 to-black/15" />
+            <div className="relative flex min-h-[58vh] items-end px-5 pb-12 sm:px-8 lg:px-12">
+              <div>
+                <p className="font-mono text-[9px] font-bold uppercase tracking-[0.26em] text-[#ef5559]">
+                  {eyebrow}
+                </p>
+                <h1 className="mt-5 max-w-6xl font-display text-[clamp(4.5rem,11vw,11rem)] font-black uppercase leading-[0.72] tracking-[-0.085em]">
+                  {headerTitle}
+                </h1>
+                {headerDescription ? (
+                  <p className="mt-7 max-w-2xl text-lg leading-8 text-white/65">
+                    {headerDescription}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </section>
+          <div>{children}</div>
+          <footer className="border-t border-white/20 bg-[#090909] px-5 py-12 sm:px-8 lg:px-12">
+            <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+              <div>
+                <p className="font-display text-4xl font-black uppercase tracking-[-0.06em]">
+                  {site.studioName}
+                </p>
+                <p className="mt-4 max-w-sm text-sm leading-7 text-white/45">
+                  {site.specialty}
+                </p>
+              </div>
+              <nav className="grid content-start gap-3 font-sans text-xs font-bold uppercase">
+                {navigation.map(([label, href]) => (
+                  <Link key={label} href={href}>
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+              <nav className="grid content-start gap-3 font-sans text-xs font-bold uppercase">
+                <VelvetContactTrigger className="text-left" />
+                <Link href={localizePath(locale, "/legal/privacy")}>
+                  Privacy
+                </Link>
+                <Link href={localizePath(locale, "/legal/terms")}>Terms</Link>
+              </nav>
+            </div>
+            <p className="mt-12 border-t border-white/15 pt-5 font-mono text-[8px] uppercase tracking-[0.18em] text-white/35">
+              © {new Date().getFullYear()} {site.studioName} · Powered by
+              Photaaz
+            </p>
+          </footer>
+          <ScrollToTop />
+        </main>
+      </CustomerNavProvider>
+    );
+  }
+
   return (
     <CustomerNavProvider>
-      <main className={cn(surface.main, variant === "masonry" && "lg:pl-[260px]")}>
-        <section className={cn("relative min-h-[42vh] overflow-hidden text-white", headerImage ? "bg-[#15120f]" : solidHeaderClass(variant))}>
-          <CustomerSiteNav slug={slug} locale={locale} name={site.studioName} variant={variant} />
+      <main
+        className={cn(surface.main, variant === "masonry" && "lg:pl-[260px]")}
+      >
+        <section
+          className={cn(
+            "relative min-h-[42vh] overflow-hidden text-white",
+            headerImage ? "bg-[#15120f]" : solidHeaderClass(variant),
+          )}
+        >
+          <CustomerSiteNav
+            slug={slug}
+            locale={locale}
+            name={site.studioName}
+            variant={variant}
+          />
           {headerImage ? (
             <>
-              <Image src={headerImage} alt={heroImageAlt ?? `${site.studioName} cover`} fill priority className={cn(variant === "panorama" ? "pf-panorama-drift" : "pf-hero-drift", "object-cover opacity-58")} />
-              <ImageWatermark watermark={site.imageWatermark} className="bottom-5" />
+              <Image
+                src={headerImage}
+                alt={heroImageAlt ?? `${site.studioName} cover`}
+                fill
+                priority
+                className={cn(
+                  variant === "panorama"
+                    ? "pf-panorama-drift"
+                    : "pf-hero-drift",
+                  "object-cover opacity-58",
+                )}
+              />
+              <ImageWatermark
+                watermark={site.imageWatermark}
+                className="bottom-5"
+              />
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,10,10,0.86),rgba(10,10,10,0.34))]" />
             </>
           ) : (
@@ -101,15 +289,30 @@ export function CustomerPublicPage({ slug, locale, site, eyebrow, title, descrip
           )}
           <div className="relative mx-auto flex min-h-[42vh] max-w-6xl items-end px-5 pb-10 pt-24 sm:px-8 lg:px-10">
             <div className="pf-reveal max-w-4xl">
-              <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-white/70">{eyebrow}</p>
-              <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.05em] sm:text-7xl">{headerTitle}</h1>
-              {headerDescription ? <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 sm:text-lg sm:leading-8">{headerDescription}</p> : null}
+              <p className="font-nav text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+                {eyebrow}
+              </p>
+              <h1 className="pf-fluid-title-page mt-4 font-display font-light leading-none tracking-[-0.05em] sm:text-7xl">
+                {headerTitle}
+              </h1>
+              {headerDescription ? (
+                <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 sm:text-lg sm:leading-8">
+                  {headerDescription}
+                </p>
+              ) : null}
             </div>
           </div>
         </section>
 
         {children}
-        {site.sections?.footer !== false ? <CustomerSiteFooter slug={slug} locale={locale} site={site} variant={variant} /> : null}
+        {site.sections?.footer !== false ? (
+          <CustomerSiteFooter
+            slug={slug}
+            locale={locale}
+            site={site}
+            variant={variant}
+          />
+        ) : null}
         <ScrollToTop />
       </main>
     </CustomerNavProvider>

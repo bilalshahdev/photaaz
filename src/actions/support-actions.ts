@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getPlatformAppConfig } from "@/services/admin/admin-data";
 import { sendEmail } from "@/services/email/email-service";
 import { isEmailTriggerEnabled } from "@/services/email/email-triggers";
+import { enforceServerActionRateLimit } from "@/services/security/rate-limit";
 
 const supportSchema = z.object({
   name: z.string().min(2),
@@ -15,6 +16,7 @@ const supportSchema = z.object({
 });
 
 export async function createSupportRequest(input: z.infer<typeof supportSchema>) {
+  await enforceServerActionRateLimit("public-support", 5, 10 * 60);
   const data = supportSchema.parse(input);
 
   await prisma.platformSupportRequest.create({

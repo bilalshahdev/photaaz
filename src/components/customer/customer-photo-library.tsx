@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { Edit2, ImageIcon, Save, Trash2, UploadCloud } from "lucide-react";
-import { createCustomerPhoto, deleteCustomerPhoto, updateCustomerPhoto } from "@/app/[locale]/site/[slug]/dashboard/galleries/photo-actions";
+import { createCustomerPhoto, deleteCustomerPhoto, updateCustomerPhoto } from "@/app/site/[slug]/dashboard/galleries/photo-actions";
 import { CustomerPhotoCategorySelect, type PhotoCategoryOption } from "@/components/customer/customer-photo-category-select";
 import { CustomerAddButton, CustomerEmptyState, CustomerIconButton, CustomerPanel, CustomerRecordCard, CustomerRecordGrid } from "@/components/customer/customer-dashboard-ui";
 import { CheckboxField, ImageDropField, SelectField, TextField } from "@/components/forms/form-controls";
 import { Button } from "@/components/ui/button";
+import { DirectUploadForm } from "@/components/forms/direct-upload-form";
 import {
   Dialog,
   DialogContent,
@@ -90,12 +91,12 @@ function AddPhotoDialog({ tenantSlug, categories, galleries }: { tenantSlug: str
         <DialogHeader>
           <DialogTitle>Add photo</DialogTitle>
         </DialogHeader>
-        <form action={createCustomerPhoto} className="grid gap-4">
+        <DirectUploadForm action={createCustomerPhoto} className="grid gap-4">
           <input type="hidden" name="tenantSlug" value={tenantSlug} />
           <TextField name="title" required minLength={2} label="Photo title" placeholder="Photo title" />
           <CustomerPhotoCategorySelect categories={categories} />
           <GallerySelect galleries={galleries} />
-          <ImageDropField name="imageFile" label="Photo file" required />
+          <ImageDropField name="imageFile" label="Photo file" required uploadArea="photos" />
           <CheckboxField
             name="rightsConfirmed"
             required
@@ -109,7 +110,7 @@ function AddPhotoDialog({ tenantSlug, categories, galleries }: { tenantSlug: str
               Upload for review
             </Button>
           </DialogFooter>
-        </form>
+        </DirectUploadForm>
       </DialogContent>
     </Dialog>
   );

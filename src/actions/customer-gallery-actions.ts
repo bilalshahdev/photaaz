@@ -5,6 +5,7 @@ import { revalidateTenantDashboard, revalidateTenantPublic } from "@/lib/cache";
 import { prisma } from "@/lib/db/prisma";
 import { slugify } from "@/lib/slug";
 import { assertGalleryCreateLimit } from "@/services/subscription/plan-limits";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
 
 const gallerySchema = z.object({
   tenantSlug: z.string().min(1),
@@ -13,16 +14,16 @@ const gallerySchema = z.object({
   description: z.string().trim().optional(),
   categoryId: z.string().trim().optional(),
   featured: z.boolean(),
-  published: z.boolean()
+  published: z.boolean(),
 });
 
 const galleryUpdateSchema = gallerySchema.extend({
-  galleryId: z.string().min(1)
+  galleryId: z.string().min(1),
 });
 
 const galleryDeleteSchema = z.object({
   tenantSlug: z.string().min(1),
-  galleryId: z.string().min(1)
+  galleryId: z.string().min(1),
 });
 
 export async function createCustomerGallery(formData: FormData) {
@@ -33,14 +34,17 @@ export async function createCustomerGallery(formData: FormData) {
     description: String(formData.get("description") ?? ""),
     categoryId: normalizeOptional(formData.get("categoryId")),
     featured: formData.get("featured") === "on",
-    published: formData.get("published") === "on"
+    published: formData.get("published") === "on",
   });
 
   const tenant = await getTenant(parsed.tenantSlug);
   await assertGalleryCreateLimit(parsed.tenantSlug);
 
   const categoryId = await getTenantCategoryId(tenant.id, parsed.categoryId);
-  const slug = await createUniqueAlbumSlug(tenant.id, parsed.slug || parsed.title);
+  const slug = await createUniqueAlbumSlug(
+    tenant.id,
+    parsed.slug || parsed.title,
+  );
 
   await prisma.album.create({
     data: {
@@ -50,8 +54,8 @@ export async function createCustomerGallery(formData: FormData) {
       description: parsed.description || null,
       categoryId,
       featured: parsed.featured,
-      published: parsed.published
-    }
+      published: parsed.published,
+    },
   });
 
   revalidateGalleryPaths(parsed.tenantSlug);
@@ -66,19 +70,19 @@ export async function updateCustomerGallery(formData: FormData) {
     description: String(formData.get("description") ?? ""),
     categoryId: normalizeOptional(formData.get("categoryId")),
     featured: formData.get("featured") === "on",
-    published: formData.get("published") === "on"
+    published: formData.get("published") === "on",
   });
 
   const tenant = await getTenant(parsed.tenantSlug);
   const album = await prisma.album.findFirst({
     where: {
       id: parsed.galleryId,
-      tenantId: tenant.id
+      tenantId: tenant.id,
     },
     select: {
       id: true,
-      slug: true
-    }
+      slug: true,
+    },
   });
 
   if (!album) {
@@ -87,11 +91,14 @@ export async function updateCustomerGallery(formData: FormData) {
 
   const categoryId = await getTenantCategoryId(tenant.id, parsed.categoryId);
   const requestedSlug = slugify(parsed.slug || parsed.title);
-  const slug = requestedSlug === album.slug ? album.slug : await createUniqueAlbumSlug(tenant.id, requestedSlug);
+  const slug =
+    requestedSlug === album.slug
+      ? album.slug
+      : await createUniqueAlbumSlug(tenant.id, requestedSlug);
 
   await prisma.album.update({
     where: {
-      id: album.id
+      id: album.id,
     },
     data: {
       title: parsed.title,
@@ -99,8 +106,8 @@ export async function updateCustomerGallery(formData: FormData) {
       description: parsed.description || null,
       categoryId,
       featured: parsed.featured,
-      published: parsed.published
-    }
+      published: parsed.published,
+    },
   });
 
   revalidateGalleryPaths(parsed.tenantSlug);
@@ -109,7 +116,7 @@ export async function updateCustomerGallery(formData: FormData) {
 export async function deleteCustomerGallery(formData: FormData) {
   const parsed = galleryDeleteSchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
-    galleryId: String(formData.get("galleryId") ?? "")
+    galleryId: String(formData.get("galleryId") ?? ""),
   });
 
   const tenant = await getTenant(parsed.tenantSlug);
@@ -117,22 +124,24 @@ export async function deleteCustomerGallery(formData: FormData) {
   await prisma.album.deleteMany({
     where: {
       id: parsed.galleryId,
-      tenantId: tenant.id
-    }
+      tenantId: tenant.id,
+    },
   });
 
   revalidateGalleryPaths(parsed.tenantSlug);
 }
 
 async function getTenant(slug: string) {
-  const tenant = await prisma.tenant.findUnique({
+  const authorizedTenant = await requireTenantOwner(slug);
+  const tenant = await prisma.tenant.findFirst({
     where: {
-      slug
+      id: authorizedTenant.id,
+      slug,
     },
     select: {
       id: true,
-      slug: true
-    }
+      slug: true,
+    },
   });
 
   if (!tenant) {
@@ -150,11 +159,11 @@ async function getTenantCategoryId(tenantId: string, categoryId?: string) {
   const category = await prisma.category.findFirst({
     where: {
       id: categoryId,
-      tenantId
+      tenantId,
     },
     select: {
-      id: true
-    }
+      id: true,
+    },
   });
 
   if (!category) {
@@ -169,7 +178,12 @@ async function createUniqueAlbumSlug(tenantId: string, value: string) {
   let slug = baseSlug;
   let suffix = 2;
 
-  while (await prisma.album.findUnique({ where: { tenantId_slug: { tenantId, slug } }, select: { id: true } })) {
+  while (
+    await prisma.album.findUnique({
+      where: { tenantId_slug: { tenantId, slug } },
+      select: { id: true },
+    })
+  ) {
     slug = `${baseSlug}-${suffix}`;
     suffix += 1;
   }

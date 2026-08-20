@@ -6,27 +6,29 @@ import { z } from "zod";
 import { revalidateTenantDashboard, revalidateTenantPublic } from "@/lib/cache";
 import { prisma } from "@/lib/db/prisma";
 import { assertCategoryLinkLimit } from "@/services/subscription/plan-limits";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
 
 const linkCategorySchema = z.object({
   tenantSlug: z.string().min(1),
-  platformSlug: z.string().min(1)
+  platformSlug: z.string().min(1),
 });
 
 const unlinkCategorySchema = z.object({
   tenantSlug: z.string().min(1),
-  categoryId: z.string().min(1)
+  categoryId: z.string().min(1),
 });
 
 export async function linkCustomerCategory(formData: FormData) {
   const parsed = linkCategorySchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
-    platformSlug: String(formData.get("platformSlug") ?? "")
+    platformSlug: String(formData.get("platformSlug") ?? ""),
   });
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
 
   const [tenant, platformType] = await Promise.all([
-    prisma.tenant.findUnique({
-      where: { slug: parsed.tenantSlug },
-      select: { id: true, slug: true }
+    prisma.tenant.findFirst({
+      where: { id: authorizedTenant.id, slug: parsed.tenantSlug },
+      select: { id: true, slug: true },
     }),
     prisma.platformPhotographyType.findUnique({
       where: { slug: parsed.platformSlug },
@@ -34,10 +36,10 @@ export async function linkCustomerCategory(formData: FormData) {
         parent: true,
         children: {
           where: { enabled: true },
-          orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
-        }
-      }
-    })
+          orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+        },
+      },
+    }),
   ]);
 
   if (!tenant) {
@@ -59,7 +61,7 @@ export async function linkCustomerCategory(formData: FormData) {
       tenantId: tenant.id,
       name: platformType.parent.name,
       slug: platformType.parent.slug,
-      image: platformType.parent.image
+      image: platformType.parent.image,
     });
 
     await upsertTenantCategory({
@@ -67,7 +69,7 @@ export async function linkCustomerCategory(formData: FormData) {
       parentId: parent.id,
       name: platformType.name,
       slug: platformType.slug,
-      image: platformType.image
+      image: platformType.image,
     });
 
     revalidateCategoryPaths(tenant.slug);
@@ -78,7 +80,7 @@ export async function linkCustomerCategory(formData: FormData) {
     tenantId: tenant.id,
     name: platformType.name,
     slug: platformType.slug,
-    image: platformType.image
+    image: platformType.image,
   });
 
   revalidateCategoryPaths(tenant.slug);
@@ -87,12 +89,13 @@ export async function linkCustomerCategory(formData: FormData) {
 export async function unlinkCustomerCategory(formData: FormData) {
   const parsed = unlinkCategorySchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
-    categoryId: String(formData.get("categoryId") ?? "")
+    categoryId: String(formData.get("categoryId") ?? ""),
   });
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug: parsed.tenantSlug },
-    select: { id: true, slug: true }
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: authorizedTenant.id, slug: parsed.tenantSlug },
+    select: { id: true, slug: true },
   });
 
   if (!tenant) {
@@ -102,8 +105,8 @@ export async function unlinkCustomerCategory(formData: FormData) {
   await prisma.category.deleteMany({
     where: {
       id: parsed.categoryId,
-      tenantId: tenant.id
-    }
+      tenantId: tenant.id,
+    },
   });
 
   revalidateCategoryPaths(tenant.slug);
@@ -114,7 +117,7 @@ async function upsertTenantCategory({
   parentId = null,
   name,
   slug,
-  image
+  image,
 }: {
   tenantId: string;
   parentId?: string | null;
@@ -126,24 +129,24 @@ async function upsertTenantCategory({
     where: {
       tenantId_slug: {
         tenantId,
-        slug
-      }
+        slug,
+      },
     },
     create: {
       tenantId,
       parentId,
       name,
       slug,
-      image
+      image,
     },
     update: {
       parentId,
       name,
-      image
+      image,
     },
     select: {
-      id: true
-    }
+      id: true,
+    },
   });
 }
 

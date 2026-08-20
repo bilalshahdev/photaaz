@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { reviewCategoryRequest } from "@/app/admin/actions";
 import { getAdminCategoryRequests, getTranslationLocaleConfig } from "@/services/admin/admin-data";
-import { getPlatformPhotographyTypes } from "@/services/platform/platform-data";
+import { getPlatformPhotographyTypes, type LocalizedString } from "@/services/platform/platform-data";
 
 export default async function AdminCategoriesPage() {
   const [types, requests, locales] = await Promise.all([getPlatformPhotographyTypes(), getAdminCategoryRequests(), getTranslationLocaleConfig()]);
@@ -37,7 +37,7 @@ export default async function AdminCategoriesPage() {
                       <span className={getRequestBadgeClass(request.status)}>{request.status}</span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Requested by {request.tenant.name} (/{request.tenant.slug}) - {request.parentType?.name ?? "Standalone category"} - Plan {request.tenant.subscription?.plan.name ?? "Free"}
+                      Requested by {request.tenant.name} (/{request.tenant.slug}) - {request.parentType ? displayLocalized(request.parentType.name) : "Standalone category"} - Plan {request.tenant.subscription?.plan ? displayLocalized(request.tenant.subscription.plan.name) : "Free"}
                     </p>
                     {request.note ? <p className="mt-2 text-sm leading-6 text-slate-500">Client note: {request.note}</p> : null}
                     {request.adminNote ? <p className="mt-2 text-sm leading-6 text-slate-500">Admin note: {request.adminNote}</p> : null}
@@ -95,4 +95,9 @@ function getRequestBadgeClass(status: string) {
     default:
       return "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800";
   }
+}
+
+function displayLocalized(value: LocalizedString) {
+  if (typeof value === "string") return value;
+  return value.en || Object.values(value).find(Boolean) || "";
 }

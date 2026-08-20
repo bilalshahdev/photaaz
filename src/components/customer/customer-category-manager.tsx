@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { ChevronDown, Eye, FolderPlus, FolderTree, ImageIcon, Link2, PlusCircle, Trash2 } from "lucide-react";
 import { linkCustomerCategory, unlinkCustomerCategory } from "@/actions/customer-category-actions";
-import { requestCustomerCategory } from "@/app/[locale]/site/[slug]/dashboard/galleries/photo-actions";
+import { requestCustomerCategory } from "@/app/site/[slug]/dashboard/galleries/photo-actions";
 import { AdminTable, AdminTableEmptyRow } from "@/components/admin/admin-crud-ui";
 import {
   CustomerAddButton,
@@ -15,6 +15,7 @@ import {
   CustomerPanel
 } from "@/components/customer/customer-dashboard-ui";
 import { ImageDropField, SelectField, TextareaField, TextField } from "@/components/forms/form-controls";
+import { DirectUploadForm } from "@/components/forms/direct-upload-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -374,7 +375,7 @@ function RequestCategoryDialog({
         <DialogHeader>
           <DialogTitle>Request new category</DialogTitle>
         </DialogHeader>
-        <form ref={formRef} action={submit} className="grid gap-4">
+        <DirectUploadForm formRef={formRef} action={submit} className="grid gap-4">
           <input type="hidden" name="tenantSlug" value={tenantSlug} />
           <SelectField
             name="parentSlug"
@@ -390,7 +391,7 @@ function RequestCategoryDialog({
             ]}
           />
           <TextField name="name" required minLength={2} disabled={disabled} label="Category name" placeholder="Category name" />
-          <ImageDropField name="imageFile" label="Suggested thumbnail" disabled={disabled} />
+          <ImageDropField name="imageFile" label="Suggested thumbnail" disabled={disabled} uploadArea="categories" />
           <TextareaField name="note" disabled={disabled} label="Note" placeholder="Why do you need it?" />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -400,7 +401,7 @@ function RequestCategoryDialog({
               {isPending ? "Sending" : "Send request"}
             </Button>
           </DialogFooter>
-        </form>
+        </DirectUploadForm>
       </DialogContent>
     </Dialog>
   );

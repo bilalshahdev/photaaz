@@ -6,6 +6,7 @@ import { Loader2, Pencil, Save, Trash2, Wrench } from "lucide-react";
 import { deleteFeature, saveFeature } from "@/app/admin/actions";
 import { AdminTable, AdminTableEmptyRow } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminConfirmDialog, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
+import { LocalizedInput, LocalizedTextarea, type AdminLocaleOption } from "@/components/admin/localized-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,13 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import type { LocalizedString } from "@/services/platform/platform-data";
 
 type FeatureItem = {
   id: string;
   key: string;
-  name: string;
-  description: string | null;
+  name: LocalizedString;
+  description: LocalizedString | null;
   _count: {
     plans: number;
   };
@@ -31,8 +32,8 @@ type FeatureItem = {
 type FeatureDraft = {
   id?: string;
   key: string;
-  name: string;
-  description: string;
+  name: LocalizedString;
+  description: LocalizedString;
 };
 
 const emptyDraft: FeatureDraft = {
@@ -41,7 +42,7 @@ const emptyDraft: FeatureDraft = {
   description: ""
 };
 
-export function FeaturesCatalog({ features: initialFeatures }: { features: FeatureItem[] }) {
+export function FeaturesCatalog({ features: initialFeatures, locales }: { features: FeatureItem[]; locales: AdminLocaleOption[] }) {
   const [features, setFeatures] = useState(initialFeatures);
   const [draft, setDraft] = useState<FeatureDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FeatureItem | null>(null);
@@ -116,15 +117,15 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
             {features.map((feature) => (
               <tr key={feature.id} className="align-middle transition hover:bg-slate-50/70">
                 <td className="p-4">
-                  <p className="font-semibold text-slate-950">{feature.name}</p>
-                  <p className="mt-1 text-sm text-slate-500">{feature.description || "No description."}</p>
+                  <p className="font-semibold text-slate-950">{displayLocalized(feature.name)}</p>
+                  <p className="mt-1 text-sm text-slate-500">{displayLocalized(feature.description) || "No description."}</p>
                 </td>
                 <td className="p-4 font-mono text-xs text-slate-500">{feature.key}</td>
                 <td className="p-4 text-slate-600">{feature._count.plans}</td>
                 <td className="p-4">
                   <div className="flex justify-end gap-2">
-                    <AdminIconButton icon={Pencil} label={`Edit ${feature.name}`} tooltip={`Edit ${feature.name}`} onClick={() => openEditDialog(feature)} />
-                    <AdminIconButton icon={Trash2} label={`Delete ${feature.name}`} tooltip={feature._count.plans > 0 ? "Feature is linked to packages" : `Delete ${feature.name}`} tone="danger" disabled={feature._count.plans > 0} onClick={() => setDeleteTarget(feature)} />
+                    <AdminIconButton icon={Pencil} label={`Edit ${displayLocalized(feature.name)}`} tooltip={`Edit ${displayLocalized(feature.name)}`} onClick={() => openEditDialog(feature)} />
+                    <AdminIconButton icon={Trash2} label={`Delete ${displayLocalized(feature.name)}`} tooltip={feature._count.plans > 0 ? "Feature is linked to packages" : `Delete ${displayLocalized(feature.name)}`} tone="danger" disabled={feature._count.plans > 0} onClick={() => setDeleteTarget(feature)} />
                   </div>
                 </td>
               </tr>
@@ -141,21 +142,15 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
             <>
               <DialogHeader>
                 <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">{draft.id ? "Edit feature" : "Add feature"}</p>
-                <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{draft.name || "Feature"}</DialogTitle>
+                <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{displayLocalized(draft.name) || "Feature"}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4">
-                <Label className="block text-sm font-medium text-slate-700">
-                  Name
-                  <Input value={draft.name} onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))} placeholder="Feature name" className="mt-2 h-11" />
-                </Label>
+                <LocalizedInput label="Name" value={draft.name} locales={locales} onChange={(name) => setDraft((current) => (current ? { ...current, name } : current))} placeholder="Feature name" />
                 <Label className="block text-sm font-medium text-slate-700">
                   Key
                   <Input value={draft.key} onChange={(event) => setDraft((current) => (current ? { ...current, key: event.target.value.trim().toLowerCase() } : current))} placeholder="photos.total" className="mt-2 h-11 font-mono" />
                 </Label>
-                <Label className="block text-sm font-medium text-slate-700">
-                  Description
-                  <Textarea value={draft.description} onChange={(event) => setDraft((current) => (current ? { ...current, description: event.target.value } : current))} placeholder="What this feature does" className="mt-2 min-h-24 resize-y" />
-                </Label>
+                <LocalizedTextarea label="Description" value={draft.description} locales={locales} onChange={(description) => setDraft((current) => (current ? { ...current, description } : current))} placeholder="What this feature does" />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
@@ -172,11 +167,17 @@ export function FeaturesCatalog({ features: initialFeatures }: { features: Featu
       <AdminConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title={deleteTarget ? `Delete ${deleteTarget.name}?` : "Delete feature?"}
+        title={deleteTarget ? `Delete ${displayLocalized(deleteTarget.name)}?` : "Delete feature?"}
         body="This feature will no longer be available for future package configuration."
         pending={isPending}
         onConfirm={confirmDelete}
       />
     </AdminPanel>
   );
+}
+
+function displayLocalized(value: LocalizedString | null | undefined) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.en || Object.values(value).find(Boolean) || "";
 }

@@ -40,8 +40,17 @@ export async function saveTenantImageUpload(file: File, tenantSlug: string, opti
     throw new Error("Only JPG, PNG, WebP, and GIF images are supported.");
   }
 
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (!hasMatchingImageSignature(bytes, file.type)) {
+    throw new Error("The uploaded file content does not match its image type.");
+  }
+
   if (hasCloudinaryConfig()) {
     return uploadTenantImageToCloudinary(file, tenantSlug, options);
+  }
+
+  if (env.NODE_ENV === "production") {
+    throw new Error("Cloudinary must be configured for production image uploads.");
   }
 
   const uploadPath = buildTenantUploadPath(tenantSlug, options);
@@ -51,12 +60,20 @@ export async function saveTenantImageUpload(file: File, tenantSlug: string, opti
   const publicPath = `/uploads/${uploadPath.localSegments.join("/")}/${fileName}`;
 
   await mkdir(uploadDirectory, { recursive: true });
-  await writeFile(absolutePath, Buffer.from(await file.arrayBuffer()));
+  await writeFile(absolutePath, bytes);
 
   return {
     publicPath,
     storageId: `local/${uploadPath.localSegments.join("/")}/${fileName}`
   };
+}
+
+export function hasMatchingImageSignature(bytes: Uint8Array, mimeType: string) {
+  if (mimeType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === "image/png") return bytes.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value);
+  if (mimeType === "image/gif") return bytes.length >= 6 && (Buffer.from(bytes.slice(0, 6)).toString("ascii") === "GIF87a" || Buffer.from(bytes.slice(0, 6)).toString("ascii") === "GIF89a");
+  if (mimeType === "image/webp") return bytes.length >= 12 && Buffer.from(bytes.slice(0, 4)).toString("ascii") === "RIFF" && Buffer.from(bytes.slice(8, 12)).toString("ascii") === "WEBP";
+  return false;
 }
 
 async function uploadTenantImageToCloudinary(file: File, tenantSlug: string, options: SaveTenantImageUploadOptions) {

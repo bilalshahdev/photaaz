@@ -6,55 +6,107 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { revalidateTenantDashboard } from "@/lib/cache";
 import { createTenantForOwner } from "@/services/tenant/create-tenant";
-import { defaultPlatformAppConfig, predefinedTranslationLocales } from "@/services/admin/admin-data";
+import {
+  defaultPlatformAppConfig,
+  predefinedTranslationLocales,
+} from "@/services/admin/admin-data";
 import { defaultPlatformMediaPolicy } from "@/services/platform/media-policy";
 import { themeCustomizationKeys } from "@/config/theme-customization";
 import { fallbackLandingSettings } from "@/services/platform/platform-data";
-import { emailDeliverySettingKey, getEmailDeliverySettings } from "@/services/email/email-service";
-import type { LocalizedString, PlatformAnnouncementView, PlatformLandingSettings, PlatformPhotographyTypeView, PlatformThemeView } from "@/services/platform/platform-data";
+import {
+  emailDeliverySettingKey,
+  getEmailDeliverySettings,
+} from "@/services/email/email-service";
+import type {
+  LocalizedString,
+  PlatformAnnouncementView,
+  PlatformLandingSettings,
+  PlatformPhotographyTypeView,
+  PlatformThemeView,
+} from "@/services/platform/platform-data";
 import { locales } from "@/i18n/locales";
+import { brandFontKeys } from "@/lib/brand-fonts";
+import { requireSuperAdmin } from "@/services/auth/admin-authorization";
 
 const localizedStringSchema = z.union([
   z.string().min(2),
-  z.record(z.string().min(1), z.string().min(1))
+  z.record(z.string().min(1), z.string().min(1)),
 ]);
 
 const localizedStringListSchema = z.union([
   z.array(z.string().min(1)),
-  z.record(z.string().min(1), z.array(z.string().min(1)))
+  z.record(z.string().min(1), z.array(z.string().min(1))),
 ]);
 
-const optionalLocalizedStringSchema = z.union([
-  z.string(),
-  z.record(z.string().min(1), z.string())
-]).nullable().optional();
+const optionalLocalizedStringSchema = z
+  .union([z.string(), z.record(z.string().min(1), z.string())])
+  .nullable()
+  .optional();
 
 const landingSchema = z.object({
   sections: z.object({
-    hero: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) }),
-    themes: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) }),
-    features: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) }),
-    pricing: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) }),
-    faq: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) }),
-    contact: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) }),
-    finalCta: z.object({ enabled: z.boolean(), displayOrder: z.number().int().min(1) })
+    hero: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
+    themes: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
+    features: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
+    pricing: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
+    faq: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
+    contact: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
+    finalCta: z.object({
+      enabled: z.boolean(),
+      displayOrder: z.number().int().min(1),
+    }),
   }),
   hero: z.object({
-    eyebrow: localizedStringSchema,
     headline: localizedStringSchema,
     subheadline: localizedStringSchema,
     primaryCta: localizedStringSchema,
-    secondaryCta: localizedStringSchema
+    secondaryCta: localizedStringSchema,
+    headlineFont: z.enum(brandFontKeys),
+    headlineSize: z.number().int().min(48).max(120),
+    headlineColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    carouselIntervalSeconds: z.number().int().min(3).max(30),
+    slides: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          image: z.string().url(),
+          alt: z.string().max(240),
+          blank: z.boolean(),
+          showButtons: z.boolean(),
+          headline: optionalLocalizedStringSchema,
+          subheadline: optionalLocalizedStringSchema,
+          linkUrl: z.union([z.literal(""), z.string().url()]),
+        }),
+      )
+      .min(1),
   }),
   seo: z.object({
     title: localizedStringSchema,
-    description: localizedStringSchema
+    description: localizedStringSchema,
   }),
   contact: z.object({
     eyebrow: localizedStringSchema,
     title: localizedStringSchema,
     body: localizedStringSchema,
-    submitLabel: localizedStringSchema
+    submitLabel: localizedStringSchema,
   }),
   features: z.array(
     z.object({
@@ -62,18 +114,18 @@ const landingSchema = z.object({
       body: localizedStringSchema,
       iconKey: z.string().min(1),
       enabled: z.boolean(),
-      displayOrder: z.number().int().min(1)
-    })
+      displayOrder: z.number().int().min(1),
+    }),
   ),
   faqs: z.array(
     z.object({
       question: localizedStringSchema,
       answer: localizedStringSchema,
       enabled: z.boolean(),
-      displayOrder: z.number().int().min(1)
-    })
+      displayOrder: z.number().int().min(1),
+    }),
   ),
-  faqDisplayLimit: z.number().int().min(1).max(20)
+  faqDisplayLimit: z.number().int().min(1).max(20),
 });
 
 const themeSchema = z.object({
@@ -88,11 +140,19 @@ const themeSchema = z.object({
   demoPath: z.string().min(2),
   displayOrder: z.number().int().min(1),
   customization: z.object({
-    allowed: z.object(Object.fromEntries(themeCustomizationKeys.map((key) => [key, z.boolean()])) as Record<(typeof themeCustomizationKeys)[number], z.ZodBoolean>),
-    minPlan: z.object(Object.fromEntries(themeCustomizationKeys.map((key) => [key, z.string().min(2)])) as Record<(typeof themeCustomizationKeys)[number], z.ZodString>)
+    allowed: z.object(
+      Object.fromEntries(
+        themeCustomizationKeys.map((key) => [key, z.boolean()]),
+      ) as Record<(typeof themeCustomizationKeys)[number], z.ZodBoolean>,
+    ),
+    minPlan: z.object(
+      Object.fromEntries(
+        themeCustomizationKeys.map((key) => [key, z.string().min(2)]),
+      ) as Record<(typeof themeCustomizationKeys)[number], z.ZodString>,
+    ),
   }),
   seoTitle: optionalLocalizedStringSchema,
-  seoDescription: optionalLocalizedStringSchema
+  seoDescription: optionalLocalizedStringSchema,
 });
 
 const photographyTypeSchema = z.object({
@@ -103,13 +163,13 @@ const photographyTypeSchema = z.object({
   enabled: z.boolean(),
   categorySeed: z.boolean(),
   displayOrder: z.number().int().min(1),
-  children: z.array(z.unknown()).optional()
+  children: z.array(z.unknown()).optional(),
 });
 
 const categoryRequestReviewSchema = z.object({
   id: z.string().min(1),
   status: z.enum(["APPROVED", "REJECTED"]),
-  adminNote: z.string().optional()
+  adminNote: z.string().optional(),
 });
 
 const announcementSchema = z.object({
@@ -120,17 +180,17 @@ const announcementSchema = z.object({
   linkHref: z.string().nullable().optional(),
   enabled: z.boolean(),
   marquee: z.boolean(),
-  displayOrder: z.number().int().min(1)
+  displayOrder: z.number().int().min(1),
 });
 
 const supportStatusSchema = z.object({
   id: z.string().min(1),
-  status: z.string().min(2)
+  status: z.string().min(2),
 });
 
 const tenantStatusSchema = z.object({
   tenantId: z.string().min(1),
-  status: z.enum(["ACTIVE", "SUSPENDED", "DELETED"])
+  status: z.enum(["ACTIVE", "SUSPENDED", "DELETED"]),
 });
 
 const tenantPlanSchema = z.object({
@@ -138,45 +198,53 @@ const tenantPlanSchema = z.object({
   planId: z.string().min(1),
   status: z.enum(["TRIALING", "ACTIVE", "PAST_DUE", "CANCELED", "EXPIRED"]),
   currentPeriodEnds: z.string().optional(),
-  adminNote: z.string().optional()
+  adminNote: z.string().optional(),
 });
 
 const tenantPackageExtensionSchema = z.object({
   tenantId: z.string().min(1),
   days: z.coerce.number().int().min(1).max(730),
-  adminNote: z.string().optional()
+  adminNote: z.string().optional(),
 });
 
 const tenantThemeCooldownResetSchema = z.object({
-  tenantId: z.string().min(1)
+  tenantId: z.string().min(1),
 });
 
 const photoModerationSchema = z.object({
   photoId: z.string().min(1),
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "FLAGGED"]),
-  moderationNote: z.string().optional()
+  moderationNote: z.string().optional(),
 });
 
 const blogModerationSchema = z.object({
   blogId: z.string().min(1),
   status: z.enum(["APPROVED", "REJECTED"]),
-  moderationNote: z.string().optional()
+  moderationNote: z.string().optional(),
 });
 
 const registerCustomerSchema = z.object({
   studioName: z.string().min(2),
-  slug: z.string().min(3).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  slug: z
+    .string()
+    .min(3)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   email: z.string().email(),
-  planId: z.string().optional()
+  planId: z.string().optional(),
 });
 
 const planSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(2),
-  description: z.string().optional(),
+  name: localizedStringSchema,
+  description: optionalLocalizedStringSchema,
+  currency: z.string().trim().min(3).max(3).default("USD"),
   monthlyPrice: z.coerce.number().int().min(0).nullable(),
   annualPrice: z.coerce.number().int().min(0).nullable(),
   lifetimePrice: z.coerce.number().int().min(0).nullable(),
+  paddleProductId: z.string().trim().optional(),
+  paddleMonthlyPriceId: z.string().trim().optional(),
+  paddleAnnualPriceId: z.string().trim().optional(),
+  paddleLifetimePriceId: z.string().trim().optional(),
   gracePeriodDays: z.coerce.number().int().min(0).max(90),
   enabled: z.boolean(),
   featured: z.boolean(),
@@ -185,37 +253,43 @@ const planSchema = z.object({
     z.object({
       featureId: z.string().min(1),
       enabled: z.boolean(),
-      limit: z.coerce.number().int().min(0).nullable()
-    })
-  )
+      limit: z.coerce.number().int().min(0).nullable(),
+    }),
+  ),
 });
 
 const createPlanSchema = planSchema.omit({ id: true });
 
 const featureSchema = z.object({
   id: z.string().optional(),
-  key: z.string().min(2).regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/),
-  name: z.string().min(2),
-  description: z.string().optional()
+  key: z
+    .string()
+    .min(2)
+    .regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/),
+  name: localizedStringSchema,
+  description: optionalLocalizedStringSchema,
 });
 
 const couponSchema = z.object({
   id: z.string().optional(),
-  code: z.string().min(2).transform((value) => value.trim().toUpperCase()),
+  code: z
+    .string()
+    .min(2)
+    .transform((value) => value.trim().toUpperCase()),
   type: z.enum(["PERCENT", "FIXED"]),
   amount: z.coerce.number().int().min(1),
   enabled: z.boolean(),
   maxRedemptions: z.coerce.number().int().min(1).nullable().optional(),
   expiresAt: z.string().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
 });
 
 const emailSettingSchema = z.object({
   key: z.string().min(2),
-  label: z.string().min(2),
-  description: z.string().optional(),
+  label: localizedStringSchema,
+  description: optionalLocalizedStringSchema,
   category: z.string().min(2),
-  enabled: z.boolean()
+  enabled: z.boolean(),
 });
 
 const emailDeliverySchema = z.object({
@@ -228,20 +302,37 @@ const emailDeliverySchema = z.object({
   smtpPort: z.coerce.number().int().positive().max(65535).optional(),
   smtpUsername: z.string().trim().optional(),
   smtpPassword: z.string().trim().optional(),
-  smtpEncryption: z.enum(["none", "starttls", "ssl"])
+  smtpEncryption: z.enum(["none", "starttls", "ssl"]),
 });
 
 const notificationSchema = z.object({
   tenantId: z.string().min(1),
   title: z.string().min(2),
   body: z.string().min(5),
-  channel: z.string().default("dashboard")
+  channel: z.string().default("dashboard"),
 });
 
 const appConfigSchema = z.object({
   brandName: z.string().min(2),
-  brandFont: z.enum(["inter", "montserrat", "cormorant", "raleway", "whisper", "playfair", "poppins", "lato", "josefin", "garamond"]).optional().default("inter"),
-  brandFontSize: z.enum(["xs", "sm", "md", "lg", "xl", "2xl"]).optional().default("md"),
+  brandFont: z
+    .enum([
+      "inter",
+      "montserrat",
+      "cormorant",
+      "raleway",
+      "whisper",
+      "playfair",
+      "poppins",
+      "lato",
+      "josefin",
+      "garamond",
+    ])
+    .optional()
+    .default("inter"),
+  brandFontSize: z
+    .enum(["xs", "sm", "md", "lg", "xl", "2xl"])
+    .optional()
+    .default("md"),
   signatureColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   faviconUrl: z.string().min(1),
   appleTouchIconUrl: z.string().min(1),
@@ -259,47 +350,86 @@ const appConfigSchema = z.object({
     platformBranding: z.object({
       enabled: z.boolean(),
       text: z.string().trim().min(1).max(40),
-      font: z.enum(["inter", "montserrat", "cormorant", "raleway", "whisper", "playfair", "poppins", "lato", "josefin", "garamond"]).optional().default("inter"),
-      position: z.enum(["bottom-left", "bottom-center", "bottom-right", "center"]),
+      font: z
+        .enum([
+          "inter",
+          "montserrat",
+          "cormorant",
+          "raleway",
+          "whisper",
+          "playfair",
+          "poppins",
+          "lato",
+          "josefin",
+          "garamond",
+        ])
+        .optional()
+        .default("inter"),
+      position: z.enum([
+        "bottom-left",
+        "bottom-center",
+        "bottom-right",
+        "center",
+      ]),
       size: z.enum(["small", "medium", "large"]),
       opacity: z.coerce.number().min(0.1).max(1),
       backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
       backgroundOpacity: z.coerce.number().min(0).max(1),
       textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
       borderColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-      borderOpacity: z.coerce.number().min(0).max(1)
-    })
+      borderOpacity: z.coerce.number().min(0).max(1),
+    }),
   }),
   phone: z.object({
     label: z.string().min(2),
     value: z.string().optional(),
-    enabled: z.boolean()
+    enabled: z.boolean(),
   }),
   creatorLink: z.object({
     label: z.string().min(2),
     href: z.string().optional(),
-    enabled: z.boolean()
+    enabled: z.boolean(),
   }),
   socialLinks: z.object({
-    instagram: z.object({ label: z.string().min(2), href: z.string().optional(), enabled: z.boolean() }),
-    facebook: z.object({ label: z.string().min(2), href: z.string().optional(), enabled: z.boolean() }),
-    youtube: z.object({ label: z.string().min(2), href: z.string().optional(), enabled: z.boolean() }),
-    linkedin: z.object({ label: z.string().min(2), href: z.string().optional(), enabled: z.boolean() }),
-    snapchat: z.object({ label: z.string().min(2), href: z.string().optional(), enabled: z.boolean() })
-  })
+    instagram: z.object({
+      label: z.string().min(2),
+      href: z.string().optional(),
+      enabled: z.boolean(),
+    }),
+    facebook: z.object({
+      label: z.string().min(2),
+      href: z.string().optional(),
+      enabled: z.boolean(),
+    }),
+    youtube: z.object({
+      label: z.string().min(2),
+      href: z.string().optional(),
+      enabled: z.boolean(),
+    }),
+    linkedin: z.object({
+      label: z.string().min(2),
+      href: z.string().optional(),
+      enabled: z.boolean(),
+    }),
+    snapchat: z.object({
+      label: z.string().min(2),
+      href: z.string().optional(),
+      enabled: z.boolean(),
+    }),
+  }),
 });
 
 const platformSeoSchema = z.object({
   seo: z.object({
     title: localizedStringSchema,
     description: localizedStringSchema,
-    keywords: localizedStringListSchema
+    keywords: localizedStringListSchema,
   }),
   seoKeywords: localizedStringListSchema,
   signatureColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   faviconUrl: z.string().min(1),
   appleTouchIconUrl: z.string().min(1),
-  socialPreviewImageUrl: z.string().min(1)
+  socialPreviewImageUrl: z.string().min(1),
 });
 
 const translationLocaleSchema = z.array(
@@ -310,8 +440,8 @@ const translationLocaleSchema = z.array(
     direction: z.enum(["ltr", "rtl"]),
     enabled: z.boolean(),
     priceCents: z.coerce.number().int().min(0),
-    billingNote: z.string().optional()
-  })
+    billingNote: z.string().optional(),
+  }),
 );
 
 function revalidatePlatform() {
@@ -351,57 +481,82 @@ function localizedListJson(values: LocalizedString[]) {
 }
 
 export async function saveLandingSettings(settings: PlatformLandingSettings) {
+  await requireSuperAdmin();
   const value = landingSchema.parse(settings);
 
   await prisma.platformSetting.upsert({
     where: { key: "landing" },
     update: { value },
-    create: { key: "landing", value }
+    create: { key: "landing", value },
   });
 
   revalidatePlatform();
 }
 
-export async function savePlatformSeoSettings(input: z.input<typeof platformSeoSchema>) {
+export async function savePlatformSeoSettings(
+  input: z.input<typeof platformSeoSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = platformSeoSchema.parse(input);
   const [landingSetting, appConfigSetting] = await Promise.all([
     prisma.platformSetting.findUnique({ where: { key: "landing" } }),
-    prisma.platformSetting.findUnique({ where: { key: "app_config" } })
+    prisma.platformSetting.findUnique({ where: { key: "app_config" } }),
   ]);
 
-  const currentLanding = landingSetting?.value && typeof landingSetting.value === "object" ? (landingSetting.value as PlatformLandingSettings) : fallbackLandingSettings;
-  const savedAppConfig = appConfigSetting?.value && typeof appConfigSetting.value === "object" ? (appConfigSetting.value as Partial<typeof defaultPlatformAppConfig>) : {};
+  const currentLanding =
+    landingSetting?.value && typeof landingSetting.value === "object"
+      ? (landingSetting.value as PlatformLandingSettings)
+      : fallbackLandingSettings;
+  const savedAppConfig =
+    appConfigSetting?.value && typeof appConfigSetting.value === "object"
+      ? (appConfigSetting.value as Partial<typeof defaultPlatformAppConfig>)
+      : {};
   const currentAppConfig = {
     ...defaultPlatformAppConfig,
     ...savedAppConfig,
     phone: {
       ...defaultPlatformAppConfig.phone,
-      ...(savedAppConfig.phone ?? {})
+      ...(savedAppConfig.phone ?? {}),
     },
     creatorLink: {
       ...defaultPlatformAppConfig.creatorLink,
-      ...(savedAppConfig.creatorLink ?? {})
+      ...(savedAppConfig.creatorLink ?? {}),
     },
     media: {
       ...defaultPlatformMediaPolicy,
       ...(savedAppConfig.media ?? {}),
       platformBranding: {
         ...defaultPlatformMediaPolicy.platformBranding,
-        ...(savedAppConfig.media?.platformBranding ?? {})
-      }
+        ...(savedAppConfig.media?.platformBranding ?? {}),
+      },
     },
     socialLinks: {
-      instagram: { ...defaultPlatformAppConfig.socialLinks.instagram, ...(savedAppConfig.socialLinks?.instagram ?? {}) },
-      facebook: { ...defaultPlatformAppConfig.socialLinks.facebook, ...(savedAppConfig.socialLinks?.facebook ?? {}) },
-      youtube: { ...defaultPlatformAppConfig.socialLinks.youtube, ...(savedAppConfig.socialLinks?.youtube ?? {}) },
-      linkedin: { ...defaultPlatformAppConfig.socialLinks.linkedin, ...(savedAppConfig.socialLinks?.linkedin ?? {}) },
-      snapchat: { ...defaultPlatformAppConfig.socialLinks.snapchat, ...(savedAppConfig.socialLinks?.snapchat ?? {}) }
-    }
+      instagram: {
+        ...defaultPlatformAppConfig.socialLinks.instagram,
+        ...(savedAppConfig.socialLinks?.instagram ?? {}),
+      },
+      facebook: {
+        ...defaultPlatformAppConfig.socialLinks.facebook,
+        ...(savedAppConfig.socialLinks?.facebook ?? {}),
+      },
+      youtube: {
+        ...defaultPlatformAppConfig.socialLinks.youtube,
+        ...(savedAppConfig.socialLinks?.youtube ?? {}),
+      },
+      linkedin: {
+        ...defaultPlatformAppConfig.socialLinks.linkedin,
+        ...(savedAppConfig.socialLinks?.linkedin ?? {}),
+      },
+      snapchat: {
+        ...defaultPlatformAppConfig.socialLinks.snapchat,
+        ...(savedAppConfig.socialLinks?.snapchat ?? {}),
+      },
+    },
   };
   const landingValue = landingSchema.parse({
     ...fallbackLandingSettings,
     ...currentLanding,
-    seo: parsed.seo
+    seo: parsed.seo,
   });
   const appConfigValue = appConfigSchema.parse({
     ...defaultPlatformAppConfig,
@@ -410,20 +565,20 @@ export async function savePlatformSeoSettings(input: z.input<typeof platformSeoS
     faviconUrl: parsed.faviconUrl,
     appleTouchIconUrl: parsed.appleTouchIconUrl,
     socialPreviewImageUrl: parsed.socialPreviewImageUrl,
-    seoKeywords: parsed.seoKeywords
+    seoKeywords: parsed.seoKeywords,
   });
 
   await prisma.$transaction([
     prisma.platformSetting.upsert({
       where: { key: "landing" },
       update: { value: landingValue },
-      create: { key: "landing", value: landingValue }
+      create: { key: "landing", value: landingValue },
     }),
     prisma.platformSetting.upsert({
       where: { key: "app_config" },
       update: { value: appConfigValue },
-      create: { key: "app_config", value: appConfigValue }
-    })
+      create: { key: "app_config", value: appConfigValue },
+    }),
   ]);
 
   revalidatePlatform();
@@ -433,6 +588,7 @@ export async function savePlatformSeoSettings(input: z.input<typeof platformSeoS
 }
 
 export async function savePlatformThemes(themes: PlatformThemeView[]) {
+  await requireSuperAdmin();
   const parsedThemes = z.array(themeSchema).parse(themes);
 
   await prisma.$transaction(
@@ -440,22 +596,23 @@ export async function savePlatformThemes(themes: PlatformThemeView[]) {
       prisma.platformTheme.upsert({
         where: { slug: theme.slug },
         update: themeData(theme),
-        create: themeData(theme)
-      })
-    )
+        create: themeData(theme),
+      }),
+    ),
   );
 
   revalidatePlatform();
 }
 
 export async function savePlatformTheme(theme: PlatformThemeView) {
+  await requireSuperAdmin();
   const parsedTheme = themeSchema.parse(theme);
   const data = themeData(parsedTheme);
 
   await prisma.platformTheme.upsert({
     where: { slug: parsedTheme.slug },
     update: data,
-    create: data
+    create: data,
   });
 
   revalidatePlatform();
@@ -482,11 +639,14 @@ function themeData(theme: z.infer<typeof themeSchema>) {
     seoTitle: defaultLocalizedText(theme.seoTitle),
     seoTitleI18n: localizedJson(theme.seoTitle),
     seoDescription: defaultLocalizedText(theme.seoDescription),
-    seoDescriptionI18n: localizedJson(theme.seoDescription)
+    seoDescriptionI18n: localizedJson(theme.seoDescription),
   };
 }
 
-export async function savePhotographyTypes(types: PlatformPhotographyTypeView[]) {
+export async function savePhotographyTypes(
+  types: PlatformPhotographyTypeView[],
+) {
+  await requireSuperAdmin();
   const parsedTypes = z.array(photographyTypeSchema).parse(types);
   const parentTypes = parsedTypes.filter((type) => !type.parentSlug);
   const childTypes = parsedTypes.filter((type) => type.parentSlug);
@@ -502,7 +662,7 @@ export async function savePhotographyTypes(types: PlatformPhotographyTypeView[])
           parentId: null,
           enabled: type.enabled,
           categorySeed: type.categorySeed,
-          displayOrder: type.displayOrder
+          displayOrder: type.displayOrder,
         },
         create: {
           name: defaultLocalizedText(type.name),
@@ -511,15 +671,15 @@ export async function savePhotographyTypes(types: PlatformPhotographyTypeView[])
           image: type.image,
           enabled: type.enabled,
           categorySeed: type.categorySeed,
-          displayOrder: type.displayOrder
-        }
+          displayOrder: type.displayOrder,
+        },
       });
     }
 
     for (const type of childTypes) {
       const parent = await tx.platformPhotographyType.findUnique({
         where: { slug: type.parentSlug ?? "" },
-        select: { id: true }
+        select: { id: true },
       });
 
       if (!parent) {
@@ -535,7 +695,7 @@ export async function savePhotographyTypes(types: PlatformPhotographyTypeView[])
           parentId: parent.id,
           enabled: type.enabled,
           categorySeed: type.categorySeed,
-          displayOrder: type.displayOrder
+          displayOrder: type.displayOrder,
         },
         create: {
           name: defaultLocalizedText(type.name),
@@ -545,8 +705,8 @@ export async function savePhotographyTypes(types: PlatformPhotographyTypeView[])
           parentId: parent.id,
           enabled: type.enabled,
           categorySeed: type.categorySeed,
-          displayOrder: type.displayOrder
-        }
+          displayOrder: type.displayOrder,
+        },
       });
     }
 
@@ -555,23 +715,26 @@ export async function savePhotographyTypes(types: PlatformPhotographyTypeView[])
     await tx.platformPhotographyType.deleteMany({
       where: {
         slug: {
-          notIn: keepSlugs
-        }
-      }
+          notIn: keepSlugs,
+        },
+      },
     });
   });
 
   revalidatePlatform();
 }
 
-export async function reviewCategoryRequest(input: z.input<typeof categoryRequestReviewSchema>) {
+export async function reviewCategoryRequest(
+  input: z.input<typeof categoryRequestReviewSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = categoryRequestReviewSchema.parse(input);
   const request = await prisma.platformCategoryRequest.findUnique({
     where: { id: parsed.id },
     include: {
       parentType: true,
-      tenant: true
-    }
+      tenant: true,
+    },
   });
 
   if (!request) {
@@ -582,7 +745,7 @@ export async function reviewCategoryRequest(input: z.input<typeof categoryReques
     if (parsed.status === "APPROVED") {
       const slug = await uniquePlatformTypeSlug(tx, request.slug);
       const displayOrder = await tx.platformPhotographyType.count({
-        where: { parentId: request.parentTypeId ?? null }
+        where: { parentId: request.parentTypeId ?? null },
       });
 
       await tx.platformPhotographyType.create({
@@ -594,8 +757,8 @@ export async function reviewCategoryRequest(input: z.input<typeof categoryReques
           parentId: request.parentTypeId,
           enabled: true,
           categorySeed: true,
-          displayOrder: displayOrder + 1
-        }
+          displayOrder: displayOrder + 1,
+        },
       });
     }
 
@@ -603,20 +766,23 @@ export async function reviewCategoryRequest(input: z.input<typeof categoryReques
       where: { id: request.id },
       data: {
         status: parsed.status,
-        adminNote: parsed.adminNote
-      }
+        adminNote: parsed.adminNote,
+      },
     });
 
     await tx.clientNotification.create({
       data: {
         tenantId: request.tenantId,
-        title: parsed.status === "APPROVED" ? "Category request approved" : "Category request rejected",
+        title:
+          parsed.status === "APPROVED"
+            ? "Category request approved"
+            : "Category request rejected",
         body:
           parsed.status === "APPROVED"
             ? `${request.name} has been approved and added to the global category library.`
             : `${request.name} was not approved.${parsed.adminNote ? ` Note: ${parsed.adminNote}` : ""}`,
-        channel: "dashboard"
-      }
+        channel: "dashboard",
+      },
     });
   });
 
@@ -625,11 +791,19 @@ export async function reviewCategoryRequest(input: z.input<typeof categoryReques
   revalidatePath(`/admin/customers/${request.tenantId}`);
 }
 
-async function uniquePlatformTypeSlug(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0], baseSlug: string) {
+async function uniquePlatformTypeSlug(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  baseSlug: string,
+) {
   let slug = baseSlug;
   let index = 2;
 
-  while (await tx.platformPhotographyType.findUnique({ where: { slug }, select: { id: true } })) {
+  while (
+    await tx.platformPhotographyType.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+  ) {
     slug = `${baseSlug}-${index}`;
     index += 1;
   }
@@ -637,7 +811,10 @@ async function uniquePlatformTypeSlug(tx: Parameters<Parameters<typeof prisma.$t
   return slug;
 }
 
-export async function savePlatformAnnouncements(announcements: PlatformAnnouncementView[]) {
+export async function savePlatformAnnouncements(
+  announcements: PlatformAnnouncementView[],
+) {
+  await requireSuperAdmin();
   const parsedAnnouncements = z.array(announcementSchema).parse(announcements);
 
   await prisma.$transaction(
@@ -653,39 +830,46 @@ export async function savePlatformAnnouncements(announcements: PlatformAnnouncem
         linkHref: announcement.linkHref,
         enabled: announcement.enabled,
         marquee: announcement.marquee,
-        displayOrder: announcement.displayOrder
+        displayOrder: announcement.displayOrder,
       };
 
       return prisma.announcement.upsert({
         where: { id: announcement.id },
         update: data,
-        create: data
+        create: data,
       });
-    })
+    }),
   );
 
   revalidatePlatform();
   revalidatePath("/admin/announcements");
 }
 
-export async function updateSupportRequestStatus(input: { id: string; status: string }) {
+export async function updateSupportRequestStatus(input: {
+  id: string;
+  status: string;
+}) {
+  await requireSuperAdmin();
   const parsedInput = supportStatusSchema.parse(input);
 
   await prisma.platformSupportRequest.update({
     where: { id: parsedInput.id },
-    data: { status: parsedInput.status }
+    data: { status: parsedInput.status },
   });
 
   revalidatePath("/admin/support");
   revalidatePath("/admin");
 }
 
-export async function updateTenantStatus(input: z.input<typeof tenantStatusSchema>) {
+export async function updateTenantStatus(
+  input: z.input<typeof tenantStatusSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = tenantStatusSchema.parse(input);
 
   await prisma.tenant.update({
     where: { id: parsed.tenantId },
-    data: { status: parsed.status }
+    data: { status: parsed.status },
   });
 
   revalidatePath("/admin/customers");
@@ -693,9 +877,14 @@ export async function updateTenantStatus(input: z.input<typeof tenantStatusSchem
   revalidatePath("/admin");
 }
 
-export async function updateTenantPlan(input: z.input<typeof tenantPlanSchema>) {
+export async function updateTenantPlan(
+  input: z.input<typeof tenantPlanSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = tenantPlanSchema.parse(input);
-  const endsAt = parsed.currentPeriodEnds ? new Date(parsed.currentPeriodEnds) : null;
+  const endsAt = parsed.currentPeriodEnds
+    ? new Date(parsed.currentPeriodEnds)
+    : null;
 
   await prisma.subscription.upsert({
     where: { tenantId: parsed.tenantId },
@@ -703,15 +892,15 @@ export async function updateTenantPlan(input: z.input<typeof tenantPlanSchema>) 
       planId: parsed.planId,
       status: parsed.status,
       currentPeriodEnds: endsAt,
-      adminNote: parsed.adminNote
+      adminNote: parsed.adminNote,
     },
     create: {
       tenantId: parsed.tenantId,
       planId: parsed.planId,
       status: parsed.status,
       currentPeriodEnds: endsAt,
-      adminNote: parsed.adminNote
-    }
+      adminNote: parsed.adminNote,
+    },
   });
 
   revalidatePath("/admin/customers");
@@ -719,11 +908,14 @@ export async function updateTenantPlan(input: z.input<typeof tenantPlanSchema>) 
   revalidatePath("/admin");
 }
 
-export async function extendTenantPackage(input: z.input<typeof tenantPackageExtensionSchema>) {
+export async function extendTenantPackage(
+  input: z.input<typeof tenantPackageExtensionSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = tenantPackageExtensionSchema.parse(input);
   const tenant = await prisma.tenant.findUnique({
     where: { id: parsed.tenantId },
-    include: { subscription: { include: { plan: true } } }
+    include: { subscription: { include: { plan: true } } },
   });
 
   if (!tenant) {
@@ -750,17 +942,19 @@ export async function extendTenantPackage(input: z.input<typeof tenantPackageExt
       data: {
         status: "ACTIVE",
         currentPeriodEnds: nextEnd,
-        adminNote: existingNote ? `${existingNote}\n${extensionNote}` : extensionNote
-      }
+        adminNote: existingNote
+          ? `${existingNote}\n${extensionNote}`
+          : extensionNote,
+      },
     }),
     prisma.clientNotification.create({
       data: {
         tenantId: tenant.id,
         title: "Package access extended",
         body: `Your ${tenant.subscription.plan.name} package has been extended by ${parsed.days} day${parsed.days === 1 ? "" : "s"}. New end date: ${nextEnd.toLocaleDateString("en-US")}.`,
-        channel: "dashboard"
-      }
-    })
+        channel: "dashboard",
+      },
+    }),
   ]);
 
   revalidatePath("/admin/customers");
@@ -769,11 +963,14 @@ export async function extendTenantPackage(input: z.input<typeof tenantPackageExt
   revalidateTenantDashboard(tenant.slug);
 }
 
-export async function resetTenantThemeSwitchCooldown(input: z.input<typeof tenantThemeCooldownResetSchema>) {
+export async function resetTenantThemeSwitchCooldown(
+  input: z.input<typeof tenantThemeCooldownResetSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = tenantThemeCooldownResetSchema.parse(input);
   const tenant = await prisma.tenant.findUnique({
     where: { id: parsed.tenantId },
-    include: { settings: true }
+    include: { settings: true },
   });
 
   if (!tenant) {
@@ -787,17 +984,17 @@ export async function resetTenantThemeSwitchCooldown(input: z.input<typeof tenan
       create: {
         tenantId: tenant.id,
         themeKey: tenant.settings?.themeKey ?? "minimal",
-        themeChangedAt: null
-      }
+        themeChangedAt: null,
+      },
     }),
     prisma.clientNotification.create({
       data: {
         tenantId: tenant.id,
         title: "Theme switch unlocked",
         body: "Your theme switch wait has been reset. You can apply another available theme now.",
-        channel: "dashboard"
-      }
-    })
+        channel: "dashboard",
+      },
+    }),
   ]);
 
   revalidatePath("/admin/customers");
@@ -806,9 +1003,14 @@ export async function resetTenantThemeSwitchCooldown(input: z.input<typeof tenan
   revalidateTenantDashboard(tenant.slug);
 }
 
-export async function registerCustomerFromAdmin(input: z.input<typeof registerCustomerSchema>) {
+export async function registerCustomerFromAdmin(
+  input: z.input<typeof registerCustomerSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = registerCustomerSchema.parse(input);
-  const existingTenant = await prisma.tenant.findUnique({ where: { slug: parsed.slug } });
+  const existingTenant = await prisma.tenant.findUnique({
+    where: { slug: parsed.slug },
+  });
 
   if (existingTenant) {
     throw new Error("This slug is already taken.");
@@ -820,8 +1022,8 @@ export async function registerCustomerFromAdmin(input: z.input<typeof registerCu
     create: {
       id: randomUUID(),
       name: parsed.studioName,
-      email: parsed.email
-    }
+      email: parsed.email,
+    },
   });
 
   const tenant = await createTenantForOwner({
@@ -831,14 +1033,14 @@ export async function registerCustomerFromAdmin(input: z.input<typeof registerCu
     themeKey: "minimal",
     categories: ["wedding"],
     primaryType: "wedding",
-    photoMode: "sample"
+    photoMode: "sample",
   });
 
   if (parsed.planId) {
     await prisma.subscription.upsert({
       where: { tenantId: tenant.id },
       update: { planId: parsed.planId, status: "ACTIVE" },
-      create: { tenantId: tenant.id, planId: parsed.planId, status: "ACTIVE" }
+      create: { tenantId: tenant.id, planId: parsed.planId, status: "ACTIVE" },
     });
   }
 
@@ -847,22 +1049,30 @@ export async function registerCustomerFromAdmin(input: z.input<typeof registerCu
 }
 
 export async function savePlanPackage(input: z.input<typeof planSchema>) {
+  await requireSuperAdmin();
   const parsed = planSchema.parse(input);
 
   await prisma.$transaction(async (tx) => {
     await tx.plan.update({
       where: { id: parsed.id },
       data: {
-        name: parsed.name,
-        description: parsed.description ?? "",
+        name: defaultLocalizedText(parsed.name),
+        nameI18n: localizedJson(parsed.name),
+        description: defaultLocalizedText(parsed.description),
+        descriptionI18n: localizedJson(parsed.description),
+        currency: parsed.currency.toUpperCase(),
         monthlyPrice: parsed.monthlyPrice,
         annualPrice: parsed.annualPrice,
         lifetimePrice: parsed.lifetimePrice,
+        paddleProductId: parsed.paddleProductId || null,
+        paddleMonthlyPriceId: parsed.paddleMonthlyPriceId || null,
+        paddleAnnualPriceId: parsed.paddleAnnualPriceId || null,
+        paddleLifetimePriceId: parsed.paddleLifetimePriceId || null,
         gracePeriodDays: parsed.gracePeriodDays,
         enabled: parsed.enabled,
         featured: parsed.featured,
-        displayOrder: parsed.displayOrder
-      }
+        displayOrder: parsed.displayOrder,
+      },
     });
 
     for (const feature of parsed.features) {
@@ -870,19 +1080,19 @@ export async function savePlanPackage(input: z.input<typeof planSchema>) {
         where: {
           planId_featureId: {
             planId: parsed.id,
-            featureId: feature.featureId
-          }
+            featureId: feature.featureId,
+          },
         },
         update: {
           enabled: feature.enabled,
-          limit: feature.limit
+          limit: feature.limit,
         },
         create: {
           planId: parsed.id,
           featureId: feature.featureId,
           enabled: feature.enabled,
-          limit: feature.limit
-        }
+          limit: feature.limit,
+        },
       });
     }
   });
@@ -896,24 +1106,36 @@ export async function savePlanPackage(input: z.input<typeof planSchema>) {
   revalidatePath("/admin");
 }
 
-export async function createPlanPackage(input: z.input<typeof createPlanSchema>) {
+export async function createPlanPackage(
+  input: z.input<typeof createPlanSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = createPlanSchema.parse(input);
-  const key = await uniquePlanKey(slugifyKey(parsed.name));
+  const key = await uniquePlanKey(
+    slugifyKey(defaultLocalizedText(parsed.name)),
+  );
 
   await prisma.$transaction(async (tx) => {
     const plan = await tx.plan.create({
       data: {
         key,
-        name: parsed.name,
-        description: parsed.description ?? "",
+        name: defaultLocalizedText(parsed.name),
+        nameI18n: localizedJson(parsed.name),
+        description: defaultLocalizedText(parsed.description),
+        descriptionI18n: localizedJson(parsed.description),
+        currency: parsed.currency.toUpperCase(),
         monthlyPrice: parsed.monthlyPrice,
         annualPrice: parsed.annualPrice,
         lifetimePrice: parsed.lifetimePrice,
+        paddleProductId: parsed.paddleProductId || null,
+        paddleMonthlyPriceId: parsed.paddleMonthlyPriceId || null,
+        paddleAnnualPriceId: parsed.paddleAnnualPriceId || null,
+        paddleLifetimePriceId: parsed.paddleLifetimePriceId || null,
         gracePeriodDays: parsed.gracePeriodDays,
         enabled: parsed.enabled,
         featured: parsed.featured,
-        displayOrder: parsed.displayOrder
-      }
+        displayOrder: parsed.displayOrder,
+      },
     });
 
     await tx.planFeature.createMany({
@@ -921,9 +1143,9 @@ export async function createPlanPackage(input: z.input<typeof createPlanSchema>)
         planId: plan.id,
         featureId: feature.featureId,
         enabled: feature.enabled,
-        limit: feature.limit
+        limit: feature.limit,
       })),
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   });
 
@@ -937,17 +1159,20 @@ export async function createPlanPackage(input: z.input<typeof createPlanSchema>)
 }
 
 export async function deletePlanPackage(id: string) {
+  await requireSuperAdmin();
   const parsedId = z.string().min(1).parse(id);
   const subscriptions = await prisma.subscription.count({
-    where: { planId: parsedId }
+    where: { planId: parsedId },
   });
 
   if (subscriptions > 0) {
-    throw new Error("Packages with active subscription history cannot be deleted. Disable the package instead.");
+    throw new Error(
+      "Packages with active subscription history cannot be deleted. Disable the package instead.",
+    );
   }
 
   await prisma.plan.delete({
-    where: { id: parsedId }
+    where: { id: parsedId },
   });
 
   revalidatePath("/admin/packages");
@@ -960,6 +1185,7 @@ export async function deletePlanPackage(id: string) {
 }
 
 export async function saveFeature(input: z.input<typeof featureSchema>) {
+  await requireSuperAdmin();
   const parsed = featureSchema.parse(input);
 
   if (parsed.id) {
@@ -967,17 +1193,21 @@ export async function saveFeature(input: z.input<typeof featureSchema>) {
       where: { id: parsed.id },
       data: {
         key: parsed.key,
-        name: parsed.name,
-        description: parsed.description
-      }
+        name: defaultLocalizedText(parsed.name),
+        nameI18n: localizedJson(parsed.name),
+        description: defaultLocalizedText(parsed.description),
+        descriptionI18n: localizedJson(parsed.description),
+      },
     });
   } else {
     await prisma.feature.create({
       data: {
         key: parsed.key,
-        name: parsed.name,
-        description: parsed.description
-      }
+        name: defaultLocalizedText(parsed.name),
+        nameI18n: localizedJson(parsed.name),
+        description: defaultLocalizedText(parsed.description),
+        descriptionI18n: localizedJson(parsed.description),
+      },
     });
   }
 
@@ -991,10 +1221,11 @@ export async function saveFeature(input: z.input<typeof featureSchema>) {
 }
 
 export async function deleteFeature(id: string) {
+  await requireSuperAdmin();
   const parsedId = z.string().min(1).parse(id);
 
   await prisma.feature.delete({
-    where: { id: parsedId }
+    where: { id: parsedId },
   });
 
   revalidatePath("/admin/features");
@@ -1007,18 +1238,22 @@ export async function deleteFeature(id: string) {
 }
 
 function slugifyKey(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "plan";
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "plan"
+  );
 }
 
 async function uniquePlanKey(baseKey: string) {
   let key = baseKey;
   let index = 2;
 
-  while (await prisma.plan.findUnique({ where: { key }, select: { id: true } })) {
+  while (
+    await prisma.plan.findUnique({ where: { key }, select: { id: true } })
+  ) {
     key = `${baseKey}-${index}`;
     index += 1;
   }
@@ -1027,6 +1262,7 @@ async function uniquePlanKey(baseKey: string) {
 }
 
 export async function saveCoupon(input: z.input<typeof couponSchema>) {
+  await requireSuperAdmin();
   const parsed = couponSchema.parse(input);
 
   await prisma.coupon.upsert({
@@ -1038,7 +1274,7 @@ export async function saveCoupon(input: z.input<typeof couponSchema>) {
       enabled: parsed.enabled,
       maxRedemptions: parsed.maxRedemptions,
       expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
-      notes: parsed.notes
+      notes: parsed.notes,
     },
     create: {
       code: parsed.code,
@@ -1047,8 +1283,8 @@ export async function saveCoupon(input: z.input<typeof couponSchema>) {
       enabled: parsed.enabled,
       maxRedemptions: parsed.maxRedemptions,
       expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
-      notes: parsed.notes
-    }
+      notes: parsed.notes,
+    },
   });
 
   revalidatePath("/admin/coupons");
@@ -1056,10 +1292,11 @@ export async function saveCoupon(input: z.input<typeof couponSchema>) {
 }
 
 export async function deleteCoupon(id: string) {
+  await requireSuperAdmin();
   const parsedId = z.string().min(1).parse(id);
   const coupon = await prisma.coupon.findUnique({
     where: { id: parsedId },
-    select: { redeemedCount: true }
+    select: { redeemedCount: true },
   });
 
   if (!coupon) {
@@ -1067,30 +1304,47 @@ export async function deleteCoupon(id: string) {
   }
 
   if (coupon.redeemedCount > 0) {
-    throw new Error("Redeemed coupons cannot be deleted. Disable the coupon instead.");
+    throw new Error(
+      "Redeemed coupons cannot be deleted. Disable the coupon instead.",
+    );
   }
 
   await prisma.coupon.delete({
-    where: { id: parsedId }
+    where: { id: parsedId },
   });
 
   revalidatePath("/admin/coupons");
   revalidatePath("/admin");
 }
 
-export async function saveEmailSetting(input: z.input<typeof emailSettingSchema>) {
+export async function saveEmailSetting(
+  input: z.input<typeof emailSettingSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = emailSettingSchema.parse(input);
+  const data = {
+    key: parsed.key,
+    label: defaultLocalizedText(parsed.label),
+    labelI18n: localizedJson(parsed.label),
+    description: defaultLocalizedText(parsed.description),
+    descriptionI18n: localizedJson(parsed.description),
+    category: parsed.category,
+    enabled: parsed.enabled,
+  };
 
   await prisma.emailSetting.upsert({
     where: { key: parsed.key },
-    update: parsed,
-    create: parsed
+    update: data,
+    create: data,
   });
 
   revalidatePath("/admin/emails");
 }
 
-export async function saveEmailDeliverySettings(input: z.input<typeof emailDeliverySchema>) {
+export async function saveEmailDeliverySettings(
+  input: z.input<typeof emailDeliverySchema>,
+) {
+  await requireSuperAdmin();
   const parsed = emailDeliverySchema.parse(input);
   const current = await getEmailDeliverySettings();
   const next = {
@@ -1100,7 +1354,7 @@ export async function saveEmailDeliverySettings(input: z.input<typeof emailDeliv
     smtpHost: parsed.smtpHost || undefined,
     smtpUsername: parsed.smtpUsername || undefined,
     smtpPassword: parsed.smtpPassword || current.smtpPassword,
-    smtpPort: parsed.smtpPort || undefined
+    smtpPort: parsed.smtpPort || undefined,
   };
 
   await prisma.platformSetting.upsert({
@@ -1108,41 +1362,47 @@ export async function saveEmailDeliverySettings(input: z.input<typeof emailDeliv
     update: { value: JSON.parse(JSON.stringify(next)) },
     create: {
       key: emailDeliverySettingKey,
-      value: JSON.parse(JSON.stringify(next))
-    }
+      value: JSON.parse(JSON.stringify(next)),
+    },
   });
 
   revalidatePath("/admin/emails");
 }
 
-export async function sendClientNotification(input: z.input<typeof notificationSchema>) {
+export async function sendClientNotification(
+  input: z.input<typeof notificationSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = notificationSchema.parse(input);
 
   await prisma.clientNotification.create({
-    data: parsed
+    data: parsed,
   });
 
   revalidatePath(`/admin/customers/${parsed.tenantId}`);
   revalidatePath("/admin");
 }
 
-export async function updatePhotoModeration(input: z.input<typeof photoModerationSchema>) {
+export async function updatePhotoModeration(
+  input: z.input<typeof photoModerationSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = photoModerationSchema.parse(input);
   const photo = await prisma.photo.update({
     where: {
-      id: parsed.photoId
+      id: parsed.photoId,
     },
     data: {
       moderationStatus: parsed.status,
-      moderationNote: parsed.moderationNote?.trim() || null
+      moderationNote: parsed.moderationNote?.trim() || null,
     },
     include: {
       tenant: {
         select: {
-          slug: true
-        }
-      }
-    }
+          slug: true,
+        },
+      },
+    },
   });
 
   revalidatePath("/admin/moderation");
@@ -1152,24 +1412,27 @@ export async function updatePhotoModeration(input: z.input<typeof photoModeratio
   revalidatePath(`/site/${photo.tenant.slug}/categories`);
 }
 
-export async function updateBlogModeration(input: z.input<typeof blogModerationSchema>) {
+export async function updateBlogModeration(
+  input: z.input<typeof blogModerationSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = blogModerationSchema.parse(input);
   const blog = await prisma.blogPost.update({
     where: {
-      id: parsed.blogId
+      id: parsed.blogId,
     },
     data: {
       moderationStatus: parsed.status,
       moderationNote: parsed.moderationNote?.trim() || null,
-      publishedAt: parsed.status === "APPROVED" ? new Date() : null
+      publishedAt: parsed.status === "APPROVED" ? new Date() : null,
     },
     include: {
       tenant: {
         select: {
-          slug: true
-        }
-      }
-    }
+          slug: true,
+        },
+      },
+    },
   });
 
   revalidatePath("/admin/moderation");
@@ -1180,13 +1443,16 @@ export async function updateBlogModeration(input: z.input<typeof blogModerationS
   revalidateTenantDashboard(blog.tenant.slug);
 }
 
-export async function savePlatformAppConfig(input: z.input<typeof appConfigSchema>) {
+export async function savePlatformAppConfig(
+  input: z.input<typeof appConfigSchema>,
+) {
+  await requireSuperAdmin();
   const value = appConfigSchema.parse(input);
 
   await prisma.platformSetting.upsert({
     where: { key: "app_config" },
     update: { value },
-    create: { key: "app_config", value }
+    create: { key: "app_config", value },
   });
 
   revalidatePath("/");
@@ -1202,41 +1468,80 @@ export type AdminAppConfigActionState = {
 };
 
 function parseBrandFont(v: FormDataEntryValue | null) {
-  const allowed = ["inter", "montserrat", "cormorant", "raleway", "whisper", "playfair", "poppins", "lato", "josefin", "garamond"] as const;
-  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "inter" as const;
+  const allowed = [
+    "inter",
+    "montserrat",
+    "cormorant",
+    "raleway",
+    "whisper",
+    "playfair",
+    "poppins",
+    "lato",
+    "josefin",
+    "garamond",
+  ] as const;
+  return allowed.includes(v as (typeof allowed)[number])
+    ? (v as (typeof allowed)[number])
+    : ("inter" as const);
 }
 function parseBrandFontSize(v: FormDataEntryValue | null) {
   const allowed = ["xs", "sm", "md", "lg", "xl", "2xl"] as const;
-  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "md" as const;
+  return allowed.includes(v as (typeof allowed)[number])
+    ? (v as (typeof allowed)[number])
+    : ("md" as const);
 }
 function parseBrandingPositionValue(v: FormDataEntryValue | null) {
-  const allowed = ["bottom-left", "bottom-center", "bottom-right", "center"] as const;
-  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "bottom-right" as const;
+  const allowed = [
+    "bottom-left",
+    "bottom-center",
+    "bottom-right",
+    "center",
+  ] as const;
+  return allowed.includes(v as (typeof allowed)[number])
+    ? (v as (typeof allowed)[number])
+    : ("bottom-right" as const);
 }
 function parseBrandingSizeValue(v: FormDataEntryValue | null) {
   const allowed = ["small", "medium", "large"] as const;
-  return allowed.includes(v as (typeof allowed)[number]) ? (v as (typeof allowed)[number]) : "small" as const;
+  return allowed.includes(v as (typeof allowed)[number])
+    ? (v as (typeof allowed)[number])
+    : ("small" as const);
 }
-function parseLocalizedField(v: FormDataEntryValue | null): Record<string, string> | string {
+function parseLocalizedField(
+  v: FormDataEntryValue | null,
+): Record<string, string> | string {
   const raw = String(v ?? "");
   try {
     const parsed = JSON.parse(raw);
-    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) return parsed;
-  } catch { /* not JSON, treat as plain string */ }
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed))
+      return parsed;
+  } catch {
+    /* not JSON, treat as plain string */
+  }
   return raw ? { en: raw } : { en: "" };
 }
-function safeFloat(v: FormDataEntryValue | null, fallback: number, min: number, max: number) {
+function safeFloat(
+  v: FormDataEntryValue | null,
+  fallback: number,
+  min: number,
+  max: number,
+) {
   const n = parseFloat(String(v ?? ""));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 }
 
 export async function savePlatformAppConfigWithFeedback(
   _state: AdminAppConfigActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<AdminAppConfigActionState> {
+  await requireSuperAdmin();
   try {
     const seoKeywords = (() => {
-      try { return JSON.parse(String(formData.get("seoKeywords") ?? "{}")); } catch { return { en: [], ur: [] }; }
+      try {
+        return JSON.parse(String(formData.get("seoKeywords") ?? "{}"));
+      } catch {
+        return { en: [], ur: [] };
+      }
     })();
 
     await savePlatformAppConfig({
@@ -1254,59 +1559,124 @@ export async function savePlatformAppConfigWithFeedback(
       copyrightText: parseLocalizedField(formData.get("copyrightText")),
       companyAddress: String(formData.get("companyAddress")),
       dashboardNotice: parseLocalizedField(formData.get("dashboardNotice")),
-      themeSwitchCooldownDays: Math.max(0, Math.min(365, parseInt(String(formData.get("themeSwitchCooldownDays") ?? "14"), 10) || 14)),
+      themeSwitchCooldownDays: Math.max(
+        0,
+        Math.min(
+          365,
+          parseInt(
+            String(formData.get("themeSwitchCooldownDays") ?? "14"),
+            10,
+          ) || 14,
+        ),
+      ),
       media: {
-        maxImageUploadMb: Math.max(1, Math.min(50, parseInt(String(formData.get("maxImageUploadMb") ?? "8"), 10) || 8)),
+        maxImageUploadMb: Math.max(
+          1,
+          Math.min(
+            50,
+            parseInt(String(formData.get("maxImageUploadMb") ?? "8"), 10) || 8,
+          ),
+        ),
         platformBranding: {
           enabled: formData.get("platformBrandingEnabled") === "on",
           text: String(formData.get("platformBrandingText")),
           font: parseBrandFont(formData.get("platformBrandingFont")),
-          position: parseBrandingPositionValue(formData.get("platformBrandingPosition")),
+          position: parseBrandingPositionValue(
+            formData.get("platformBrandingPosition"),
+          ),
           size: parseBrandingSizeValue(formData.get("platformBrandingSize")),
-          opacity: safeFloat(formData.get("platformBrandingOpacity"), 0.9, 0.1, 1),
+          opacity: safeFloat(
+            formData.get("platformBrandingOpacity"),
+            0.9,
+            0.1,
+            1,
+          ),
           textColor: String(formData.get("platformBrandingTextColor")),
-          backgroundColor: String(formData.get("platformBrandingBackgroundColor")),
-          backgroundOpacity: safeFloat(formData.get("platformBrandingBackgroundOpacity"), 0.35, 0, 1),
+          backgroundColor: String(
+            formData.get("platformBrandingBackgroundColor"),
+          ),
+          backgroundOpacity: safeFloat(
+            formData.get("platformBrandingBackgroundOpacity"),
+            0.35,
+            0,
+            1,
+          ),
           borderColor: String(formData.get("platformBrandingBorderColor")),
-          borderOpacity: safeFloat(formData.get("platformBrandingBorderOpacity"), 0.18, 0, 1),
-        }
+          borderOpacity: safeFloat(
+            formData.get("platformBrandingBorderOpacity"),
+            0.18,
+            0,
+            1,
+          ),
+        },
       },
       phone: {
         label: String(formData.get("phoneLabel") || "Phone"),
         value: String(formData.get("phoneValue") || ""),
-        enabled: formData.get("phoneEnabled") === "on"
+        enabled: formData.get("phoneEnabled") === "on",
       },
       creatorLink: {
         label: String(formData.get("creatorLabel") || "Creator"),
         href: String(formData.get("creatorHref") || ""),
-        enabled: formData.get("creatorEnabled") === "on"
+        enabled: formData.get("creatorEnabled") === "on",
       },
       socialLinks: {
-        instagram: { label: String(formData.get("instagramLabel") || "Instagram"), href: String(formData.get("instagramHref") || ""), enabled: formData.get("instagramEnabled") === "on" },
-        facebook: { label: String(formData.get("facebookLabel") || "Facebook"), href: String(formData.get("facebookHref") || ""), enabled: formData.get("facebookEnabled") === "on" },
-        youtube: { label: String(formData.get("youtubeLabel") || "YouTube"), href: String(formData.get("youtubeHref") || ""), enabled: formData.get("youtubeEnabled") === "on" },
-        linkedin: { label: String(formData.get("linkedinLabel") || "LinkedIn"), href: String(formData.get("linkedinHref") || ""), enabled: formData.get("linkedinEnabled") === "on" },
-        snapchat: { label: String(formData.get("snapchatLabel") || "Snapchat"), href: String(formData.get("snapchatHref") || ""), enabled: formData.get("snapchatEnabled") === "on" },
-      }
+        instagram: {
+          label: String(formData.get("instagramLabel") || "Instagram"),
+          href: String(formData.get("instagramHref") || ""),
+          enabled: formData.get("instagramEnabled") === "on",
+        },
+        facebook: {
+          label: String(formData.get("facebookLabel") || "Facebook"),
+          href: String(formData.get("facebookHref") || ""),
+          enabled: formData.get("facebookEnabled") === "on",
+        },
+        youtube: {
+          label: String(formData.get("youtubeLabel") || "YouTube"),
+          href: String(formData.get("youtubeHref") || ""),
+          enabled: formData.get("youtubeEnabled") === "on",
+        },
+        linkedin: {
+          label: String(formData.get("linkedinLabel") || "LinkedIn"),
+          href: String(formData.get("linkedinHref") || ""),
+          enabled: formData.get("linkedinEnabled") === "on",
+        },
+        snapchat: {
+          label: String(formData.get("snapchatLabel") || "Snapchat"),
+          href: String(formData.get("snapchatHref") || ""),
+          enabled: formData.get("snapchatEnabled") === "on",
+        },
+      },
     });
 
-    return { status: "success", message: "Platform configuration saved successfully." };
+    return {
+      status: "success",
+      message: "Platform configuration saved successfully.",
+    };
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Failed to save configuration. Please check all fields and try again."
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to save configuration. Please check all fields and try again.",
     };
   }
 }
 
-export async function saveTranslationLocaleConfig(input: z.input<typeof translationLocaleSchema>) {
+export async function saveTranslationLocaleConfig(
+  input: z.input<typeof translationLocaleSchema>,
+) {
+  await requireSuperAdmin();
   const parsed = translationLocaleSchema.parse(input);
-  const allowedCodes = new Set<string>(predefinedTranslationLocales.map((locale) => locale.code));
+  const allowedCodes = new Set<string>(
+    predefinedTranslationLocales.map((locale) => locale.code),
+  );
   const value = parsed
     .filter((locale) => allowedCodes.has(locale.code))
     .map((locale) => ({
       ...locale,
-      billingNote: locale.billingNote ?? ""
+      billingNote: locale.billingNote ?? "",
     }));
 
   if (!value.some((locale) => locale.code === "en" && locale.enabled)) {
@@ -1317,14 +1687,14 @@ export async function saveTranslationLocaleConfig(input: z.input<typeof translat
       direction: "ltr",
       enabled: true,
       priceCents: 0,
-      billingNote: "Default platform language"
+      billingNote: "Default platform language",
     });
   }
 
   await prisma.platformSetting.upsert({
     where: { key: "translation_locales" },
     update: { value },
-    create: { key: "translation_locales", value }
+    create: { key: "translation_locales", value },
   });
 
   revalidatePath("/");

@@ -7,7 +7,10 @@ export type CustomerSiteThemeVariant =
   | "monochrome"
   | "panorama";
 
-export function resolveCustomerSiteThemeVariant(slug: string): CustomerSiteThemeVariant {
+export function resolveCustomerSiteThemeVariant(
+  slug: string,
+): CustomerSiteThemeVariant {
+  if (slug.includes("velvet")) return "luxury";
   if (slug.includes("editorial")) return "editorial";
   if (slug.includes("cinematic")) return "cinematic";
   if (slug.includes("masonry")) return "masonry";

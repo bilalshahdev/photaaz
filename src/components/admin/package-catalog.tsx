@@ -13,6 +13,7 @@ import {
   AdminRecordGrid
 } from "@/components/admin/admin-crud-ui";
 import { AdminAddButton, AdminConfirmDialog, AdminIconButton, AdminPanel } from "@/components/admin/admin-ui";
+import { LocalizedInput, LocalizedTextarea, type AdminLocaleOption } from "@/components/admin/localized-fields";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -24,13 +25,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import type { LocalizedString } from "@/services/platform/platform-data";
 
 type FeatureOption = {
   id: string;
   key: string;
-  name: string;
-  description: string | null;
+  name: LocalizedString;
+  description: LocalizedString | null;
 };
 
 type PackageFeature = {
@@ -42,11 +43,16 @@ type PackageFeature = {
 
 type PackagePlan = {
   id: string;
-  name: string;
-  description: string;
+  name: LocalizedString;
+  description: LocalizedString;
+  currency: string;
   monthlyPrice: number | null;
   annualPrice: number | null;
   lifetimePrice: number | null;
+  paddleProductId: string | null;
+  paddleMonthlyPriceId: string | null;
+  paddleAnnualPriceId: string | null;
+  paddleLifetimePriceId: string | null;
   gracePeriodDays: number;
   enabled: boolean;
   featured: boolean;
@@ -68,7 +74,7 @@ type PackageDraft = Omit<PackagePlan, "_count" | "features"> & {
   };
 };
 
-export function PackageCatalog({ plans: initialPlans, features }: { plans: PackagePlan[]; features: FeatureOption[] }) {
+export function PackageCatalog({ plans: initialPlans, features, locales }: { plans: PackagePlan[]; features: FeatureOption[]; locales: AdminLocaleOption[] }) {
   const router = useRouter();
   const [plans, setPlans] = useState(initialPlans);
   const [draft, setDraft] = useState<PackageDraft | null>(null);
@@ -88,9 +94,14 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
       id: "",
       name: "New package",
       description: "Package description for the public pricing card.",
+      currency: "USD",
       monthlyPrice: 0,
       annualPrice: 0,
       lifetimePrice: 0,
+      paddleProductId: "",
+      paddleMonthlyPriceId: "",
+      paddleAnnualPriceId: "",
+      paddleLifetimePriceId: "",
       gracePeriodDays: 0,
       enabled: true,
       featured: false,
@@ -252,7 +263,7 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-display text-3xl font-black tracking-[-0.04em] text-slate-950">{plan.name}</h3>
+                    <h3 className="font-display text-3xl font-black tracking-[-0.04em] text-slate-950">{displayLocalized(plan.name)}</h3>
                     {plan.featured ? <span className="rounded-full bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary">Featured</span> : null}
                     {!plan.enabled ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">Hidden</span> : null}
                   </div>
@@ -260,17 +271,18 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <AdminDragHandle />
-                  <AdminIconButton icon={Pencil} label={`Edit ${plan.name}`} tooltip={`Edit ${plan.name}`} onClick={() => openEditDialog(plan)} />
-                  <AdminIconButton icon={Trash2} label={`Delete ${plan.name}`} tooltip={plan._count.subscriptions > 0 ? "Packages with subscriptions cannot be deleted" : `Delete ${plan.name}`} tone="danger" disabled={isPending || plan._count.subscriptions > 0} onClick={() => deletePlan(plan)} />
+                  <AdminIconButton icon={Pencil} label={`Edit ${displayLocalized(plan.name)}`} tooltip={`Edit ${displayLocalized(plan.name)}`} onClick={() => openEditDialog(plan)} />
+                  <AdminIconButton icon={Trash2} label={`Delete ${displayLocalized(plan.name)}`} tooltip={plan._count.subscriptions > 0 ? "Packages with subscriptions cannot be deleted" : `Delete ${displayLocalized(plan.name)}`} tone="danger" disabled={isPending || plan._count.subscriptions > 0} onClick={() => deletePlan(plan)} />
                 </div>
               </div>
 
-              <p className="mt-4 text-sm leading-6 text-slate-600">{plan.description || "No public description set."}</p>
+              <p className="mt-4 text-sm leading-6 text-slate-600">{displayLocalized(plan.description) || "No public description set."}</p>
 
               <div className="mt-6 grid gap-3 text-sm">
                 <AdminInfoRow label="Monthly" value={formatPrice(plan.monthlyPrice)} />
                 <AdminInfoRow label="Annual" value={formatPrice(plan.annualPrice)} />
                 <AdminInfoRow label="Lifetime" value={formatPrice(plan.lifetimePrice)} />
+                <AdminInfoRow label="Paddle" value={hasPaddleCheckout(plan) ? "Configured" : "Not configured"} />
                 <AdminInfoRow label="Grace period" value={`${plan.gracePeriodDays} day${plan.gracePeriodDays === 1 ? "" : "s"}`} />
               </div>
 
@@ -282,7 +294,7 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
                       <p key={access.featureId} className="flex items-center gap-2">
                         <CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
                         <span>
-                          {access.feature.name}
+                          {displayLocalized(access.feature.name)}
                           {access.limit === null ? "" : ` (${access.limit})`}
                         </span>
                       </p>
@@ -303,24 +315,28 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
             <>
               <DialogHeader>
                 <p className="font-nav text-xs font-semibold uppercase tracking-[0.2em] text-primary">{isCreating ? "Add package" : "Edit package"}</p>
-                <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{draft.name}</DialogTitle>
+                <DialogTitle className="font-display text-3xl font-black tracking-[-0.04em]">{displayLocalized(draft.name)}</DialogTitle>
               </DialogHeader>
 
               <div className="grid gap-5">
               <div className="grid gap-4">
-                <Label className="block text-sm font-medium text-slate-700">
-                  Package name
-                  <Input value={draft.name} onChange={(event) => setDraft((current) => (current ? { ...current, name: event.target.value } : current))} placeholder="Package name" className="mt-2 h-11" />
-                </Label>
+                <LocalizedInput label="Package name" value={draft.name} locales={locales} onChange={(name) => setDraft((current) => (current ? { ...current, name } : current))} placeholder="Package name" />
               </div>
-              <Label className="block text-sm font-medium text-slate-700">
-                Public pricing description
-                <Textarea value={draft.description} onChange={(event) => setDraft((current) => (current ? { ...current, description: event.target.value } : current))} placeholder="What's included in this plan" className="mt-2 min-h-24 resize-y" />
-              </Label>
+              <LocalizedTextarea label="Public pricing description" value={draft.description} locales={locales} onChange={(description) => setDraft((current) => (current ? { ...current, description } : current))} placeholder="What's included in this plan" />
               <div className="grid gap-3 sm:grid-cols-3">
                 <PriceInput label="Monthly price" value={draft.monthlyPrice} onChange={(monthlyPrice) => setDraft((current) => (current ? { ...current, monthlyPrice } : current))} />
                 <PriceInput label="Annual price" value={draft.annualPrice} onChange={(annualPrice) => setDraft((current) => (current ? { ...current, annualPrice } : current))} />
                 <PriceInput label="Lifetime price" value={draft.lifetimePrice} onChange={(lifetimePrice) => setDraft((current) => (current ? { ...current, lifetimePrice } : current))} />
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h4 className="font-semibold text-slate-950">Paddle checkout IDs</h4>
+                <p className="mt-1 text-sm text-slate-500">Create matching prices in Paddle sandbox/production, then paste their price IDs here.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <TextInput label="Product ID" value={draft.paddleProductId ?? ""} onChange={(paddleProductId) => setDraft((current) => (current ? { ...current, paddleProductId } : current))} placeholder="pro_..." />
+                  <TextInput label="Monthly price ID" value={draft.paddleMonthlyPriceId ?? ""} onChange={(paddleMonthlyPriceId) => setDraft((current) => (current ? { ...current, paddleMonthlyPriceId } : current))} placeholder="pri_..." />
+                  <TextInput label="Annual price ID" value={draft.paddleAnnualPriceId ?? ""} onChange={(paddleAnnualPriceId) => setDraft((current) => (current ? { ...current, paddleAnnualPriceId } : current))} placeholder="pri_..." />
+                  <TextInput label="Ownership price ID" value={draft.paddleLifetimePriceId ?? ""} onChange={(paddleLifetimePriceId) => setDraft((current) => (current ? { ...current, paddleLifetimePriceId } : current))} placeholder="pri_..." />
+                </div>
               </div>
               <PriceInput label="Grace period after missed renewal (days)" value={draft.gracePeriodDays} onChange={(gracePeriodDays) => setDraft((current) => (current ? { ...current, gracePeriodDays: gracePeriodDays ?? 0 } : current))} />
               <div className="grid gap-3 sm:grid-cols-2">
@@ -348,8 +364,8 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
                         <Label className="flex items-start gap-3 text-sm">
                           <Checkbox checked={access.enabled} onCheckedChange={(checked) => updateFeature(feature.id, { enabled: checked === true, ...(isBooleanOnly ? { limit: null } : {}) })} className="mt-1" />
                           <span>
-                            <span className="block font-semibold text-slate-950">{feature.name}</span>
-                            {feature.description ? <span className="mt-1 block text-xs text-slate-500">{feature.description}</span> : null}
+                            <span className="block font-semibold text-slate-950">{displayLocalized(feature.name)}</span>
+                            {displayLocalized(feature.description) ? <span className="mt-1 block text-xs text-slate-500">{displayLocalized(feature.description)}</span> : null}
                           </span>
                         </Label>
                         {isBooleanOnly ? (
@@ -385,7 +401,7 @@ export function PackageCatalog({ plans: initialPlans, features }: { plans: Packa
       <AdminConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title={deleteTarget ? `Delete ${deleteTarget.name}?` : "Delete package?"}
+        title={deleteTarget ? `Delete ${displayLocalized(deleteTarget.name)}?` : "Delete package?"}
         body="This can only be done for packages with no subscription history."
         pending={isPending}
         onConfirm={confirmDeletePlan}
@@ -399,9 +415,14 @@ function toPlanInput(draft: PackageDraft) {
     id: draft.id,
     name: draft.name,
     description: draft.description,
+    currency: draft.currency,
     monthlyPrice: draft.monthlyPrice,
     annualPrice: draft.annualPrice,
     lifetimePrice: draft.lifetimePrice,
+    paddleProductId: draft.paddleProductId ?? "",
+    paddleMonthlyPriceId: draft.paddleMonthlyPriceId ?? "",
+    paddleAnnualPriceId: draft.paddleAnnualPriceId ?? "",
+    paddleLifetimePriceId: draft.paddleLifetimePriceId ?? "",
     gracePeriodDays: draft.gracePeriodDays,
     enabled: draft.enabled,
     featured: draft.featured,
@@ -438,6 +459,12 @@ function mergeDraftIntoPlan(plan: PackagePlan, draft: PackageDraft, features: Fe
   };
 }
 
+function displayLocalized(value: LocalizedString | null | undefined) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.en || Object.values(value).find(Boolean) || "";
+}
+
 function PriceInput({ label, value, onChange }: { label: string; value: number | null; onChange: (value: number | null) => void }) {
   return (
     <Label className="block text-sm font-medium text-slate-700">
@@ -448,6 +475,20 @@ function PriceInput({ label, value, onChange }: { label: string; value: number |
         value={value ?? 0}
         onChange={(event) => onChange(Number(event.target.value))}
         placeholder="0"
+        className="mt-2 h-11"
+      />
+    </Label>
+  );
+}
+
+function TextInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
+  return (
+    <Label className="block text-sm font-medium text-slate-700">
+      {label}
+      <Input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
         className="mt-2 h-11"
       />
     </Label>
@@ -468,4 +509,8 @@ function formatPrice(value: number | null) {
   }
 
   return `$${Math.round(value / 100).toLocaleString("en-US")}`;
+}
+
+function hasPaddleCheckout(plan: Pick<PackagePlan, "paddleMonthlyPriceId" | "paddleAnnualPriceId" | "paddleLifetimePriceId">) {
+  return Boolean(plan.paddleMonthlyPriceId || plan.paddleAnnualPriceId || plan.paddleLifetimePriceId);
 }

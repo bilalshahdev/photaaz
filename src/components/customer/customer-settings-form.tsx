@@ -7,6 +7,7 @@ import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { updateCustomerSiteSettingsWithFeedback, type CustomerSettingsActionState } from "@/actions/customer-settings-actions";
 import { Button } from "@/components/ui/button";
+import { DirectUploadForm } from "@/components/forms/direct-upload-form";
 
 const initialState: CustomerSettingsActionState = {
   status: "idle",
@@ -22,12 +23,12 @@ export function CustomerSettingsForm({ children }: { children: ReactNode }) {
   }, [state]);
 
   return (
-    <form action={formAction} className="mt-5 grid gap-5">
+    <DirectUploadForm action={formAction} className="mt-5 grid gap-5">
       {children}
       <div className="order-last sticky bottom-4 z-20 flex justify-end">
         <SaveSettingsButton />
       </div>
-    </form>
+    </DirectUploadForm>
   );
 }
 

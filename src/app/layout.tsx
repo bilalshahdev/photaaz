@@ -8,6 +8,9 @@ import { createMetadata, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getPlatformAppConfig } from "@/services/admin/admin-data";
 import { brandFontVarMap } from "@/lib/brand-fonts";
 import { hexToHsl } from "@/lib/utils";
+import { CookieConsent } from "@/components/legal/cookie-consent";
+import { getLocale } from "next-intl/server";
+import { getTextDirection, isLocale } from "@/i18n/locales";
 
 const pfInter = Inter({ subsets: ["latin"], variable: "--pf-font-inter" });
 const pfMontserrat = Montserrat({ subsets: ["latin"], variable: "--pf-font-montserrat" });
@@ -58,7 +61,8 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const config = await getPlatformAppConfig();
+  const [config, requestedLocale] = await Promise.all([getPlatformAppConfig(), getLocale()]);
+  const locale = isLocale(requestedLocale) ? requestedLocale : "en";
 
   const fontClasses = `${pfInter.variable} ${pfMontserrat.variable} ${pfCormorant.variable} ${pfRaleway.variable} ${pfWhisper.variable} ${pfPlayfair.variable} ${pfPoppins.variable} ${pfLato.variable} ${pfJosefin.variable} ${pfGaramond.variable}`;
   const brandFontVar = brandFontVarMap[config.brandFont ?? "inter"];
@@ -68,8 +72,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html
-      lang="en"
-      dir="ltr"
+      lang={locale}
+      dir={getTextDirection(locale)}
       suppressHydrationWarning
       className={fontClasses}
       style={{
@@ -96,6 +100,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {children}
+        <CookieConsent />
         <Toaster richColors closeButton position="top-right" />
       </body>
     </html>

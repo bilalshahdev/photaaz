@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
+import { ZoomIn } from "lucide-react";
+import { SharedPhotoViewer } from "@/components/customer/shared-photo-viewer";
 import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
 import { ImageWatermark } from "@/components/customer/image-watermark";
 import { useNavbarVisibility } from "@/components/layout/customer-site-nav";
 import { cn } from "@/lib/utils";
+import type { NewThemeKey } from "@/lib/new-themes";
 import type { CustomerSiteGallery } from "@/services/tenant/customer-site-data";
 import type { EffectiveImageWatermark } from "@/services/platform/media-policy";
 
@@ -25,6 +27,7 @@ type CustomerGalleryBrowserProps = {
   variant?: CustomerSiteThemeVariant;
   imageWatermark?: EffectiveImageWatermark | null;
   isDemo?: boolean;
+  presentation?: "velvet" | NewThemeKey;
 };
 
 const initialVisiblePhotos = 12;
@@ -58,7 +61,7 @@ function buildPhotoEntries(galleries: CustomerSiteGallery[], variant: CustomerSi
   );
 }
 
-export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, imageWatermark, isDemo = false }: CustomerGalleryBrowserProps) {
+export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, imageWatermark, isDemo = false, presentation }: CustomerGalleryBrowserProps) {
   const variant = variantProp ?? resolveCustomerSiteThemeVariant(slug);
   const isDark = variant === "cinematic" || variant === "luxury" || variant === "monochrome";
   const { isTopHidden, navbarHeight, setLocked } = useNavbarVisibility();
@@ -143,8 +146,8 @@ export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, 
     setViewerIndex(nextIndex >= 0 ? nextIndex : 0);
   }
 
-  const browserStyle = getGalleryBrowserStyle(variant, isDark);
-  const theme = getGalleryFilterTheme(variant, isDark);
+  const browserStyle = getGalleryBrowserStyle(variant, isDark, presentation);
+  const theme = getGalleryFilterTheme(variant, isDark, presentation);
   // navbarHeight is measured from the actual rendered header element; 0 on masonry desktop (sidebar nav, no top bar)
   const filterBarTop = isTopHidden ? "0px" : `${navbarHeight}px`;
 
@@ -170,11 +173,11 @@ export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, 
         </div>
       </div>
 
-      <section ref={sectionRef} className={cn("mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-10", isDark && "bg-black text-white")}>
+      <section ref={sectionRef} className={cn("px-5 py-10 sm:px-8 lg:px-10", presentation ? "max-w-none" : "mx-auto max-w-6xl", presentation === "velvet" && "bg-[#101010] text-white", !presentation && isDark && "bg-black text-white")}>
         {visibleEntries.length ? (
           <div className={cn("pf-stagger", browserStyle.grid)}>
             {visibleEntries.map((photo, index) => (
-              <article key={`${photo.id}-${index}`} className={cn("group overflow-hidden border transition-shadow duration-300 hover:shadow-[0_22px_70px_rgba(15,23,42,0.16)]", browserStyle.card)}>
+              <article key={`${photo.id}-${index}`} className={cn("group overflow-hidden border transition-shadow duration-300 hover:shadow-[0_22px_70px_rgba(15,23,42,0.16)]", browserStyle.card, variant === "cinematic" && (index % 5 === 0 ? "md:col-span-8" : index % 5 === 1 ? "md:col-span-4" : "md:col-span-6"), variant === "editorial" && (index % 4 === 0 ? "md:col-span-7" : index % 4 === 1 ? "md:col-span-5 md:mt-20" : "md:col-span-6"), variant === "luxury" && (index % 4 === 0 ? "md:col-span-5" : index % 4 === 1 ? "md:col-span-7 md:mt-24" : "md:col-span-6"), variant === "masonry" && (index % 6 === 0 ? "md:col-span-7 md:row-span-2" : index % 6 === 1 ? "md:col-span-5" : "md:col-span-4"))}>
                 <button type="button" onClick={() => openViewer(photo)} className={cn("relative block w-full overflow-hidden text-left", browserStyle.aspect(index))}>
                   <Image src={photo.image} alt={photo.title} fill className={cn("object-cover transition duration-700 group-hover:scale-105", browserStyle.image)} />
                   <ImageWatermark watermark={photo.watermarkApplied ? null : imageWatermark} />
@@ -202,38 +205,7 @@ export function CustomerGalleryBrowser({ slug, galleries, variant: variantProp, 
         ) : null}
       </section>
 
-      {viewerPhoto ? (
-        <div className="pf-viewer-enter fixed inset-0 z-50 bg-black p-4 text-white sm:p-8">
-          <button type="button" onClick={() => setViewerIndex(null)} className="absolute right-4 top-4 z-10 inline-flex size-11 items-center justify-center border border-white/20 bg-black/70 transition hover:bg-white hover:text-black" aria-label="Close photo viewer">
-            <X className="size-5" aria-hidden="true" />
-          </button>
-          {filteredEntries.length > 1 ? (
-            <>
-              <button type="button" onClick={() => stepViewer("previous")} className="absolute left-4 top-1/2 z-10 inline-flex size-12 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/70 transition hover:bg-white hover:text-black sm:left-8 sm:size-14" aria-label="Previous photo">
-                <ChevronLeft className="size-6" aria-hidden="true" />
-              </button>
-              <button type="button" onClick={() => stepViewer("next")} className="absolute right-4 top-1/2 z-10 inline-flex size-12 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/70 transition hover:bg-white hover:text-black sm:right-8 sm:size-14" aria-label="Next photo">
-                <ChevronRight className="size-6" aria-hidden="true" />
-              </button>
-            </>
-          ) : null}
-          <div className="flex h-full flex-col">
-            <div className="relative min-h-0 flex-1">
-              <Image src={viewerPhoto.image} alt={viewerPhoto.title} fill className="object-contain" sizes="100vw" priority />
-              <ImageWatermark watermark={viewerPhoto.watermarkApplied ? null : imageWatermark} />
-            </div>
-            <div className="mx-auto mt-4 flex w-full max-w-6xl items-end justify-between gap-4 border-t border-white/10 pt-4">
-              <div>
-                <p className="font-display text-3xl font-light tracking-[-0.05em]">{viewerPhoto.title}</p>
-                <p className="mt-1 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white/50">{viewerPhoto.location}</p>
-              </div>
-              <p className="hidden max-w-sm text-right text-sm text-white/50 sm:block">
-                {viewerIndex === null ? 0 : viewerIndex + 1} / {filteredEntries.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <SharedPhotoViewer images={filteredEntries} index={viewerIndex} onClose={() => setViewerIndex(null)} onStep={stepViewer} themeKey={presentation} imageWatermark={imageWatermark} />
     </>
   );
 }
@@ -246,7 +218,15 @@ type FilterTheme = {
   active: string;
 };
 
-function getGalleryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolean): FilterTheme {
+
+function getGalleryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolean, presentation?: "velvet" | NewThemeKey): FilterTheme {
+  if (presentation === "velvet") return { bar: "border-white/15 bg-[#101010] text-white", row: "gap-7 py-4", btn: "shrink-0 border-0 border-b-2 px-0 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.2em]", idle: "border-transparent text-white/50 hover:text-white", active: "border-[#d2262e] text-[#ef5559]" };
+  if (presentation === "relay") return { bar: "border-[#17211d] bg-[#f2f0e8] text-[#17211d]", row: "gap-0", btn: "shrink-0 border-r border-[#17211d] px-5 py-4 font-mono text-xs uppercase tracking-[0.16em]", idle: "hover:bg-[#8db6a4]", active: "bg-[#e75a3d] text-white" };
+  if (presentation === "fieldbook") return { bar: "border-[#26322b] bg-[#ede6d5] text-[#26322b]", row: "gap-5 py-3", btn: "shrink-0 border-b px-1 py-2 font-mono text-xs uppercase", idle: "border-transparent opacity-60", active: "border-[#26322b]" };
+  if (presentation === "kaleido") return { bar: "border-[#232136] bg-[#ffcf56] text-[#232136]", row: "gap-2 py-3", btn: "shrink-0 rounded-full border-2 border-[#232136] px-5 py-2 font-bold", idle: "bg-[#f6f2e7]", active: "bg-[#ff6b5e]" };
+  if (presentation === "proscenium") return { bar: "border-white/20 bg-[#120f15] text-[#f1e9dc]", row: "justify-center gap-8 py-4", btn: "shrink-0 border-b px-1 py-2 font-serif text-lg italic", idle: "border-transparent text-white/55", active: "border-[#d44b3e] text-[#d44b3e]" };
+  if (presentation === "cartograph") return { bar: "border-[#10271f] bg-[#dfe7df] text-[#10271f]", row: "gap-3 py-3", btn: "shrink-0 border border-[#10271f] px-4 py-2 font-mono text-xs uppercase", idle: "bg-transparent", active: "bg-[#10271f] text-[#dfe7df]" };
+  if (presentation === "vitrine") return { bar: "border-[#9b8d76] bg-[#e7e2d8] text-[#26221e]", row: "justify-center gap-7 py-4", btn: "shrink-0 border-0 border-b px-1 py-2 font-serif", idle: "border-transparent opacity-55", active: "border-[#8e4037] text-[#8e4037]" };
   switch (variant) {
     case "luxury":
       return {
@@ -311,7 +291,8 @@ function getGalleryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolea
   }
 }
 
-function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boolean) {
+function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boolean, presentation?: "velvet" | NewThemeKey) {
+  if (presentation === "velvet") return { grid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-4", card: "border-white/15 bg-[#151515] text-white", aspect: () => "aspect-[4/5]", image: "grayscale group-hover:grayscale-0", body: "border-t border-white/15 p-4", title: "font-display text-2xl font-black uppercase tracking-[-0.05em]", meta: "mt-2 font-mono text-[9px] uppercase tracking-[0.18em] text-[#ef5559]" };
   if (variant === "monochrome") {
     return {
       grid: "grid gap-px sm:grid-cols-2 lg:grid-cols-3",
@@ -338,7 +319,7 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "luxury") {
     return {
-      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      grid: "grid gap-x-6 gap-y-12 md:grid-cols-12",
       card: "border-[rgba(216,191,136,0.3)] bg-[#1a1814] text-[#fbf4e8] shadow-[0_8px_32px_rgba(216,191,136,0.08)]",
       aspect: (index: number) => (index % 3 === 1 ? "aspect-square" : "aspect-[4/5]"),
       image: "saturate-90",
@@ -350,7 +331,7 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "editorial") {
     return {
-      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      grid: "grid gap-x-6 gap-y-12 md:grid-cols-12",
       card: "border-[#ddcdbf] bg-[#fffaf2] shadow-sm",
       aspect: (index: number) => (index % 4 === 0 ? "aspect-[16/11]" : "aspect-[4/5]"),
       image: "",
@@ -362,7 +343,7 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "masonry") {
     return {
-      grid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+      grid: "grid auto-rows-fr gap-px bg-[#101418] md:grid-cols-12",
       card: "border-[#d9dfdc] bg-white",
       aspect: () => "aspect-square",
       image: "",
@@ -374,7 +355,7 @@ function getGalleryBrowserStyle(variant: CustomerSiteThemeVariant, isDark: boole
 
   if (variant === "cinematic") {
     return {
-      grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+      grid: "grid gap-3 md:grid-cols-12",
       card: "border-white/5 bg-white/5",
       aspect: () => "aspect-[4/5]",
       image: "contrast-125 brightness-90",

@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronDown, ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
+import { ChevronDown, ZoomIn } from "lucide-react";
+import { SharedPhotoViewer } from "@/components/customer/shared-photo-viewer";
 import { customerPublicSurface, isDarkCustomerVariant } from "@/components/customer/customer-public-page";
 import { ImageWatermark } from "@/components/customer/image-watermark";
 import { resolveCustomerSiteThemeVariant, type CustomerSiteThemeVariant } from "@/lib/customer-theme";
 import { useNavbarVisibility } from "@/components/layout/customer-site-nav";
 import { type GalleryTaxonomyItem } from "@/data/customer-gallery-taxonomy";
 import { cn } from "@/lib/utils";
+import type { NewThemeKey } from "@/lib/new-themes";
 import type { CustomerSiteCategory, CustomerSiteGallery } from "@/services/tenant/customer-site-data";
 import type { EffectiveImageWatermark } from "@/services/platform/media-policy";
 
@@ -29,6 +31,7 @@ type CustomerCategoryBrowserProps = {
   variant?: CustomerSiteThemeVariant;
   imageWatermark?: EffectiveImageWatermark | null;
   isDemo?: boolean;
+  presentation?: "velvet" | NewThemeKey;
 };
 
 const initialVisiblePhotos = 12;
@@ -91,7 +94,7 @@ function buildCategoryPhotoEntries(galleries: CustomerSiteGallery[], categories:
   );
 }
 
-export function CustomerCategoryBrowser({ slug, galleries, categories, variant: variantProp, imageWatermark, isDemo = false }: CustomerCategoryBrowserProps) {
+export function CustomerCategoryBrowser({ slug, galleries, categories, variant: variantProp, imageWatermark, isDemo = false, presentation }: CustomerCategoryBrowserProps) {
   const variant = variantProp ?? resolveCustomerSiteThemeVariant(slug);
   const surface = customerPublicSurface(variant);
   const isDark = isDarkCustomerVariant(variant);
@@ -114,8 +117,8 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
   const visibleEntries = filteredEntries.slice(0, visiblePhotos);
   const viewerPhoto = viewerIndex === null ? null : filteredEntries[viewerIndex];
   const hasMore = visibleEntries.length < filteredEntries.length;
-  const browserStyle = getCategoryBrowserStyle(variant, isDark, surface);
-  const theme = getCategoryFilterTheme(variant, isDark);
+  const browserStyle = getCategoryBrowserStyle(variant, isDark, surface, presentation);
+  const theme = getCategoryFilterTheme(variant, isDark, presentation);
   const filterBarTop = isTopHidden ? "0px" : `${navbarHeight}px`;
 
   const stepViewer = useCallback(
@@ -223,11 +226,11 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
         </div>
       </div>
 
-      <section ref={sectionRef} className={surface.section}>
+      <section ref={sectionRef} className={presentation === "velvet" ? "max-w-none bg-[#101010] px-5 py-10 text-white sm:px-8 lg:px-10" : surface.section}>
         {visibleEntries.length ? (
           <div className={cn("pf-stagger", browserStyle.grid)}>
             {visibleEntries.map((photo, index) => (
-              <article key={`${photo.id}-${index}`} className={cn("group overflow-hidden border transition-shadow duration-300 hover:shadow-[0_22px_70px_rgba(15,23,42,0.16)]", browserStyle.card)}>
+              <article key={`${photo.id}-${index}`} className={cn("group overflow-hidden border transition-shadow duration-300 hover:shadow-[0_22px_70px_rgba(15,23,42,0.16)]", browserStyle.card, variant === "cinematic" && (index % 5 === 0 ? "md:col-span-8" : index % 5 === 1 ? "md:col-span-4" : "md:col-span-6"), variant === "editorial" && (index % 4 === 0 ? "md:col-span-7" : index % 4 === 1 ? "md:col-span-5 md:mt-20" : "md:col-span-6"), variant === "luxury" && (index % 4 === 0 ? "md:col-span-5" : index % 4 === 1 ? "md:col-span-7 md:mt-24" : "md:col-span-6"), variant === "masonry" && (index % 6 === 0 ? "md:col-span-7" : index % 6 === 1 ? "md:col-span-5" : "md:col-span-4"))}>
                 <button type="button" onClick={() => openViewer(photo)} className={cn("relative block w-full overflow-hidden text-left", browserStyle.aspect(index))}>
                   <Image src={photo.image} alt={photo.title} fill className={cn("object-cover transition duration-700 group-hover:scale-105", browserStyle.image)} />
                   <ImageWatermark watermark={photo.watermarkApplied ? null : imageWatermark} />
@@ -259,36 +262,7 @@ export function CustomerCategoryBrowser({ slug, galleries, categories, variant: 
         ) : null}
       </section>
 
-      {viewerPhoto ? (
-        <div className="pf-viewer-enter fixed inset-0 z-50 bg-black p-4 text-white sm:p-8">
-          <button type="button" onClick={() => setViewerIndex(null)} className="absolute right-4 top-4 z-10 inline-flex size-11 items-center justify-center border border-white/20 bg-black/70 transition hover:bg-white hover:text-black" aria-label="Close photo viewer">
-            <X className="size-5" aria-hidden="true" />
-          </button>
-          {filteredEntries.length > 1 ? (
-            <>
-              <button type="button" onClick={() => stepViewer("previous")} className="absolute left-4 top-1/2 z-10 inline-flex size-12 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/70 transition hover:bg-white hover:text-black sm:left-8 sm:size-14" aria-label="Previous photo">
-                <ChevronLeft className="size-6" aria-hidden="true" />
-              </button>
-              <button type="button" onClick={() => stepViewer("next")} className="absolute right-4 top-1/2 z-10 inline-flex size-12 -translate-y-1/2 items-center justify-center border border-white/20 bg-black/70 transition hover:bg-white hover:text-black sm:right-8 sm:size-14" aria-label="Next photo">
-                <ChevronRight className="size-6" aria-hidden="true" />
-              </button>
-            </>
-          ) : null}
-          <div className="flex h-full flex-col">
-            <div className="relative min-h-0 flex-1">
-              <Image src={viewerPhoto.image} alt={viewerPhoto.title} fill className="object-contain" sizes="100vw" priority />
-              <ImageWatermark watermark={viewerPhoto.watermarkApplied ? null : imageWatermark} />
-            </div>
-            <div className="mx-auto mt-4 flex w-full max-w-6xl items-end justify-between gap-4 border-t border-white/10 pt-4">
-              <div>
-                <p className="font-display text-3xl font-light tracking-[-0.05em]">{viewerPhoto.title}</p>
-                <p className="mt-1 font-nav text-xs font-semibold uppercase tracking-[0.22em] text-white/50">{viewerPhoto.location}</p>
-              </div>
-              <p className="hidden max-w-sm text-right text-sm text-white/50 sm:block">{viewerIndex === null ? 0 : viewerIndex + 1} / {filteredEntries.length}</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <SharedPhotoViewer images={filteredEntries} index={viewerIndex} onClose={() => setViewerIndex(null)} onStep={stepViewer} themeKey={presentation} imageWatermark={imageWatermark} />
     </>
   );
 }
@@ -305,7 +279,22 @@ type CategoryFilterTheme = {
   subActive: string;
 };
 
-function getCategoryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolean): CategoryFilterTheme {
+
+function getNewCategoryFilterTheme(presentation?: "velvet" | NewThemeKey): CategoryFilterTheme | null {
+  const shared = "shrink-0 transition-colors";
+  if (presentation === "relay") return { bar: "border-[#17211d] bg-[#f2f0e8] text-[#17211d]", row: "gap-0", btn: `${shared} border-r border-[#17211d] px-5 py-4 font-mono text-xs uppercase tracking-[0.16em]`, idle: "hover:bg-[#8db6a4]", active: "bg-[#e75a3d] text-white", subRow: "gap-0 border-t border-[#17211d]", subBtn: `${shared} border-r border-[#17211d] px-4 py-2 font-mono text-[10px] uppercase`, subIdle: "opacity-60", subActive: "bg-[#8db6a4]" };
+  if (presentation === "fieldbook") return { bar: "border-[#26322b] bg-[#ede6d5] text-[#26322b]", row: "gap-5 py-3", btn: `${shared} border-b px-1 py-2 font-mono text-xs uppercase`, idle: "border-transparent opacity-60", active: "border-[#26322b]", subRow: "gap-4 pb-3", subBtn: `${shared} border-b px-1 py-1 font-serif italic`, subIdle: "border-transparent opacity-50", subActive: "border-[#26322b]" };
+  if (presentation === "kaleido") return { bar: "border-[#232136] bg-[#ffcf56] text-[#232136]", row: "gap-2 py-3", btn: `${shared} rounded-full border-2 border-[#232136] px-5 py-2 font-bold`, idle: "bg-[#f6f2e7]", active: "bg-[#ff6b5e]", subRow: "gap-2 pb-3", subBtn: `${shared} rounded-full border-2 border-[#232136] px-4 py-1 text-sm font-bold`, subIdle: "bg-[#f6f2e7]", subActive: "bg-[#52b8a5]" };
+  if (presentation === "proscenium") return { bar: "border-white/20 bg-[#120f15] text-[#f1e9dc]", row: "justify-center gap-8 py-4", btn: `${shared} border-b px-1 py-2 font-serif text-lg italic`, idle: "border-transparent text-white/55", active: "border-[#d44b3e] text-[#d44b3e]", subRow: "justify-center gap-6 pb-3", subBtn: `${shared} border-b px-1 py-1 text-xs uppercase tracking-[0.18em]`, subIdle: "border-transparent text-white/40", subActive: "border-[#d44b3e]/70 text-[#d44b3e]" };
+  if (presentation === "cartograph") return { bar: "border-[#10271f] bg-[#dfe7df] text-[#10271f]", row: "gap-3 py-3", btn: `${shared} border border-[#10271f] px-4 py-2 font-mono text-xs uppercase`, idle: "bg-transparent", active: "bg-[#10271f] text-[#dfe7df]", subRow: "gap-2 pb-3", subBtn: `${shared} border border-[#10271f]/50 px-3 py-1 font-mono text-[10px] uppercase`, subIdle: "opacity-55", subActive: "bg-[#dd6f45] text-white opacity-100" };
+  if (presentation === "vitrine") return { bar: "border-[#9b8d76] bg-[#e7e2d8] text-[#26221e]", row: "justify-center gap-7 py-4", btn: `${shared} border-0 border-b px-1 py-2 font-serif`, idle: "border-transparent opacity-55", active: "border-[#8e4037] text-[#8e4037]", subRow: "justify-center gap-5 pb-3", subBtn: `${shared} border-b px-1 py-1 font-serif text-sm`, subIdle: "border-transparent opacity-45", subActive: "border-[#8e4037]/70 text-[#8e4037]" };
+  return null;
+}
+
+function getCategoryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boolean, presentation?: "velvet" | NewThemeKey): CategoryFilterTheme {
+  if (presentation === "velvet") return { bar: "border-white/15 bg-[#101010] text-white", row: "gap-7 py-4", btn: "shrink-0 border-0 border-b-2 px-0 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.2em]", idle: "border-transparent text-white/50", active: "border-[#d2262e] text-[#ef5559]", subRow: "gap-5 pb-3", subBtn: "text-[10px] uppercase tracking-[0.15em]", subIdle: "text-white/40", subActive: "text-[#ef5559]" };
+  const galleryTheme = getNewCategoryFilterTheme(presentation);
+  if (galleryTheme) return galleryTheme;
   switch (variant) {
     case "luxury":
       return {
@@ -403,8 +392,19 @@ function getCategoryFilterTheme(variant: CustomerSiteThemeVariant, isDark: boole
 function getCategoryBrowserStyle(
   variant: CustomerSiteThemeVariant,
   isDark: boolean,
-  surface: ReturnType<typeof customerPublicSurface>
+  surface: ReturnType<typeof customerPublicSurface>,
+  presentation?: "velvet" | NewThemeKey
 ) {
+  if (presentation === "velvet") return {
+    grid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+    card: "border-white/15 bg-[#151515] text-white",
+    aspect: () => "aspect-[4/5]",
+    image: "grayscale group-hover:grayscale-0",
+    body: "border-t border-white/15 p-4",
+    title: "font-display text-2xl font-black uppercase tracking-[-0.05em]",
+    meta: "mt-2 font-mono text-[9px] uppercase tracking-[0.18em] text-[#ef5559]"
+  };
+
   if (variant === "monochrome") {
     return {
       grid: "grid gap-px sm:grid-cols-2 lg:grid-cols-3",
@@ -431,7 +431,7 @@ function getCategoryBrowserStyle(
 
   if (variant === "luxury") {
     return {
-      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      grid: "grid gap-x-6 gap-y-12 md:grid-cols-12",
       card: "border-[rgba(216,191,136,0.3)] bg-[#1a1814] text-[#fbf4e8] shadow-[0_8px_32px_rgba(216,191,136,0.08)]",
       aspect: (index: number) => (index % 3 === 0 ? "aspect-[16/11]" : "aspect-[4/5]"),
       image: "saturate-90",
@@ -443,7 +443,7 @@ function getCategoryBrowserStyle(
 
   if (variant === "editorial") {
     return {
-      grid: "grid gap-6 md:grid-cols-2 xl:grid-cols-3",
+      grid: "grid gap-x-6 gap-y-12 md:grid-cols-12",
       card: "border-[#ddcdbf] bg-[#fffaf2] shadow-sm",
       aspect: (index: number) => (index % 4 === 0 ? "aspect-[16/11]" : "aspect-[4/5]"),
       image: "",
@@ -455,7 +455,7 @@ function getCategoryBrowserStyle(
 
   if (variant === "masonry") {
     return {
-      grid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+      grid: "grid gap-px bg-[#101418] md:grid-cols-12",
       card: "border-[#d9dfdc] bg-white",
       aspect: () => "aspect-square",
       image: "",
@@ -467,7 +467,7 @@ function getCategoryBrowserStyle(
 
   if (variant === "cinematic") {
     return {
-      grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+      grid: "grid gap-3 md:grid-cols-12",
       card: "border-white/5 bg-white/5",
       aspect: () => "aspect-[4/5]",
       image: "contrast-125 brightness-90",

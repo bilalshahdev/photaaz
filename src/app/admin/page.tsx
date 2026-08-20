@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { AlertTriangle, BadgeDollarSign, CalendarClock, Camera, FileText, Images, LifeBuoy, ShieldAlert, Tags, UsersRound } from "lucide-react";
+import { AlertTriangle, BadgeDollarSign, CalendarClock, Camera, FileText, Images, LifeBuoy, ShieldAlert, Tags } from "lucide-react";
 import { AdminPage, AdminPageHeader } from "@/components/admin/admin-ui";
 import { getAdminDashboardStats } from "@/services/admin/admin-data";
 

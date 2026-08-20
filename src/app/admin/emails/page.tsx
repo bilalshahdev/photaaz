@@ -1,16 +1,19 @@
 import { Mail, Send } from "lucide-react";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
-import { CheckboxField, SelectField, TextareaField, TextField } from "@/components/forms/form-controls";
-import { saveEmailDeliverySettings, saveEmailSetting } from "@/app/admin/actions";
-import { getAdminEmailDeliverySettings, getAdminEmailSettings } from "@/services/admin/admin-data";
+import { CheckboxField, SelectField, TextField } from "@/components/forms/form-controls";
+import { saveEmailDeliverySettings } from "@/app/admin/actions";
+import { getAdminEmailDeliverySettings, getAdminEmailSettings, getTranslationLocaleConfig } from "@/services/admin/admin-data";
 import type { EmailDeliveryProvider, EmailEncryption } from "@/services/email/email-service";
-import { EmailDeliveryButton, EmailSettingButton } from "./email-form-button";
+import { EmailDeliveryButton } from "./email-form-button";
+import { EmailSettingsEditor } from "./email-settings-editor";
 
 export default async function AdminEmailsPage() {
-  const [settings, delivery] = await Promise.all([
+  const [settings, delivery, locales] = await Promise.all([
     getAdminEmailSettings(),
-    getAdminEmailDeliverySettings()
+    getAdminEmailDeliverySettings(),
+    getTranslationLocaleConfig()
   ]);
+  const enabledLocales = locales.filter((locale) => locale.enabled);
 
   return (
     <AdminPage>
@@ -113,30 +116,7 @@ export default async function AdminEmailsPage() {
       </AdminPanel>
 
       <AdminPanel title="Email switches" icon={Mail} className="mt-6">
-        <div className="grid gap-4 md:grid-cols-2">
-          {settings.map((setting) => (
-            <form
-              key={setting.key}
-              action={async (formData) => {
-                "use server";
-                await saveEmailSetting({
-                  key: setting.key,
-                  label: String(formData.get("label")),
-                  description: String(formData.get("description") ?? ""),
-                  category: String(formData.get("category")),
-                  enabled: formData.get("enabled") === "on"
-                });
-              }}
-              className="grid gap-3 rounded-lg border border-slate-200 p-4"
-            >
-              <TextField name="label" label="Label" defaultValue={setting.label} placeholder="Email name" />
-              <TextField name="category" label="Category" defaultValue={setting.category} placeholder="Category name" />
-              <TextareaField name="description" label="Description" defaultValue={setting.description ?? ""} placeholder="What this email does" className="min-h-20 resize-y" />
-              <CheckboxField name="enabled" defaultChecked={setting.enabled} label="Email enabled" controlPosition="right" />
-              <EmailSettingButton />
-            </form>
-          ))}
-        </div>
+        <EmailSettingsEditor settings={settings} locales={enabledLocales} />
       </AdminPanel>
     </AdminPage>
   );

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
 import {
   BadgeDollarSign,
+  BookOpen,
   HelpCircle,
   Languages,
   LayoutDashboard,
@@ -14,17 +15,24 @@ import {
   MessageCircle,
   Palette,
   Search,
+  Scale,
   Settings,
   ShieldAlert,
   Tags,
   UsersRound,
   Wand2,
-  Wrench
+  Wrench,
 } from "lucide-react";
-import { DashboardShell, type DashboardNavItem } from "@/components/layout/dashboard-shell";
-import { AdminLocaleProvider, AdminLocaleSelector } from "@/components/admin/admin-locale-context";
+import {
+  DashboardShell,
+  type DashboardNavItem,
+} from "@/components/layout/dashboard-shell";
+import {
+  AdminLocaleProvider,
+  AdminLocaleSelector,
+} from "@/components/admin/admin-locale-context";
 import type { AdminLocaleOption } from "@/components/admin/localized-fields";
-import { adminSessionStorageKey, adminSidebarStorageKey } from "@/lib/admin-session";
+import { adminSidebarStorageKey } from "@/lib/admin-session";
 
 const adminNav: DashboardNavItem[] = [
   // Overview
@@ -33,6 +41,7 @@ const adminNav: DashboardNavItem[] = [
   { label: "Moderation", href: "/admin/moderation", icon: ShieldAlert },
   // Content & marketing
   { label: "Landing", href: "/admin/landing", icon: Wand2 },
+  { label: "Main Blog", href: "/admin/blogs", icon: BookOpen },
   { label: "SEO", href: "/admin/seo", icon: Search },
   { label: "FAQs", href: "/admin/faqs", icon: HelpCircle },
   { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
@@ -45,13 +54,20 @@ const adminNav: DashboardNavItem[] = [
   // Communication
   { label: "Messages", href: "/admin/messages", icon: MessageCircle },
   { label: "Support", href: "/admin/support", icon: LifeBuoy },
+  { label: "Legal Requests", href: "/admin/legal", icon: Scale },
   // Settings
   { label: "Translations", href: "/admin/translations", icon: Languages },
   { label: "Email Config", href: "/admin/emails", icon: Mail },
-  { label: "App Config", href: "/admin/settings", icon: Settings }
+  { label: "App Config", href: "/admin/settings", icon: Settings },
 ];
 
-export function AdminAuthGate({ children, enabledLocales = [] }: { children: React.ReactNode; enabledLocales?: AdminLocaleOption[] }) {
+export function AdminAuthGate({
+  children,
+  enabledLocales = [],
+}: {
+  children: React.ReactNode;
+  enabledLocales?: AdminLocaleOption[];
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
@@ -59,18 +75,13 @@ export function AdminAuthGate({ children, enabledLocales = [] }: { children: Rea
   const isLoginPage = pathname === "/admin/login";
 
   useEffect(() => {
-    const nextAuthed = localStorage.getItem(adminSessionStorageKey) === "true";
-
-    setIsAuthed(nextAuthed);
-    setIsReady(true);
-
-    if (!nextAuthed && !isLoginPage) {
-      router.replace("/admin/login" as Route);
-    }
-
-    if (nextAuthed && isLoginPage) {
-      router.replace("/admin" as Route);
-    }
+    fetch("/api/admin/session", { cache: "no-store" }).then((response) => {
+      const nextAuthed = response.ok;
+      setIsAuthed(nextAuthed);
+      setIsReady(true);
+      if (!nextAuthed && !isLoginPage) router.replace("/admin/login" as Route);
+      if (nextAuthed && isLoginPage) router.replace("/admin" as Route);
+    });
   }, [isLoginPage, router]);
 
   if (!isReady) {
@@ -96,21 +107,26 @@ export function AdminAuthGate({ children, enabledLocales = [] }: { children: Rea
   return (
     <AdminLocaleProvider locales={enabledLocales}>
       <DashboardShell
-        brand={{ label: "Photaaz", subtitle: "Super Admin", href: "/admin", mark: "P" }}
+        brand={{
+          label: "Photaaz",
+          subtitle: "Super Admin",
+          href: "/admin",
+          mark: "P",
+        }}
         nav={adminNav}
         storageKey={adminSidebarStorageKey}
         activeRootHref="/admin"
-        badge="Dashboard"
+        badge=""
         headerExtra={<AdminLocaleSelector />}
         logout={{
           label: "Logout",
           title: "Logout?",
           body: "You will be signed out of the super admin dashboard.",
           confirmLabel: "Logout",
-          onClick: () => {
-            localStorage.removeItem(adminSessionStorageKey);
+          onClick: async () => {
+            await fetch("/api/admin/session", { method: "DELETE" });
             router.replace("/admin/login" as Route);
-          }
+          },
         }}
       >
         {children}

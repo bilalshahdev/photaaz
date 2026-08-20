@@ -1,10 +1,26 @@
 import { prisma } from "@/lib/db/prisma";
-import { getEffectivePlanKey, getSubscriptionLifecycle, syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
-import { getTenantPlanAccess, hasFeatureInAccess, planLimitKeys } from "@/services/subscription/plan-limits";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
+import {
+  getEffectivePlanKey,
+  getSubscriptionLifecycle,
+  syncSubscriptionLifecycle,
+} from "@/services/subscription/lifecycle";
+import {
+  getTenantPlanAccess,
+  hasFeatureInAccess,
+  planLimitKeys,
+} from "@/services/subscription/plan-limits";
 import { getClientVisiblePlanFeatures } from "@/services/subscription/plan-presentation";
 import { normalizeTenantWatermark } from "@/services/platform/media-policy";
 
-const homeSectionKeys = ["hero", "featuredPhotos", "categories", "galleries", "contact", "footer"] as const;
+const homeSectionKeys = [
+  "hero",
+  "featuredPhotos",
+  "categories",
+  "galleries",
+  "contact",
+  "footer",
+] as const;
 type HomeSectionKey = (typeof homeSectionKeys)[number];
 
 export type CustomerDashboardView = {
@@ -39,19 +55,22 @@ export type CustomerDashboardView = {
   }>;
 };
 
-export async function getCustomerDashboardView(slug: string): Promise<CustomerDashboardView | null> {
+export async function getCustomerDashboardView(
+  slug: string,
+): Promise<CustomerDashboardView | null> {
+  await requireTenantOwner(slug);
   await syncSubscriptionLifecycle();
 
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       settings: true,
       subscription: {
         include: {
-          plan: true
-        }
+          plan: true,
+        },
       },
       _count: {
         select: {
@@ -60,30 +79,30 @@ export async function getCustomerDashboardView(slug: string): Promise<CustomerDa
           photos: true,
           notifications: {
             where: {
-              status: "UNREAD"
-            }
-          }
-        }
+              status: "UNREAD",
+            },
+          },
+        },
       },
       domains: {
         orderBy: {
-          createdAt: "asc"
+          createdAt: "asc",
         },
-        take: 1
+        take: 1,
       },
       photos: {
         orderBy: {
-          createdAt: "asc"
+          createdAt: "asc",
         },
-        take: 1
+        take: 1,
       },
       notifications: {
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
-        take: 5
-      }
-    }
+        take: 5,
+      },
+    },
   });
 
   if (!tenant) {
@@ -91,28 +110,29 @@ export async function getCustomerDashboardView(slug: string): Promise<CustomerDa
   }
 
   const lifecycle = getSubscriptionLifecycle(tenant.subscription);
-  const [subcategoryCount, approvedPhotoCount, pendingPhotoCount] = await Promise.all([
-    prisma.category.count({
-      where: {
-        tenantId: tenant.id,
-        parentId: {
-          not: null
-        }
-      }
-    }),
-    prisma.photo.count({
-      where: {
-        tenantId: tenant.id,
-        moderationStatus: "APPROVED"
-      }
-    }),
-    prisma.photo.count({
-      where: {
-        tenantId: tenant.id,
-        moderationStatus: "PENDING"
-      }
-    })
-  ]);
+  const [subcategoryCount, approvedPhotoCount, pendingPhotoCount] =
+    await Promise.all([
+      prisma.category.count({
+        where: {
+          tenantId: tenant.id,
+          parentId: {
+            not: null,
+          },
+        },
+      }),
+      prisma.photo.count({
+        where: {
+          tenantId: tenant.id,
+          moderationStatus: "APPROVED",
+        },
+      }),
+      prisma.photo.count({
+        where: {
+          tenantId: tenant.id,
+          moderationStatus: "PENDING",
+        },
+      }),
+    ]);
 
   return {
     name: tenant.name,
@@ -128,7 +148,7 @@ export async function getCustomerDashboardView(slug: string): Promise<CustomerDa
     domain: tenant.domains[0]
       ? {
           hostname: tenant.domains[0].hostname,
-          status: tenant.domains[0].status
+          status: tenant.domains[0].status,
         }
       : null,
     planKey: getEffectivePlanKey(tenant.subscription),
@@ -139,12 +159,15 @@ export async function getCustomerDashboardView(slug: string): Promise<CustomerDa
     packageLabel: lifecycle.label,
     packageTone: lifecycle.tone,
     packageIsUsable: lifecycle.isUsable,
-    heroImage: tenant.photos[0]?.secureUrl ?? "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85",
-    notifications: tenant.notifications
+    heroImage:
+      tenant.photos[0]?.secureUrl ??
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85",
+    notifications: tenant.notifications,
   };
 }
 
 export async function getCustomerCategoriesView(slug: string) {
+  await requireTenantOwner(slug);
   const data = await getCustomerGalleriesView(slug);
 
   if (!data) {
@@ -158,19 +181,23 @@ export async function getCustomerCategoriesView(slug: string) {
     parentCategoryOptions: data.parentCategoryOptions,
     canRequestCustomCategories: data.canRequestCustomCategories,
     categoryRequestLimit: data.categoryRequestLimit,
-    categoryRequests: data.categoryRequests
+    categoryRequests: data.categoryRequests,
   };
 }
 
-export async function getCustomerGalleryDetailView(slug: string, albumSlug: string) {
+export async function getCustomerGalleryDetailView(
+  slug: string,
+  albumSlug: string,
+) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     select: {
       id: true,
-      name: true
-    }
+      name: true,
+    },
   });
 
   if (!tenant) {
@@ -180,20 +207,20 @@ export async function getCustomerGalleryDetailView(slug: string, albumSlug: stri
   const album = await prisma.album.findFirst({
     where: {
       tenantId: tenant.id,
-      slug: albumSlug
+      slug: albumSlug,
     },
     include: {
       category: {
         include: {
-          parent: true
-        }
+          parent: true,
+        },
       },
       photos: {
         orderBy: {
-          createdAt: "desc"
-        }
-      }
-    }
+          createdAt: "desc",
+        },
+      },
+    },
   });
 
   if (!album) {
@@ -209,28 +236,34 @@ export async function getCustomerGalleryDetailView(slug: string, albumSlug: stri
       description: album.description,
       featured: album.featured,
       published: album.published,
-      category: album.category?.parent ? `${album.category.parent.name} / ${album.category.name}` : album.category?.name ?? "Uncategorized",
+      category: album.category?.parent
+        ? `${album.category.parent.name} / ${album.category.name}`
+        : (album.category?.name ?? "Uncategorized"),
       photos: album.photos.map((photo) => ({
         id: photo.id,
         title: photo.title ?? photo.alt,
         alt: photo.alt,
         image: photo.secureUrl,
         status: photo.moderationStatus,
-        createdAt: photo.createdAt
-      }))
-    }
+        createdAt: photo.createdAt,
+      })),
+    },
   };
 }
 
-export async function getCustomerCategoryDetailView(slug: string, categorySlug: string) {
+export async function getCustomerCategoryDetailView(
+  slug: string,
+  categorySlug: string,
+) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     select: {
       id: true,
-      name: true
-    }
+      name: true,
+    },
   });
 
   if (!tenant) {
@@ -240,7 +273,7 @@ export async function getCustomerCategoryDetailView(slug: string, categorySlug: 
   const category = await prisma.category.findFirst({
     where: {
       tenantId: tenant.id,
-      slug: categorySlug
+      slug: categorySlug,
     },
     include: {
       parent: true,
@@ -249,36 +282,36 @@ export async function getCustomerCategoryDetailView(slug: string, categorySlug: 
           _count: {
             select: {
               photos: true,
-              albums: true
-            }
-          }
+              albums: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       albums: {
         include: {
           _count: {
             select: {
-              photos: true
-            }
-          }
+              photos: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: "desc"
-        }
+          createdAt: "desc",
+        },
       },
       photos: {
         include: {
-          album: true
+          album: true,
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
-        take: 60
-      }
-    }
+        take: 60,
+      },
+    },
   });
 
   if (!category) {
@@ -297,14 +330,14 @@ export async function getCustomerCategoryDetailView(slug: string, categorySlug: 
         name: child.name,
         slug: child.slug,
         photoCount: child._count.photos,
-        albumCount: child._count.albums
+        albumCount: child._count.albums,
       })),
       albums: category.albums.map((album) => ({
         id: album.id,
         title: album.title,
         slug: album.slug,
         published: album.published,
-        photoCount: album._count.photos
+        photoCount: album._count.photos,
       })),
       photos: category.photos.map((photo) => ({
         id: photo.id,
@@ -313,33 +346,34 @@ export async function getCustomerCategoryDetailView(slug: string, categorySlug: 
         image: photo.secureUrl,
         status: photo.moderationStatus,
         gallery: photo.album?.title ?? "Not in gallery",
-        createdAt: photo.createdAt
-      }))
-    }
+        createdAt: photo.createdAt,
+      })),
+    },
   };
 }
 
 export async function getCustomerCommunicationView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     select: {
       id: true,
       name: true,
       conversations: {
         orderBy: {
-          updatedAt: "desc"
+          updatedAt: "desc",
         },
         include: {
           messages: {
             orderBy: {
-              createdAt: "asc"
-            }
-          }
-        }
-      }
-    }
+              createdAt: "asc",
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -358,26 +392,27 @@ export async function getCustomerCommunicationView(slug: string) {
         id: message.id,
         senderRole: message.senderRole,
         body: message.body,
-        createdAt: message.createdAt
-      }))
-    }))
+        createdAt: message.createdAt,
+      })),
+    })),
   };
 }
 
 export async function getCustomerVisitorSupportView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     select: {
       id: true,
       name: true,
       visitorInquiries: {
         orderBy: {
-          createdAt: "desc"
-        }
-      }
-    }
+          createdAt: "desc",
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -395,66 +430,67 @@ export async function getCustomerVisitorSupportView(slug: string) {
       subject: inquiry.subject,
       message: inquiry.message,
       status: inquiry.status,
-      createdAt: inquiry.createdAt
-    }))
+      createdAt: inquiry.createdAt,
+    })),
   };
 }
 
 export async function getCustomerPhotosView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       categories: {
         where: {
-          parentId: null
+          parentId: null,
         },
         include: {
           children: {
             orderBy: {
-              createdAt: "asc"
-            }
-          }
+              createdAt: "asc",
+            },
+          },
         },
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       blogCategories: {
         orderBy: [
           {
-            displayOrder: "asc"
+            displayOrder: "asc",
           },
           {
-            name: "asc"
-          }
-        ]
+            name: "asc",
+          },
+        ],
       },
       albums: {
         orderBy: {
-          title: "asc"
+          title: "asc",
         },
         select: {
           id: true,
-          title: true
-        }
+          title: true,
+        },
       },
       photos: {
         include: {
           category: {
             include: {
-              parent: true
-            }
+              parent: true,
+            },
           },
-          album: true
+          album: true,
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
-        take: 60
-      }
-    }
+        take: 60,
+      },
+    },
   });
 
   if (!tenant) {
@@ -468,12 +504,12 @@ export async function getCustomerPhotosView(slug: string) {
       name: category.name,
       children: category.children.map((child) => ({
         id: child.id,
-        name: child.name
-      }))
+        name: child.name,
+      })),
     })),
     galleryOptions: tenant.albums.map((album) => ({
       id: album.id,
-      label: album.title
+      label: album.title,
     })),
     photos: tenant.photos.map((photo) => ({
       id: photo.id,
@@ -483,105 +519,108 @@ export async function getCustomerPhotosView(slug: string) {
       status: photo.moderationStatus,
       categoryId: photo.categoryId,
       albumId: photo.albumId,
-      category: photo.category?.parent ? `${photo.category.parent.name} / ${photo.category.name}` : photo.category?.name ?? "Uncategorized",
+      category: photo.category?.parent
+        ? `${photo.category.parent.name} / ${photo.category.name}`
+        : (photo.category?.name ?? "Uncategorized"),
       gallery: photo.album?.title ?? "Not in gallery",
-      createdAt: photo.createdAt
-    }))
+      createdAt: photo.createdAt,
+    })),
   };
 }
 
 export async function getCustomerGalleriesView(slug: string) {
+  await requireTenantOwner(slug);
   await syncSubscriptionLifecycle();
 
   const [tenant, platformParentTypes] = await Promise.all([
     prisma.tenant.findUnique({
-    where: {
-      slug
-    },
-    include: {
-      categories: {
-        where: {
-          parentId: null
-        },
-        include: {
-          _count: {
-            select: {
-              albums: true,
-              photos: true
-            }
+      where: {
+        slug,
+      },
+      include: {
+        categories: {
+          where: {
+            parentId: null,
           },
-          children: {
-            include: {
-              _count: {
-                select: {
-                  albums: true,
-                  photos: true
-                }
-              }
+          include: {
+            _count: {
+              select: {
+                albums: true,
+                photos: true,
+              },
             },
-            orderBy: {
-              createdAt: "asc"
-            }
-          }
-        },
-        orderBy: {
-          createdAt: "asc"
-        }
-      },
-      albums: {
-        include: {
-          category: {
-            include: {
-              parent: true
-            }
-          },
-          _count: {
-            select: {
-              photos: true
-            }
-          },
-          photos: {
-            orderBy: {
-              createdAt: "asc"
+            children: {
+              include: {
+                _count: {
+                  select: {
+                    albums: true,
+                    photos: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
             },
-            take: 1
-          }
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
         },
-        orderBy: {
-          createdAt: "asc"
-        }
-      },
-      categoryRequests: {
-        orderBy: {
-          createdAt: "desc"
+        albums: {
+          include: {
+            category: {
+              include: {
+                parent: true,
+              },
+            },
+            _count: {
+              select: {
+                photos: true,
+              },
+            },
+            photos: {
+              orderBy: {
+                createdAt: "asc",
+              },
+              take: 1,
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
         },
-        take: 6,
-        include: {
-          parentType: true
-        }
+        categoryRequests: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 6,
+          include: {
+            parentType: true,
+          },
+        },
+        subscription: {
+          include: {
+            plan: true,
+          },
+        },
       },
-      subscription: {
-        include: {
-          plan: true
-        }
-      }
-    }
-  }),
+    }),
     prisma.platformPhotographyType.findMany({
       where: {
         enabled: true,
-        parentId: null
+        parentId: null,
       },
       include: {
         children: {
           where: {
-            enabled: true
+            enabled: true,
           },
-          orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
-        }
+          orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+        },
       },
-      orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
-    })
+      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+    }),
   ]);
 
   if (!tenant) {
@@ -589,7 +628,8 @@ export async function getCustomerGalleriesView(slug: string) {
   }
 
   const planAccess = await getTenantPlanAccess(slug);
-  const categoryRequestLimit = planAccess?.limits[planLimitKeys.categoryRequestsTotal];
+  const categoryRequestLimit =
+    planAccess?.limits[planLimitKeys.categoryRequestsTotal];
 
   return {
     name: tenant.name,
@@ -606,37 +646,39 @@ export async function getCustomerGalleriesView(slug: string) {
         slug: child.slug,
         image: child.image,
         albumCount: child._count.albums,
-        photoCount: child._count.photos
-      }))
+        photoCount: child._count.photos,
+      })),
     })),
     uploadCategories: tenant.categories.flatMap((category) =>
       category.children.length
         ? category.children.map((child) => ({
             id: child.id,
-            label: `${category.name} / ${child.name}`
+            label: `${category.name} / ${child.name}`,
           }))
         : [
             {
               id: category.id,
-              label: category.name
-            }
-          ]
+              label: category.name,
+            },
+          ],
     ),
     albums: tenant.albums.map((album) => ({
       id: album.id,
       title: album.title,
       slug: album.slug,
       description: album.description,
-      category: album.category?.parent ? `${album.category.parent.name} / ${album.category.name}` : album.category?.name,
+      category: album.category?.parent
+        ? `${album.category.parent.name} / ${album.category.name}`
+        : album.category?.name,
       categoryId: album.categoryId,
       featured: album.featured,
       published: album.published,
       photoCount: album._count.photos,
-      coverImage: album.photos[0]?.secureUrl
+      coverImage: album.photos[0]?.secureUrl,
     })),
     parentCategoryOptions: platformParentTypes.map((type) => ({
       slug: type.slug,
-      name: type.name
+      name: type.name,
     })),
     availableCategories: platformParentTypes.map((type) => ({
       slug: type.slug,
@@ -647,10 +689,13 @@ export async function getCustomerGalleriesView(slug: string) {
         slug: child.slug,
         name: child.name,
         image: child.image,
-        linked: tenant.categories.some((category) => category.slug === child.slug)
-      }))
+        linked: tenant.categories.some(
+          (category) => category.slug === child.slug,
+        ),
+      })),
     })),
-    canRequestCustomCategories: categoryRequestLimit == null || categoryRequestLimit > 0,
+    canRequestCustomCategories:
+      categoryRequestLimit == null || categoryRequestLimit > 0,
     categoryRequestLimit: categoryRequestLimit ?? null,
     categoryRequests: tenant.categoryRequests.map((request) => ({
       id: request.id,
@@ -658,28 +703,29 @@ export async function getCustomerGalleriesView(slug: string) {
       status: request.status,
       image: request.image,
       parentName: request.parentType?.name,
-      adminNote: request.adminNote
-    }))
+      adminNote: request.adminNote,
+    })),
   };
 }
 
 export async function getCustomerContentView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       pages: {
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       blogs: {
         orderBy: {
-          createdAt: "desc"
-        }
-      }
-    }
+          createdAt: "desc",
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -689,57 +735,58 @@ export async function getCustomerContentView(slug: string) {
   return {
     name: tenant.name,
     pages: tenant.pages,
-    blogs: tenant.blogs
+    blogs: tenant.blogs,
   };
 }
 
 export async function getCustomerBlogEditorView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       categories: {
         where: {
-          parentId: null
+          parentId: null,
         },
         include: {
           children: {
             orderBy: {
-              createdAt: "asc"
-            }
-          }
+              createdAt: "asc",
+            },
+          },
         },
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       blogCategories: {
         orderBy: [
           {
-            displayOrder: "asc"
+            displayOrder: "asc",
           },
           {
-            name: "asc"
-          }
-        ]
+            name: "asc",
+          },
+        ],
       },
       photos: {
         where: {
-          moderationStatus: "APPROVED"
+          moderationStatus: "APPROVED",
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
         take: 24,
         select: {
           id: true,
           title: true,
           alt: true,
-          secureUrl: true
-        }
-      }
-    }
+          secureUrl: true,
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -750,82 +797,86 @@ export async function getCustomerBlogEditorView(slug: string) {
     name: tenant.name,
     blogCategories: tenant.blogCategories.map((category) => ({
       id: category.id,
-      label: category.name
+      label: category.name,
     })),
     relatedCategories: tenant.categories.flatMap((category) =>
       category.children.length
         ? category.children.map((child) => ({
             id: child.id,
-            label: `${category.name} / ${child.name}`
+            label: `${category.name} / ${child.name}`,
           }))
         : [
             {
               id: category.id,
-              label: category.name
-            }
-          ]
+              label: category.name,
+            },
+          ],
     ),
     photos: tenant.photos.map((photo) => ({
       id: photo.id,
       title: photo.title ?? photo.alt,
-      image: photo.secureUrl
-    }))
+      image: photo.secureUrl,
+    })),
   };
 }
 
-export async function getCustomerBlogPostEditorView(slug: string, blogId: string) {
+export async function getCustomerBlogPostEditorView(
+  slug: string,
+  blogId: string,
+) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       categories: {
         where: {
-          parentId: null
+          parentId: null,
         },
         include: {
           children: {
             orderBy: {
-              createdAt: "asc"
-            }
-          }
+              createdAt: "asc",
+            },
+          },
         },
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       blogCategories: {
         orderBy: [
           {
-            displayOrder: "asc"
+            displayOrder: "asc",
           },
           {
-            name: "asc"
-          }
-        ]
+            name: "asc",
+          },
+        ],
       },
       photos: {
         where: {
-          moderationStatus: "APPROVED"
+          moderationStatus: "APPROVED",
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
         take: 24,
         select: {
           id: true,
           title: true,
           alt: true,
-          secureUrl: true
-        }
+          secureUrl: true,
+        },
       },
       blogs: {
         where: {
-          id: blogId
+          id: blogId,
         },
-        take: 1
-      }
-    }
+        take: 1,
+      },
+    },
   });
 
   const blog = tenant?.blogs[0];
@@ -838,25 +889,25 @@ export async function getCustomerBlogPostEditorView(slug: string, blogId: string
     name: tenant.name,
     blogCategories: tenant.blogCategories.map((category) => ({
       id: category.id,
-      label: category.name
+      label: category.name,
     })),
     relatedCategories: tenant.categories.flatMap((category) =>
       category.children.length
         ? category.children.map((child) => ({
             id: child.id,
-            label: `${category.name} / ${child.name}`
+            label: `${category.name} / ${child.name}`,
           }))
         : [
             {
               id: category.id,
-              label: category.name
-            }
-          ]
+              label: category.name,
+            },
+          ],
     ),
     photos: tenant.photos.map((photo) => ({
       id: photo.id,
       title: photo.title ?? photo.alt,
-      image: photo.secureUrl
+      image: photo.secureUrl,
     })),
     blog: {
       id: blog.id,
@@ -867,35 +918,36 @@ export async function getCustomerBlogPostEditorView(slug: string, blogId: string
       relatedCategoryId: blog.categoryId,
       featuredImage: blog.featuredImage,
       tags: blog.tags,
-      contentHtml: readBlogHtml(blog.content)
-    }
+      contentHtml: readBlogHtml(blog.content),
+    },
   };
 }
 
 export async function getCustomerBlogCategoriesView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       blogCategories: {
         orderBy: [
           {
-            displayOrder: "asc"
+            displayOrder: "asc",
           },
           {
-            name: "asc"
-          }
+            name: "asc",
+          },
         ],
         include: {
           _count: {
             select: {
-              posts: true
-            }
-          }
-        }
-      }
-    }
+              posts: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -909,47 +961,48 @@ export async function getCustomerBlogCategoriesView(slug: string) {
       name: category.name,
       slug: category.slug,
       description: category.description ?? "",
-      postCount: category._count.posts
-    }))
+      postCount: category._count.posts,
+    })),
   };
 }
 
 export async function getCustomerSettingsView(slug: string) {
+  await requireTenantOwner(slug);
   await syncSubscriptionLifecycle();
 
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       settings: true,
       domains: {
         orderBy: {
-          createdAt: "asc"
-        }
+          createdAt: "asc",
+        },
       },
       subscription: {
         include: {
-          plan: true
-        }
+          plan: true,
+        },
       },
       photos: {
         where: {
-          moderationStatus: "APPROVED"
+          moderationStatus: "APPROVED",
         },
         include: {
           category: {
             include: {
-              parent: true
-            }
-          }
+              parent: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
-        take: 120
-      }
-    }
+        take: 120,
+      },
+    },
   });
 
   if (!tenant) {
@@ -963,13 +1016,17 @@ export async function getCustomerSettingsView(slug: string) {
   const watermark = normalizeTenantWatermark(businessDetails.watermark);
   const sections = normalizeRecord(businessDetails.sections);
   const homepage = normalizeRecord(businessDetails.homepage);
+  const homepageCopy = normalizeRecord(homepage.copy);
   const homepageFeaturedPhotos = normalizeRecord(homepage.featuredPhotos);
-  const fallbackHeroImage = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85";
+  const fallbackHeroImage =
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85";
   const planAccess = await getTenantPlanAccess(slug);
-  const planKey = planAccess?.planKey ?? getEffectivePlanKey(tenant.subscription);
+  const planKey =
+    planAccess?.planKey ?? getEffectivePlanKey(tenant.subscription);
   const canHideFooter = !["basic", "free", "plus"].includes(planKey);
   const heroImages = normalizeStringList(hero.images);
-  const heroImage = readString(hero.image) ?? heroImages[0] ?? fallbackHeroImage;
+  const heroImage =
+    readString(hero.image) ?? heroImages[0] ?? fallbackHeroImage;
 
   return {
     name: tenant.name,
@@ -981,16 +1038,21 @@ export async function getCustomerSettingsView(slug: string) {
     site: {
       heroTitle: readString(hero.title) ?? tenant.name,
       specialty: readString(hero.specialty) ?? "Photography",
-      tagline: readString(hero.tagline) ?? `Selected work, stories, and visual collections by ${tenant.name}.`,
+      tagline:
+        readString(hero.tagline) ??
+        `Selected work, stories, and visual collections by ${tenant.name}.`,
       heroImage,
       heroImages: heroImages.length ? heroImages : [heroImage],
       heroImageLimit: planAccess?.limits[planLimitKeys.heroImagesTotal] ?? 1,
-      canUsePageHeaderImages: hasFeatureInAccess(planAccess, "pageHeaderImages"),
+      canUsePageHeaderImages: hasFeatureInAccess(
+        planAccess,
+        "pageHeaderImages",
+      ),
       pageHeaders: {
         gallery: normalizePageHeader(pageHeaders.gallery),
         categories: normalizePageHeader(pageHeaders.categories),
         blog: normalizePageHeader(pageHeaders.blog),
-        about: normalizePageHeader(pageHeaders.about)
+        about: normalizePageHeader(pageHeaders.about),
       },
       canUseCustomWatermark: hasFeatureInAccess(planAccess, "watermarks"),
       contactEmail: readString(contact.email) ?? `${tenant.slug}@example.com`,
@@ -1004,39 +1066,73 @@ export async function getCustomerSettingsView(slug: string) {
         categories: readSectionEnabled(sections.categories, true),
         galleries: readSectionEnabled(sections.galleries, true),
         contact: readSectionEnabled(sections.contact, true),
-        footer: canHideFooter ? readSectionEnabled(sections.footer, true) : true
+        footer: canHideFooter
+          ? readSectionEnabled(sections.footer, true)
+          : true,
       },
       sectionOrder: getSectionOrder(sections),
       homepage: {
+        copy: {
+          welcomeTitle:
+            readString(homepageCopy.welcomeTitle) ??
+            "Images with history, energy and a point of view.",
+          featuredTitle:
+            readString(homepageCopy.featuredTitle) ?? "Featured photographs",
+          galleriesTitle:
+            readString(homepageCopy.galleriesTitle) ?? "Inside the work",
+          contactTitle:
+            readString(homepageCopy.contactTitle) ??
+            "Bring the next story into focus.",
+          contactBody:
+            readString(homepageCopy.contactBody) ??
+            "Available for editorial assignments, campaigns, portraits, events and image licensing.",
+        },
         featuredPhotos: {
-          source: readEnum(homepageFeaturedPhotos.source, ["selected", "all", "category", "subcategory", "gallery"], "selected"),
+          source: readEnum(
+            homepageFeaturedPhotos.source,
+            ["selected", "all", "category", "subcategory", "gallery"],
+            "selected",
+          ),
           sourceId: readString(homepageFeaturedPhotos.sourceId) ?? "",
-          selectedPhotoIds: normalizeStringList(homepageFeaturedPhotos.selectedPhotoIds),
+          selectedPhotoIds: normalizeStringList(
+            homepageFeaturedPhotos.selectedPhotoIds,
+          ),
           limit: readNumber(homepageFeaturedPhotos.limit, 12),
-          columns: readEnum(homepageFeaturedPhotos.columns, ["1", "2", "3", "4", "masonry"], "3"),
-          gridStyle: readEnum(homepageFeaturedPhotos.gridStyle, ["square", "portrait", "landscape", "tiles", "mixed"], "mixed"),
-          pagination: "infinite"
-        }
+          columns: readEnum(
+            homepageFeaturedPhotos.columns,
+            ["1", "2", "3", "4", "masonry"],
+            "3",
+          ),
+          gridStyle: readEnum(
+            homepageFeaturedPhotos.gridStyle,
+            ["square", "portrait", "landscape", "tiles", "mixed"],
+            "mixed",
+          ),
+          pagination: "infinite",
+        },
       },
       photoOptions: tenant.photos.map((photo) => ({
         id: photo.id,
         title: photo.title ?? photo.alt,
         image: photo.secureUrl,
-        category: photo.category?.parent ? `${photo.category.parent.name} / ${photo.category.name}` : photo.category?.name ?? "Uncategorized"
-      }))
+        category: photo.category?.parent
+          ? `${photo.category.parent.name} / ${photo.category.name}`
+          : (photo.category?.name ?? "Uncategorized"),
+      })),
     },
     domain: tenant.domains[0] ?? null,
-    canUseCustomDomain: hasFeatureInAccess(planAccess, "customDomains")
+    canUseCustomDomain: hasFeatureInAccess(planAccess, "customDomains"),
   };
 }
 
 export async function getCustomerPackageView(slug: string) {
+  await requireTenantOwner(slug);
   await syncSubscriptionLifecycle();
 
   const [tenant, access, availablePlans] = await Promise.all([
     prisma.tenant.findUnique({
       where: {
-        slug
+        slug,
       },
       include: {
         subscription: {
@@ -1045,42 +1141,42 @@ export async function getCustomerPackageView(slug: string) {
               include: {
                 features: {
                   include: {
-                    feature: true
+                    feature: true,
                   },
                   orderBy: {
-                    createdAt: "asc"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    createdAt: "asc",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     }),
     getTenantPlanAccess(slug),
     prisma.plan.findMany({
       where: {
-        enabled: true
+        enabled: true,
       },
       include: {
         features: {
           include: {
-            feature: true
+            feature: true,
           },
           orderBy: {
-            createdAt: "asc"
-          }
-        }
+            createdAt: "asc",
+          },
+        },
       },
       orderBy: [
         {
-          displayOrder: "asc"
+          displayOrder: "asc",
         },
         {
-          name: "asc"
-        }
-      ]
-    })
+          name: "asc",
+        },
+      ],
+    }),
   ]);
 
   if (!tenant) {
@@ -1096,7 +1192,8 @@ export async function getCustomerPackageView(slug: string) {
     current: {
       key: access?.planKey ?? getEffectivePlanKey(tenant.subscription),
       name: plan?.name ?? "Free",
-      description: plan?.description ?? "Starter plan for publishing a simple portfolio.",
+      description:
+        plan?.description ?? "Starter plan for publishing a simple portfolio.",
       status: tenant.subscription?.status ?? "NONE",
       label: lifecycle.label,
       tone: lifecycle.tone,
@@ -1106,16 +1203,20 @@ export async function getCustomerPackageView(slug: string) {
       monthlyPrice: plan?.monthlyPrice ?? null,
       annualPrice: plan?.annualPrice ?? null,
       lifetimePrice: plan?.lifetimePrice ?? null,
-      gracePeriodDays: plan?.gracePeriodDays ?? 0
+      currency: plan?.currency ?? "USD",
+      gracePeriodDays: plan?.gracePeriodDays ?? 0,
     },
     limits: {
       photosTotal: access?.limits[planLimitKeys.photosTotal] ?? null,
-      photosPerCategory: access?.limits[planLimitKeys.photosPerCategory] ?? null,
+      photosPerCategory:
+        access?.limits[planLimitKeys.photosPerCategory] ?? null,
       categoriesTotal: access?.limits[planLimitKeys.categoriesTotal] ?? null,
-      subcategoriesPerCategory: access?.limits[planLimitKeys.subcategoriesPerCategory] ?? null,
+      subcategoriesPerCategory:
+        access?.limits[planLimitKeys.subcategoriesPerCategory] ?? null,
       galleriesTotal: access?.limits[planLimitKeys.galleriesTotal] ?? null,
       photosPerGallery: access?.limits[planLimitKeys.photosPerGallery] ?? null,
-      categoryRequestsTotal: access?.limits[planLimitKeys.categoryRequestsTotal] ?? null
+      categoryRequestsTotal:
+        access?.limits[planLimitKeys.categoryRequestsTotal] ?? null,
     },
     features: visibleCustomerPlanFeatures(access?.features ?? []),
     availablePlans: availablePlans.map((item) => ({
@@ -1127,27 +1228,43 @@ export async function getCustomerPackageView(slug: string) {
       monthlyPrice: item.monthlyPrice,
       annualPrice: item.annualPrice,
       lifetimePrice: item.lifetimePrice,
+      currency: item.currency,
+      checkout: {
+        monthly: Boolean(item.paddleMonthlyPriceId),
+        annual: Boolean(item.paddleAnnualPriceId),
+        lifetime: Boolean(item.paddleLifetimePriceId),
+      },
       gracePeriodDays: item.gracePeriodDays,
-      features: visibleCustomerPlanFeatures(item.features
-        .filter((featureAccess) => featureAccess.enabled)
-        .map((featureAccess) => ({
-          key: featureAccess.feature.key,
-          name: featureAccess.feature.name,
-          description: featureAccess.feature.description,
-          limit: featureAccess.limit
-        })))
-    }))
+      features: visibleCustomerPlanFeatures(
+        item.features
+          .filter((featureAccess) => featureAccess.enabled)
+          .map((featureAccess) => ({
+            key: featureAccess.feature.key,
+            name: featureAccess.feature.name,
+            description: featureAccess.feature.description,
+            limit: featureAccess.limit,
+          })),
+      ),
+    })),
   };
 }
 
-function visibleCustomerPlanFeatures<T extends { key: string; name: string; description: string | null; limit: number | null }>(features: T[]) {
+function visibleCustomerPlanFeatures<
+  T extends {
+    key: string;
+    name: string;
+    description: string | null;
+    limit: number | null;
+  },
+>(features: T[]) {
   return getClientVisiblePlanFeatures(features);
 }
 
 export async function getCustomerProfileView(slug: string) {
+  await requireTenantOwner(slug);
   const tenant = await prisma.tenant.findUnique({
     where: {
-      slug
+      slug,
     },
     include: {
       settings: true,
@@ -1155,10 +1272,10 @@ export async function getCustomerProfileView(slug: string) {
         select: {
           name: true,
           email: true,
-          image: true
-        }
-      }
-    }
+          image: true,
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -1172,21 +1289,37 @@ export async function getCustomerProfileView(slug: string) {
   return {
     name: tenant.name,
     slug: tenant.slug,
-    accountEmail: tenant.owner?.email ?? readString(profile.email) ?? readString(contact.email) ?? `${tenant.slug}@example.com`,
+    accountEmail:
+      tenant.owner?.email ??
+      readString(profile.email) ??
+      readString(contact.email) ??
+      `${tenant.slug}@example.com`,
     profile: {
-      displayName: readString(profile.displayName) ?? tenant.owner?.name ?? tenant.name,
-      headline: readString(profile.headline) ?? `The photographer behind ${tenant.name}.`,
+      displayName:
+        readString(profile.displayName) ?? tenant.owner?.name ?? tenant.name,
+      headline:
+        readString(profile.headline) ??
+        `The photographer behind ${tenant.name}.`,
       avatarUrl: readString(profile.avatarUrl) ?? tenant.owner?.image ?? "",
-      email: readString(profile.email) ?? tenant.owner?.email ?? readString(contact.email) ?? `${tenant.slug}@example.com`,
+      email:
+        readString(profile.email) ??
+        tenant.owner?.email ??
+        readString(contact.email) ??
+        `${tenant.slug}@example.com`,
       phone: readString(profile.phone) ?? "",
-      location: readString(profile.location) ?? readString(contact.location) ?? "Islamabad, Pakistan",
-      bio: readString(profile.bio) ?? ""
-    }
+      location:
+        readString(profile.location) ??
+        readString(contact.location) ??
+        "Islamabad, Pakistan",
+      bio: readString(profile.bio) ?? "",
+    },
   };
 }
 
 function normalizeRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function normalizePageHeader(value: unknown) {
@@ -1194,7 +1327,7 @@ function normalizePageHeader(value: unknown) {
     return {
       image: readString(value) ?? "",
       title: "",
-      description: ""
+      description: "",
     };
   }
 
@@ -1203,13 +1336,22 @@ function normalizePageHeader(value: unknown) {
   return {
     image: readString(header.image) ?? "",
     title: readString(header.title) ?? "",
-    description: readString(header.description) ?? ""
+    description: readString(header.description) ?? "",
   };
 }
 
 function normalizeSocialLinks(value: unknown) {
   const savedLinks = normalizeRecord(value);
-  const keys = ["instagram", "facebook", "youtube", "linkedin", "snapchat", "pinterest", "behance", "tiktok"] as const;
+  const keys = [
+    "instagram",
+    "facebook",
+    "youtube",
+    "linkedin",
+    "snapchat",
+    "pinterest",
+    "behance",
+    "tiktok",
+  ] as const;
 
   return Object.fromEntries(
     keys.map((key) => {
@@ -1221,21 +1363,28 @@ function normalizeSocialLinks(value: unknown) {
         key,
         {
           href: href ?? "",
-          enabled: readBoolean(link.enabled, Boolean(href))
-        }
+          enabled: readBoolean(link.enabled, Boolean(href)),
+        },
       ];
-    })
+    }),
   ) as Record<(typeof keys)[number], { href: string; enabled: boolean }>;
 }
 
 function normalizeStringList(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === "string" && Boolean(item.trim()),
+      )
+    : [];
 }
 
 function readBlogHtml(value: unknown) {
   const content = normalizeRecord(value);
   const html = content.html;
-  return typeof html === "string" && html.trim() ? html : "<p>Write the story behind this shoot...</p>";
+  return typeof html === "string" && html.trim()
+    ? html
+    : "<p>Write the story behind this shoot...</p>";
 }
 
 function readString(value: unknown) {
@@ -1262,7 +1411,10 @@ function readSectionOrder(value: unknown, fallback: number) {
 
 function getSectionOrder(sections: Record<string, unknown>): HomeSectionKey[] {
   return [...homeSectionKeys].sort((first, second) => {
-    return readSectionOrder(sections[first], homeSectionKeys.indexOf(first) + 1) - readSectionOrder(sections[second], homeSectionKeys.indexOf(second) + 1);
+    return (
+      readSectionOrder(sections[first], homeSectionKeys.indexOf(first) + 1) -
+      readSectionOrder(sections[second], homeSectionKeys.indexOf(second) + 1)
+    );
   });
 }
 
@@ -1270,6 +1422,12 @@ function readNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function readEnum<T extends string>(value: unknown, options: readonly T[], fallback: T) {
-  return typeof value === "string" && options.includes(value as T) ? (value as T) : fallback;
+function readEnum<T extends string>(
+  value: unknown,
+  options: readonly T[],
+  fallback: T,
+) {
+  return typeof value === "string" && options.includes(value as T)
+    ? (value as T)
+    : fallback;
 }

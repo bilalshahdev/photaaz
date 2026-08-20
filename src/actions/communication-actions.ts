@@ -5,33 +5,37 @@ import { locales } from "@/i18n/locales";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { publishConversationEvent } from "@/services/communication/live-events";
+import { requireSuperAdmin } from "@/services/auth/admin-authorization";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
 
 const clientThreadSchema = z.object({
   tenantSlug: z.string().min(1),
   subject: z.string().trim().min(2).max(120),
-  body: z.string().trim().min(5).max(2000)
+  body: z.string().trim().min(5).max(2000),
 });
 
 const replySchema = z.object({
   threadId: z.string().min(1),
-  body: z.string().trim().min(2).max(2000)
+  body: z.string().trim().min(2).max(2000),
 });
 
 export async function startClientConversation(formData: FormData) {
   const parsed = clientThreadSchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
     subject: String(formData.get("subject") ?? ""),
-    body: String(formData.get("body") ?? "")
+    body: String(formData.get("body") ?? ""),
   });
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
 
-  const tenant = await prisma.tenant.findUnique({
+  const tenant = await prisma.tenant.findFirst({
     where: {
-      slug: parsed.tenantSlug
+      id: authorizedTenant.id,
+      slug: parsed.tenantSlug,
     },
     select: {
       id: true,
-      slug: true
-    }
+      slug: true,
+    },
   });
 
   if (!tenant) {
@@ -46,18 +50,18 @@ export async function startClientConversation(formData: FormData) {
         create: {
           senderRole: "CLIENT",
           body: parsed.body,
-          readByClientAt: new Date()
-        }
-      }
+          readByClientAt: new Date(),
+        },
+      },
     },
     include: {
       messages: {
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
-        take: 1
-      }
-    }
+        take: 1,
+      },
+    },
   });
 
   publishLatestMessage(tenant.slug, thread, thread.messages[0]);
@@ -67,25 +71,27 @@ export async function startClientConversation(formData: FormData) {
 export async function replyAsClient(formData: FormData) {
   const parsed = replySchema.parse({
     threadId: String(formData.get("threadId") ?? ""),
-    body: String(formData.get("body") ?? "")
+    body: String(formData.get("body") ?? ""),
   });
 
   const thread = await prisma.conversationThread.findUnique({
     where: {
-      id: parsed.threadId
+      id: parsed.threadId,
     },
     include: {
       tenant: {
         select: {
-          slug: true
-        }
-      }
-    }
+          slug: true,
+        },
+      },
+    },
   });
 
   if (!thread) {
     throw new Error("Conversation not found.");
   }
+
+  await requireTenantOwner(thread.tenant.slug);
 
   const [message] = await prisma.$transaction([
     prisma.conversationMessage.create({
@@ -93,17 +99,17 @@ export async function replyAsClient(formData: FormData) {
         threadId: thread.id,
         senderRole: "CLIENT",
         body: parsed.body,
-        readByClientAt: new Date()
-      }
+        readByClientAt: new Date(),
+      },
     }),
     prisma.conversationThread.update({
       where: {
-        id: thread.id
+        id: thread.id,
       },
       data: {
-        status: "OPEN"
-      }
-    })
+        status: "OPEN",
+      },
+    }),
   ]);
 
   publishLatestMessage(thread.tenant.slug, thread, message);
@@ -111,22 +117,23 @@ export async function replyAsClient(formData: FormData) {
 }
 
 export async function replyAsAdmin(formData: FormData) {
+  await requireSuperAdmin();
   const parsed = replySchema.parse({
     threadId: String(formData.get("threadId") ?? ""),
-    body: String(formData.get("body") ?? "")
+    body: String(formData.get("body") ?? ""),
   });
 
   const thread = await prisma.conversationThread.findUnique({
     where: {
-      id: parsed.threadId
+      id: parsed.threadId,
     },
     include: {
       tenant: {
         select: {
-          slug: true
-        }
-      }
-    }
+          slug: true,
+        },
+      },
+    },
   });
 
   if (!thread) {
@@ -138,8 +145,8 @@ export async function replyAsAdmin(formData: FormData) {
       threadId: thread.id,
       senderRole: "ADMIN",
       body: parsed.body,
-      readByAdminAt: new Date()
-    }
+      readByAdminAt: new Date(),
+    },
   });
 
   publishLatestMessage(thread.tenant.slug, thread, message);
@@ -159,7 +166,7 @@ function publishLatestMessage(
     senderRole: string;
     body: string;
     createdAt: Date;
-  }
+  },
 ) {
   if (!message) {
     return;
@@ -173,14 +180,14 @@ function publishLatestMessage(
       id: thread.id,
       subject: thread.subject,
       status: thread.status,
-      updatedAt: thread.updatedAt.toISOString()
+      updatedAt: thread.updatedAt.toISOString(),
     },
     message: {
       id: message.id,
       senderRole: message.senderRole,
       body: message.body,
-      createdAt: message.createdAt.toISOString()
-    }
+      createdAt: message.createdAt.toISOString(),
+    },
   });
 }
 

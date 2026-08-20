@@ -51,6 +51,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { DirectUploadForm } from "@/components/forms/direct-upload-form";
 
 type BlogCategoryOption = {
   id: string;
@@ -127,7 +128,7 @@ export function CustomerBlogEditor({ tenantSlug, blogCategories, relatedCategori
   }
 
   return (
-    <form action={blog ? updateCustomerBlogPost : createCustomerBlogPost} className="grid gap-5">
+    <DirectUploadForm action={blog ? updateCustomerBlogPost : createCustomerBlogPost} className="grid gap-5">
       <input type="hidden" name="tenantSlug" value={tenantSlug} />
       {blog ? <input type="hidden" name="blogId" value={blog.id} /> : null}
       <input type="hidden" name="contentHtml" value={contentHtml} />
@@ -262,7 +263,7 @@ export function CustomerBlogEditor({ tenantSlug, blogCategories, relatedCategori
 
         <div className="mt-5 grid gap-2">
           <Label htmlFor="blog-cover-file">Or upload a new cover image</Label>
-          <Input id="blog-cover-file" name="featuredImageFile" type="file" accept="image/*" />
+          <Input id="blog-cover-file" name="featuredImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-upload-area="blogs" data-upload-label="featured" />
           <p className="text-xs leading-5 text-slate-500">
             If you upload a new cover, it will be used instead of the selected library photo.
           </p>
@@ -282,7 +283,7 @@ export function CustomerBlogEditor({ tenantSlug, blogCategories, relatedCategori
           {blog ? "Save and submit for review" : "Create and submit for review"}
         </Button>
       </div>
-    </form>
+    </DirectUploadForm>
   );
 }
 

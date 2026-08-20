@@ -1,15 +1,26 @@
 import type { Metadata } from "next";
-import { defaultLocale, locales, localizePath, resolveLocalizedString, type AppLocale } from "@/i18n/locales";
+import {
+  defaultLocale,
+  locales,
+  localizePath,
+  resolveLocalizedString,
+  type AppLocale,
+} from "@/i18n/locales";
 import { env } from "@/lib/env";
 import type { PlatformAppConfig } from "@/services/admin/admin-data";
-import type { LocalizedString, PlatformPricingPlanView } from "@/services/platform/platform-data";
+import type {
+  LocalizedString,
+  PlatformPricingPlanView,
+} from "@/services/platform/platform-data";
 
 export const SITE_URL = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
 export const DEFAULT_SITE_NAME = "Photaaz";
-export const DEFAULT_TITLE = "Photaaz - Professional Photography Websites in Minutes";
+export const DEFAULT_TITLE =
+  "Photaaz - Professional Photography Websites in Minutes";
 export const DEFAULT_DESCRIPTION =
   "Create a professional photography website in minutes. Pick a design, upload photos, and publish a polished portfolio with themes, galleries, blogs, and a custom domain.";
-export const DEFAULT_OG_IMAGE = "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=90";
+export const DEFAULT_OG_IMAGE =
+  "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=90";
 
 type SeoInput = {
   title?: string;
@@ -26,6 +37,7 @@ type SeoInput = {
   ogTitle?: string;
   ogDescription?: string;
   canonicalUrl?: string;
+  alternateLocales?: readonly AppLocale[];
 };
 
 type ThemeJsonLdInput = {
@@ -51,11 +63,17 @@ export function absoluteUrl(path = "/") {
   return new URL(normalizePath(path), SITE_URL).toString();
 }
 
-export function getLocalizedSeoPath(path = "/", locale: AppLocale = defaultLocale) {
+export function getLocalizedSeoPath(
+  path = "/",
+  locale: AppLocale = defaultLocale,
+) {
   return localizePath(locale, normalizePath(path)).toString();
 }
 
-export function getLocalizedSeoUrl(path = "/", locale: AppLocale = defaultLocale) {
+export function getLocalizedSeoUrl(
+  path = "/",
+  locale: AppLocale = defaultLocale,
+) {
   return absoluteUrl(getLocalizedSeoPath(path, locale));
 }
 
@@ -86,14 +104,23 @@ export function createMetadata({
   noIndex = false,
   ogTitle,
   ogDescription,
-  canonicalUrl
+  canonicalUrl,
+  alternateLocales = locales,
 }: SeoInput = {}): Metadata {
   const normalizedPath = normalizePath(path);
   const canonical = canonicalUrl || getLocalizedSeoUrl(normalizedPath, locale);
   const imageUrl = getSeoImageUrl(image);
   const favicon = absoluteUrl(faviconUrl);
   const appleIcon = absoluteUrl(appleTouchIconUrl);
-  const languageAlternates = Object.fromEntries(locales.map((item) => [item, getLocalizedSeoUrl(normalizedPath, item)]));
+  const languageAlternates = Object.fromEntries(
+    alternateLocales.map((item) => [
+      item,
+      getLocalizedSeoUrl(normalizedPath, item),
+    ]),
+  );
+  const defaultAlternateLocale = alternateLocales.includes(defaultLocale)
+    ? defaultLocale
+    : (alternateLocales[0] ?? defaultLocale);
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -109,17 +136,19 @@ export function createMetadata({
     icons: {
       icon: favicon,
       shortcut: favicon,
-      apple: appleIcon
+      apple: appleIcon,
     },
     alternates: {
       canonical,
       types: {
-        "application/rss+xml": [{ url: "/feed.xml", title: `${siteName} Updates` }]
+        "application/rss+xml": [
+          { url: "/feed.xml", title: `${siteName} Updates` },
+        ],
       },
       languages: {
         ...languageAlternates,
-        "x-default": getLocalizedSeoUrl(normalizedPath, defaultLocale)
-      }
+        "x-default": getLocalizedSeoUrl(normalizedPath, defaultAlternateLocale),
+      },
     },
     openGraph: {
       title: ogTitle || title,
@@ -133,15 +162,15 @@ export function createMetadata({
           url: imageUrl,
           width: 1600,
           height: 900,
-          alt: ogTitle || title
-        }
-      ]
+          alt: ogTitle || title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: ogTitle || title,
       description: ogDescription || description,
-      images: [imageUrl]
+      images: [imageUrl],
     },
     robots: noIndex
       ? {
@@ -149,8 +178,8 @@ export function createMetadata({
           follow: false,
           googleBot: {
             index: false,
-            follow: false
-          }
+            follow: false,
+          },
         }
       : {
           index: true,
@@ -160,15 +189,15 @@ export function createMetadata({
             follow: true,
             "max-image-preview": "large",
             "max-snippet": -1,
-            "max-video-preview": -1
-          }
+            "max-video-preview": -1,
+          },
         },
     other: {
       "geo.region": "PK-IS",
       "geo.placename": "Islamabad, Pakistan",
       "geo.position": GEO_POSITION,
-      ICBM: GEO_COORDINATES
-    }
+      ICBM: GEO_COORDINATES,
+    },
   };
 }
 
@@ -184,27 +213,29 @@ export function organizationJsonLd(config?: PlatformAppConfig) {
     url: absoluteUrl("/"),
     logo: absoluteUrl(config?.faviconUrl || "/favicon.svg"),
     image: getSeoImageUrl(config?.socialPreviewImageUrl),
-    description: resolveLocalizedString(config?.footerText ?? "", "en") || DEFAULT_DESCRIPTION,
+    description:
+      resolveLocalizedString(config?.footerText ?? "", "en") ||
+      DEFAULT_DESCRIPTION,
     email: config?.supportEmail,
     telephone: config?.phone.enabled ? config.phone.value : undefined,
     address: {
       "@type": "PostalAddress",
       streetAddress: config?.companyAddress || "Islamabad, Pakistan",
       addressLocality: "Islamabad",
-      addressCountry: "PK"
+      addressCountry: "PK",
     },
     areaServed: [
       { "@type": "Country", name: "Pakistan" },
-      { "@type": "Place", name: "Worldwide" }
+      { "@type": "Place", name: "Worldwide" },
     ],
     founder: config?.creatorLink.enabled
       ? {
           "@type": "Person",
           name: config.creatorLink.label,
-          url: config.creatorLink.href
+          url: config.creatorLink.href,
         }
       : undefined,
-    sameAs
+    sameAs,
   };
 }
 
@@ -217,21 +248,28 @@ export function websiteJsonLd(config?: PlatformAppConfig) {
     "@id": `${SITE_URL}/#website`,
     name,
     url: absoluteUrl("/"),
-    description: resolveLocalizedString(config?.footerText ?? "", "en") || DEFAULT_DESCRIPTION,
+    description:
+      resolveLocalizedString(config?.footerText ?? "", "en") ||
+      DEFAULT_DESCRIPTION,
     publisher: {
-      "@id": `${SITE_URL}/#organization`
+      "@id": `${SITE_URL}/#organization`,
     },
     inLanguage: locales,
     potentialAction: {
       "@type": "SearchAction",
       target: `${absoluteUrl("/themes")}?q={search_term_string}`,
-      "query-input": "required name=search_term_string"
-    }
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
-export function softwareApplicationJsonLd(config?: PlatformAppConfig, plans: PlatformPricingPlanView[] = []) {
-  const enabledPrices = plans.filter((plan) => plan.enabled).map((plan) => resolveLocalizedString(plan.price, "en"));
+export function softwareApplicationJsonLd(
+  config?: PlatformAppConfig,
+  plans: PlatformPricingPlanView[] = [],
+) {
+  const enabledPrices = plans
+    .filter((plan) => plan.enabled)
+    .map((plan) => resolveLocalizedString(plan.price, "en"));
 
   return {
     "@context": "https://schema.org",
@@ -242,9 +280,11 @@ export function softwareApplicationJsonLd(config?: PlatformAppConfig, plans: Pla
     operatingSystem: "Web",
     url: absoluteUrl("/"),
     image: getSeoImageUrl(config?.socialPreviewImageUrl),
-    description: resolveLocalizedString(config?.footerText ?? "", "en") || DEFAULT_DESCRIPTION,
+    description:
+      resolveLocalizedString(config?.footerText ?? "", "en") ||
+      DEFAULT_DESCRIPTION,
     creator: {
-      "@id": `${SITE_URL}/#organization`
+      "@id": `${SITE_URL}/#organization`,
     },
     offers: enabledPrices.length
       ? plans
@@ -252,16 +292,20 @@ export function softwareApplicationJsonLd(config?: PlatformAppConfig, plans: Pla
           .map((plan) => ({
             "@type": "Offer",
             name: resolveLocalizedString(plan.name, "en"),
-            price: resolveLocalizedString(plan.price, "en").replace(/[^0-9.]/g, "") || "0",
-            priceCurrency: "PKR",
+            price:
+              resolveLocalizedString(plan.price, "en").replace(
+                /[^0-9.]/g,
+                "",
+              ) || "0",
+            priceCurrency: "USD",
             description: resolveLocalizedString(plan.description, "en"),
-            availability: "https://schema.org/InStock"
+            availability: "https://schema.org/InStock",
           }))
       : {
           "@type": "Offer",
           price: "0",
-          priceCurrency: "PKR"
-        }
+          priceCurrency: "USD",
+        },
   };
 }
 
@@ -274,13 +318,16 @@ export function faqJsonLd(items: Array<{ question: string; answer: string }>) {
       name: item.question,
       acceptedAnswer: {
         "@type": "Answer",
-        text: item.answer
-      }
-    }))
+        text: item.answer,
+      },
+    })),
   };
 }
 
-export function themeJsonLd(theme: ThemeJsonLdInput, locale: AppLocale = defaultLocale) {
+export function themeJsonLd(
+  theme: ThemeJsonLdInput,
+  locale: AppLocale = defaultLocale,
+) {
   const name = resolveLocalizedString(theme.name, locale);
   const description = resolveLocalizedString(theme.description, locale);
 
@@ -293,14 +340,19 @@ export function themeJsonLd(theme: ThemeJsonLdInput, locale: AppLocale = default
     description,
     inLanguage: locale,
     isAccessibleForFree: true,
-    about: theme.features.map((feature) => resolveLocalizedString(feature, locale)),
+    about: theme.features.map((feature) =>
+      resolveLocalizedString(feature, locale),
+    ),
     provider: {
-      "@id": `${SITE_URL}/#organization`
-    }
+      "@id": `${SITE_URL}/#organization`,
+    },
   };
 }
 
-export function breadcrumbJsonLd(items: Array<{ name: string; href: string }>, locale: AppLocale = defaultLocale) {
+export function breadcrumbJsonLd(
+  items: Array<{ name: string; href: string }>,
+  locale: AppLocale = defaultLocale,
+) {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -308,7 +360,7 @@ export function breadcrumbJsonLd(items: Array<{ name: string; href: string }>, l
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: getLocalizedSeoUrl(item.href, locale)
-    }))
+      item: getLocalizedSeoUrl(item.href, locale),
+    })),
   };
 }

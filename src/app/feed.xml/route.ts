@@ -1,8 +1,8 @@
 import { resolveLocalizedString } from "@/i18n/locales";
-import { getPlatformBlogArticles } from "@/data/platform-blog";
 import { SITE_URL } from "@/lib/seo";
 import { getPlatformAppConfig } from "@/services/admin/admin-data";
 import { getPlatformAnnouncements, getPlatformThemes } from "@/services/platform/platform-data";
+import { getManagedPlatformBlogArticles } from "@/services/platform/platform-blog-data";
 
 export const revalidate = 600;
 
@@ -16,12 +16,12 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
-  const [config, announcements, themes] = await Promise.all([
+  const [config, announcements, themes, blogArticles] = await Promise.all([
     getPlatformAppConfig(),
     getPlatformAnnouncements({ enabledOnly: true }).catch(() => []),
-    getPlatformThemes({ enabledOnly: true }).catch(() => [])
+    getPlatformThemes({ enabledOnly: true }).catch(() => []),
+    getManagedPlatformBlogArticles()
   ]);
-  const blogArticles = getPlatformBlogArticles();
 
   const announcementItems = announcements.slice(0, 10).map((announcement) => {
     const href = announcement.linkHref || "/";

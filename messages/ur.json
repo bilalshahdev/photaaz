@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "themes": "تھیمز",
+    "features": "فیچرز",
+    "blog": "بلاگ",
+    "pricing": "قیمتیں",
+    "contact": "رابطہ",
+    "signIn": "سائن اِن",
+    "start": "شروع"
+  },
+  "home": {
+    "steps": ["ڈیزائن منتخب کریں", "تصاویر اپ لوڈ کریں", "ویب سائٹ شائع کریں"],
+    "stepNote": "سادہ لانچ راستہ",
+    "themesEyebrow": "تھیم شوکیس",
+    "themesTitle": "وہ ڈیزائن منتخب کریں جس سے آپ کا پورٹ فولیو شروع ہو۔",
+    "themesBody": "ہر تھیم ایک حقیقی پورٹ فولیو تجربہ ہے جس میں پری ویو، اسکرین شاٹس، اور لائیو ڈیمو شامل ہیں۔ فوٹوگرافی کی قسم onboarding کے دوران بعد میں آتی ہے۔",
+    "viewAllThemes": "تمام تھیمز دیکھیں",
+    "themeDetails": "تھیم تفصیلات",
+    "liveDemo": "لائیو ڈیمو",
+    "flow": ["ڈیزائن منتخب کریں", "فوٹوگرافی قسم منتخب کریں", "ویب سائٹ شائع کریں"],
+    "flowNote": "پروڈکٹ سادہ رہتی ہے: look منتخب کریں، کام شامل کریں، اور live ہو جائیں۔",
+    "featuresEyebrow": "فوٹوگرافرز کیا شائع کر سکتے ہیں",
+    "featuresTitle": "صاف پبلک پورٹ فولیو کے لیے ضروری سب کچھ۔",
+    "pricingEyebrow": "قیمتیں",
+    "pricingTitle": "مفت شروع کریں، زیادہ گنجائش چاہیے تو اپ گریڈ کریں۔",
+    "perMonth": "/ماہ",
+    "faqEyebrow": "FAQ",
+    "faqTitle": "شائع کرنے سے پہلے عام سوالات۔",
+    "faqBody": "پہلی بار پبلک پورٹ فولیو بنانے والے فوٹوگرافرز کے لیے مختصر جوابات۔",
+    "contactSuccess": "سوال محفوظ ہو گیا۔ یہ admin support inbox میں نظر آئے گا۔",
+    "contactError": "ابھی محفوظ نہیں ہو سکا۔ اپنی local database connection چیک کریں اور دوبارہ کوشش کریں۔",
+    "nameLabel": "نام",
+    "namePlaceholder": "آپ کا نام",
+    "emailLabel": "ای میل",
+    "emailPlaceholder": "you@example.com",
+    "messageLabel": "پیغام",
+    "messagePlaceholder": "میں weddings shoot کرتا ہوں اور galleries، blog posts، اور custom domain کے ساتھ portfolio چاہتا ہوں۔",
+    "launchEyebrow": "آج لانچ کریں",
+    "launchTitle": "اپنا فوٹوگرافی پورٹ فولیو لانچ کریں۔"
+  },
+  "language": {
+    "select": "زبان منتخب کریں",
+    "english": "انگریزی",
+    "urdu": "اردو",
+    "spanish": "ہسپانوی",
+    "arabic": "عربی",
+    "turkish": "ترکی",
+    "hindi": "ہندی",
+    "portuguese": "پرتگالی",
+    "german": "جرمن",
+    "french": "فرانسیسی"
+  }
+}

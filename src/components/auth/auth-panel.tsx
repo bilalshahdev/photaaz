@@ -8,12 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { customerDashboardPath, onboardingPath } from "@/config/routes";
 import { authClient } from "@/lib/auth/client";
+import Link from "next/link";
+import { currentLegalVersions } from "@/config/legal";
+import { localizePath, type AppLocale } from "@/i18n/locales";
 
 type AuthPanelProps = {
   mode: "sign-in" | "sign-up";
+  locale: AppLocale;
 };
 
-export function AuthPanel({ mode }: AuthPanelProps) {
+export function AuthPanel({ mode, locale }: AuthPanelProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -28,15 +32,21 @@ export function AuthPanel({ mode }: AuthPanelProps) {
     const password = String(formData.get("password") ?? "");
     const name = String(formData.get("name") ?? "Photographer");
 
-    const result =
-      mode === "sign-up"
-        ? await authClient.signUp.email({
-            email,
-            password,
-            name,
-            callbackURL: onboardingPath()
-          })
-        : await authClient.signIn.email({
+    if (mode === "sign-up" && formData.get("legalAccepted") !== "on") {
+      setPending(false);
+      setError("You must accept the Terms and Privacy Policy to create an account.");
+      return;
+    }
+
+    const result = mode === "sign-up"
+      ? await fetch("/api/auth/sign-up/email", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, password, name, callbackURL: onboardingPath(), legalAccepted: true, legalVersions: currentLegalVersions, locale }),
+        }).then(async (response) => response.ok
+          ? ({ error: null })
+          : ({ error: { message: ((await response.json().catch(() => null)) as { message?: string } | null)?.message ?? "Account creation failed." } }))
+      : await authClient.signIn.email({
             email,
             password,
             callbackURL: customerDashboardPath("demo")
@@ -63,6 +73,14 @@ export function AuthPanel({ mode }: AuthPanelProps) {
           {mode === "sign-up" ? "Start your studio workspace." : "Sign in to your studio."}
         </h1>
       </div>
+      {mode === "sign-up" ? (
+        <Label className="mt-5 flex items-start gap-3 text-sm leading-6 text-white/75">
+          <input name="legalAccepted" type="checkbox" required className="mt-1 size-4 accent-teal-500" />
+          <span>
+            I agree to the <Link className="text-accent underline" href={localizePath(locale, "/legal/terms")} target="_blank">Terms</Link> and acknowledge the <Link className="text-accent underline" href={localizePath(locale, "/legal/privacy")} target="_blank">Privacy Policy</Link>.
+          </span>
+        </Label>
+      ) : null}
       <div className="mt-6 space-y-4">
         {mode === "sign-up" ? (
           <Label className="block">

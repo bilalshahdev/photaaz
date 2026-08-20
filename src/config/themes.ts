@@ -1,4 +1,19 @@
-export const themeKeys = ["minimal", "editorial", "cinematic", "masonry", "luxury", "monochrome", "panorama"] as const;
+export const themeKeys = [
+  "minimal",
+  "editorial",
+  "cinematic",
+  "masonry",
+  "luxury",
+  "monochrome",
+  "panorama",
+  "velvet",
+  "relay",
+  "fieldbook",
+  "kaleido",
+  "proscenium",
+  "cartograph",
+  "vitrine",
+] as const;
 
 export type ThemeKey = (typeof themeKeys)[number];
 export type ThemeTier = "basic" | "premium" | "special";
@@ -24,7 +39,7 @@ export type ThemeConfig = {
 const planThemeAccessRank: Record<PlanThemeAccess, number> = {
   free: 0,
   paid: 1,
-  pro: 2
+  pro: 2,
 };
 
 export function getPlanThemeAccess(planKey: string): PlanThemeAccess {
@@ -52,13 +67,29 @@ export function getThemeRequiredAccess(theme: ThemeConfig): PlanThemeAccess {
 }
 
 export function canPlanUseTheme(planKey: string, theme: ThemeConfig) {
-  return planThemeAccessRank[getPlanThemeAccess(planKey)] >= planThemeAccessRank[getThemeRequiredAccess(theme)];
+  return (
+    planThemeAccessRank[getPlanThemeAccess(planKey)] >=
+    planThemeAccessRank[getThemeRequiredAccess(theme)]
+  );
 }
 
-export function getAccessibleThemeKeys(planKey: string, premiumThemeLimit: number | null | undefined): ThemeKey[] {
-  const basicThemeKeys = themes.filter((theme) => theme.tier === "basic").map((theme) => theme.key);
-  const paidThemeKeys = themes.filter((theme) => theme.tier === "premium" && canPlanUseTheme(planKey, theme)).map((theme) => theme.key);
-  const specialThemeKeys = themes.filter((theme) => theme.tier === "special" && canPlanUseTheme(planKey, theme)).map((theme) => theme.key);
+export function getAccessibleThemeKeys(
+  planKey: string,
+  premiumThemeLimit: number | null | undefined,
+): ThemeKey[] {
+  const basicThemeKeys = themes
+    .filter((theme) => theme.tier === "basic")
+    .map((theme) => theme.key);
+  const paidThemeKeys = themes
+    .filter(
+      (theme) => theme.tier === "premium" && canPlanUseTheme(planKey, theme),
+    )
+    .map((theme) => theme.key);
+  const specialThemeKeys = themes
+    .filter(
+      (theme) => theme.tier === "special" && canPlanUseTheme(planKey, theme),
+    )
+    .map((theme) => theme.key);
 
   if (premiumThemeLimit == null) {
     return [...basicThemeKeys, ...paidThemeKeys, ...specialThemeKeys];
@@ -68,10 +99,17 @@ export function getAccessibleThemeKeys(planKey: string, premiumThemeLimit: numbe
     return basicThemeKeys;
   }
 
-  return [...basicThemeKeys, ...paidThemeKeys, ...specialThemeKeys].slice(0, basicThemeKeys.length + premiumThemeLimit);
+  return [...basicThemeKeys, ...paidThemeKeys, ...specialThemeKeys].slice(
+    0,
+    basicThemeKeys.length + premiumThemeLimit,
+  );
 }
 
-export function canPlanUseThemeWithLimit(planKey: string, theme: ThemeConfig, premiumThemeLimit: number | null | undefined) {
+export function canPlanUseThemeWithLimit(
+  planKey: string,
+  theme: ThemeConfig,
+  premiumThemeLimit: number | null | undefined,
+) {
   return getAccessibleThemeKeys(planKey, premiumThemeLimit).includes(theme.key);
 }
 
@@ -87,117 +125,259 @@ export function getThemeBadgeLabel(theme: ThemeConfig) {
   return "Basic";
 }
 
-export const themes: ThemeConfig[] = [
+const allThemes: ThemeConfig[] = [
   {
     key: "minimal",
     name: "Lumen",
     tier: "basic",
     premium: false,
-    description: "Soft whitespace, warm image crops, and a clear inquiry path for wedding and lifestyle portfolios.",
+    description:
+      "Soft whitespace, warm image crops, and a clear inquiry path for wedding and lifestyle portfolios.",
     mood: "Light / Refined",
-    previewImage: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1200&q=85",
     palette: ["#f7f0e6", "#15120f", "#1d7a70", "#d8875f"],
     defaultSettings: {
       navbarStyle: "centered",
       galleryStyle: "grid",
       cardStyle: "minimal",
-      footerStyle: "simple"
-    }
+      footerStyle: "simple",
+    },
   },
   {
     key: "editorial",
     name: "Archive",
     tier: "premium",
     premium: true,
-    description: "A magazine-style system for campaign stories, visual essays, journals, and bold portfolio features.",
+    description:
+      "A magazine-style system for campaign stories, visual essays, journals, and bold portfolio features.",
     mood: "Magazine / Story-led",
-    previewImage: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=85",
     palette: ["#f8f1e8", "#211917", "#b45f3a", "#2f6f66"],
     defaultSettings: {
       navbarStyle: "floating",
       galleryStyle: "masonry",
       cardStyle: "modern",
-      footerStyle: "expanded"
-    }
+      footerStyle: "expanded",
+    },
   },
   {
     key: "cinematic",
     name: "Noir",
     tier: "premium",
     premium: true,
-    description: "A dark, full-bleed theme for dramatic travel, street, and documentary photography.",
+    description:
+      "A dark, full-bleed theme for dramatic travel, street, and documentary photography.",
     mood: "Dark / Filmic",
-    previewImage: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=85",
     palette: ["#0f1111", "#f4efe6", "#45c2b5", "#c99145"],
     defaultSettings: {
       navbarStyle: "centered",
       galleryStyle: "masonry",
       cardStyle: "rounded",
-      footerStyle: "expanded"
-    }
+      footerStyle: "expanded",
+    },
   },
   {
     key: "masonry",
     name: "Contact Sheet",
     tier: "premium",
     premium: true,
-    description: "A dense visual archive for photographers who want visitors to scan many shoots quickly.",
+    description:
+      "A dense visual archive for photographers who want visitors to scan many shoots quickly.",
     mood: "Archive / Dense",
-    previewImage: "https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?auto=format&fit=crop&w=1200&q=85",
     palette: ["#f4f2ec", "#101418", "#177d74", "#9aa3a7"],
     defaultSettings: {
       navbarStyle: "sidebar",
       galleryStyle: "grid",
       cardStyle: "minimal",
-      footerStyle: "simple"
-    }
+      footerStyle: "simple",
+    },
   },
   {
     key: "luxury",
     name: "Atelier",
     tier: "special",
     premium: true,
-    description: "Boutique spacing, polished details, and a premium first impression for studios and fashion work.",
+    description:
+      "Boutique spacing, polished details, and a premium first impression for studios and fashion work.",
     mood: "Boutique / Premium",
-    previewImage: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85",
     palette: ["#11100d", "#fbf4e8", "#c9a875", "#19746a"],
     defaultSettings: {
       navbarStyle: "floating",
       galleryStyle: "masonry",
       cardStyle: "modern",
-      footerStyle: "simple"
-    }
+      footerStyle: "simple",
+    },
   },
   {
     key: "monochrome",
     name: "Monogram",
     tier: "premium",
     premium: true,
-    description: "A fine-art black-and-white theme with gallery-grade presentation and collector-style browsing.",
+    description:
+      "A fine-art black-and-white theme with gallery-grade presentation and collector-style browsing.",
     mood: "Fine Art / Monochrome",
-    previewImage: "https://images.unsplash.com/photo-1496440737103-cd596325d314?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1496440737103-cd596325d314?auto=format&fit=crop&w=1200&q=85",
     palette: ["#000000", "#f7f7f2", "#6f6f6f", "#d6d6cc"],
     defaultSettings: {
       navbarStyle: "centered",
       galleryStyle: "masonry",
       cardStyle: "minimal",
-      footerStyle: "expanded"
-    }
+      footerStyle: "expanded",
+    },
   },
   {
     key: "panorama",
     name: "Horizon",
     tier: "special",
     premium: true,
-    description: "A wide cinematic layout for landscape, outdoor, and travel photographers.",
+    description:
+      "A wide cinematic layout for landscape, outdoor, and travel photographers.",
     mood: "Landscape / Panoramic",
-    previewImage: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85",
+    previewImage:
+      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85",
     palette: ["#e9ece6", "#17201c", "#1d7a70", "#d9b56f"],
     defaultSettings: {
       navbarStyle: "floating",
       galleryStyle: "grid",
       cardStyle: "modern",
-      footerStyle: "expanded"
-    }
-  }
+      footerStyle: "expanded",
+    },
+  },
+  {
+    key: "velvet",
+    name: "Velvet",
+    tier: "premium",
+    premium: true,
+    description:
+      "A cinematic burgundy portfolio with dramatic layering for fashion, nightlife, and luxury portraiture.",
+    mood: "Dramatic / Fashion",
+    previewImage:
+      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#180c12", "#f2e7df", "#8f3048", "#d6a96f"],
+    defaultSettings: {
+      navbarStyle: "floating",
+      galleryStyle: "masonry",
+      cardStyle: "modern",
+      footerStyle: "expanded",
+    },
+  },
+  {
+    key: "relay",
+    name: "Relay",
+    tier: "basic",
+    premium: false,
+    description:
+      "A sequence-led portfolio built as a photographic relay of numbered stories and horizontal project lanes.",
+    mood: "Sequential / Kinetic",
+    previewImage:
+      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#f2f0e8", "#17211d", "#e75a3d", "#8db6a4"],
+    defaultSettings: {
+      navbarStyle: "floating",
+      galleryStyle: "grid",
+      cardStyle: "minimal",
+      footerStyle: "expanded",
+    },
+  },
+  {
+    key: "fieldbook",
+    name: "Fieldbook",
+    tier: "basic",
+    premium: false,
+    description:
+      "An annotated documentary notebook with diptychs, field metadata, ruled bands, and tactile indexes.",
+    mood: "Documentary / Annotated",
+    previewImage:
+      "https://images.unsplash.com/photo-1452780212940-6f5c0d14d848?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#ede6d5", "#26322b", "#b24b35", "#66766b"],
+    defaultSettings: {
+      navbarStyle: "sidebar",
+      galleryStyle: "grid",
+      cardStyle: "minimal",
+      footerStyle: "simple",
+    },
+  },
+  {
+    key: "kaleido",
+    name: "Kaleido",
+    tier: "basic",
+    premium: false,
+    description:
+      "A colorful aperture-and-portal system with asymmetric image tiles and playful spatial navigation.",
+    mood: "Graphic / Playful",
+    previewImage:
+      "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#f6f2e7", "#232136", "#ff6b5e", "#52b8a5"],
+    defaultSettings: {
+      navbarStyle: "centered",
+      galleryStyle: "grid",
+      cardStyle: "rounded",
+      footerStyle: "expanded",
+    },
+  },
+  {
+    key: "proscenium",
+    name: "Proscenium",
+    tier: "premium",
+    premium: true,
+    description:
+      "A theatrical photographic stage organized into immersive acts, program notes, and curated stills.",
+    mood: "Theatrical / Dramatic",
+    previewImage:
+      "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#120f15", "#f1e9dc", "#d44b3e", "#55445d"],
+    defaultSettings: {
+      navbarStyle: "floating",
+      galleryStyle: "grid",
+      cardStyle: "modern",
+      footerStyle: "expanded",
+    },
+  },
+  {
+    key: "cartograph",
+    name: "Cartograph",
+    tier: "premium",
+    premium: true,
+    description:
+      "A route-based visual atlas where galleries become destinations and stories unfold along coordinates.",
+    mood: "Spatial / Exploratory",
+    previewImage:
+      "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#dfe7df", "#10271f", "#dd6f45", "#6f9484"],
+    defaultSettings: {
+      navbarStyle: "floating",
+      galleryStyle: "masonry",
+      cardStyle: "modern",
+      footerStyle: "expanded",
+    },
+  },
+  {
+    key: "vitrine",
+    name: "Vitrine",
+    tier: "premium",
+    premium: true,
+    description:
+      "A curated exhibition website with room-based browsing, salon-wall compositions, and catalogue typography.",
+    mood: "Curatorial / Exhibition",
+    previewImage:
+      "https://images.unsplash.com/photo-1561839561-b13bcfe95249?auto=format&fit=crop&w=1200&q=85",
+    palette: ["#e7e2d8", "#26221e", "#8e4037", "#9b8d76"],
+    defaultSettings: {
+      navbarStyle: "centered",
+      galleryStyle: "masonry",
+      cardStyle: "minimal",
+      footerStyle: "simple",
+    },
+  },
 ];
+
+export const themes = allThemes;

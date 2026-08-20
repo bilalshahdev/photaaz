@@ -1,110 +1,10 @@
 import { prisma } from "@/lib/db/prisma";
+import { sendEmail } from "@/services/email/email-service";
 import type { SubscriptionStatus } from "@prisma/client";
+import { getSubscriptionLifecycle, type SubscriptionLifecycleState } from "@/services/subscription/lifecycle-policy";
+export { getEffectivePlanKey, getSubscriptionLifecycle, type SubscriptionLifecycleState } from "@/services/subscription/lifecycle-policy";
 
 const ACTIVE_STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE"];
-
-export type SubscriptionLifecycleState = {
-  label: string;
-  tone: "neutral" | "success" | "warning" | "danger";
-  daysLeft: number | null;
-  isUsable: boolean;
-  isExpired: boolean;
-  isExpiringSoon: boolean;
-};
-
-export function getSubscriptionLifecycle(input?: { status: SubscriptionStatus; currentPeriodEnds: Date | null; plan?: { gracePeriodDays?: number | null } } | null): SubscriptionLifecycleState {
-  if (!input) {
-    return {
-      label: "No package",
-      tone: "neutral",
-      daysLeft: null,
-      isUsable: false,
-      isExpired: false,
-      isExpiringSoon: false
-    };
-  }
-
-  if (input.status === "CANCELED" || input.status === "EXPIRED") {
-    return {
-      label: input.status === "EXPIRED" ? "Expired" : "Canceled",
-      tone: "danger",
-      daysLeft: null,
-      isUsable: false,
-      isExpired: input.status === "EXPIRED",
-      isExpiringSoon: false
-    };
-  }
-
-  if (!input.currentPeriodEnds) {
-    return {
-      label: input.status === "PAST_DUE" ? "Past due" : "Active, no end date",
-      tone: input.status === "PAST_DUE" ? "warning" : "success",
-      daysLeft: null,
-      isUsable: input.status !== "PAST_DUE",
-      isExpired: false,
-      isExpiringSoon: false
-    };
-  }
-
-  const daysLeft = Math.ceil((input.currentPeriodEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-
-  if (daysLeft < 0) {
-    const gracePeriodDays = Math.max(0, input.plan?.gracePeriodDays ?? 0);
-    const daysOverdue = Math.abs(daysLeft);
-
-    if (gracePeriodDays > 0 && daysOverdue <= gracePeriodDays) {
-      const graceDaysLeft = gracePeriodDays - daysOverdue;
-
-      return {
-        label: graceDaysLeft === 0 ? "Grace period ends today" : `${graceDaysLeft} grace day${graceDaysLeft === 1 ? "" : "s"} left`,
-        tone: "warning",
-        daysLeft,
-        isUsable: true,
-        isExpired: false,
-        isExpiringSoon: true
-      };
-    }
-
-    return {
-      label: `Ended ${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? "" : "s"} ago`,
-      tone: "danger",
-      daysLeft,
-      isUsable: false,
-      isExpired: true,
-      isExpiringSoon: false
-    };
-  }
-
-  if (daysLeft <= 7) {
-    return {
-      label: `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
-      tone: "warning",
-      daysLeft,
-      isUsable: true,
-      isExpired: false,
-      isExpiringSoon: true
-    };
-  }
-
-  return {
-    label: `${daysLeft} days left`,
-    tone: "success",
-    daysLeft,
-    isUsable: true,
-    isExpired: false,
-    isExpiringSoon: false
-  };
-}
-
-export function getEffectivePlanKey(input?: { status: SubscriptionStatus; currentPeriodEnds: Date | null; plan: { key: string; gracePeriodDays?: number | null } } | null) {
-  const lifecycle = getSubscriptionLifecycle(input);
-
-  if (!input || !lifecycle.isUsable) {
-    return "free";
-  }
-
-  return input.plan.key;
-}
 
 export function formatSubscriptionDate(date: Date) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date);
@@ -136,6 +36,68 @@ export function getSubscriptionBadgeClass(tone: SubscriptionLifecycleState["tone
   }
 }
 
+type LifecycleEmailSubscription = {
+  tenant: {
+    name: string;
+    owner: {
+      email: string;
+      name: string;
+    } | null;
+  };
+  plan: {
+    name: string;
+  };
+};
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#039;";
+      default:
+        return character;
+    }
+  });
+}
+
+async function sendLifecycleEmail(input: {
+  subscription: LifecycleEmailSubscription;
+  subject: string;
+  title: string;
+  body: string;
+}) {
+  const ownerEmail = input.subscription.tenant.owner?.email;
+
+  if (!ownerEmail) {
+    return;
+  }
+
+  try {
+    await sendEmail({
+      to: ownerEmail,
+      subject: input.subject,
+      text: input.body,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+          <p style="font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #0f766e;">Photaaz</p>
+          <h1 style="font-size: 24px; margin: 0 0 12px;">${escapeHtml(input.title)}</h1>
+          <p>${escapeHtml(input.body)}</p>
+        </div>
+      `
+    });
+  } catch (error) {
+    console.error("Subscription lifecycle email failed", error);
+  }
+}
+
 export async function syncSubscriptionLifecycle() {
   const now = new Date();
   const expiringWindowEnd = new Date(now);
@@ -146,13 +108,19 @@ export async function syncSubscriptionLifecycle() {
       currentPeriodEnds: { gte: now, lte: expiringWindowEnd }
     },
     include: {
-      plan: true
+      plan: true,
+      tenant: {
+        include: {
+          owner: true
+        }
+      }
     }
   });
 
   for (const subscription of expiringSubscriptions) {
     const notificationWindowStart = new Date(subscription.currentPeriodEnds ?? now);
     notificationWindowStart.setDate(notificationWindowStart.getDate() - 7);
+    const body = `Your ${subscription.plan.name} package ends on ${(subscription.currentPeriodEnds ?? now).toLocaleDateString("en-US")}. Please renew or contact support if you need help.`;
     const existingNotification = await prisma.clientNotification.findFirst({
       where: {
         tenantId: subscription.tenantId,
@@ -167,9 +135,15 @@ export async function syncSubscriptionLifecycle() {
         data: {
           tenantId: subscription.tenantId,
           title: "Package ending soon",
-          body: `Your ${subscription.plan.name} package ends on ${(subscription.currentPeriodEnds ?? now).toLocaleDateString("en-US")}. Please renew or contact support if you need help.`,
+          body,
           channel: "dashboard"
         }
+      });
+      await sendLifecycleEmail({
+        subscription,
+        subject: "Your Photaaz package is ending soon",
+        title: "Package ending soon",
+        body
       });
     }
   }
@@ -181,13 +155,18 @@ export async function syncSubscriptionLifecycle() {
     },
     include: {
       plan: true,
-      tenant: true
+      tenant: {
+        include: {
+          owner: true
+        }
+      }
     }
   });
 
   const expiredSubscriptions = overdueSubscriptions.filter((subscription) => getSubscriptionLifecycle(subscription).isExpired);
 
   for (const subscription of expiredSubscriptions) {
+    const body = `Your ${subscription.plan.name} package has ended. Renew your package to continue using paid features. Your content is kept safely, but public access is limited to the Basic plan.`;
     const existingNotification = await prisma.clientNotification.findFirst({
       where: {
         tenantId: subscription.tenantId,
@@ -209,12 +188,21 @@ export async function syncSubscriptionLifecycle() {
               data: {
                 tenantId: subscription.tenantId,
                 title: "Package expired",
-                body: `Your ${subscription.plan.name} package has ended. Contact support or renew your package to continue using paid features.`,
+                body,
                 channel: "dashboard"
               }
             })
           ])
     ]);
+
+    if (!existingNotification) {
+      await sendLifecycleEmail({
+        subscription,
+        subject: "Your Photaaz package has expired",
+        title: "Package expired",
+        body
+      });
+    }
   }
 
   const graceSubscriptions = overdueSubscriptions.filter((subscription) => {
@@ -225,6 +213,7 @@ export async function syncSubscriptionLifecycle() {
 
   for (const subscription of graceSubscriptions) {
     const lifecycle = getSubscriptionLifecycle(subscription);
+    const body = `Your ${subscription.plan.name} package is past its renewal date. ${lifecycle.label}. Renew to keep paid features active.`;
     const existingNotification = await prisma.clientNotification.findFirst({
       where: {
         tenantId: subscription.tenantId,
@@ -239,9 +228,15 @@ export async function syncSubscriptionLifecycle() {
         data: {
           tenantId: subscription.tenantId,
           title: "Renewal grace period",
-          body: `Your ${subscription.plan.name} package is past its renewal date. ${lifecycle.label}. Renew or contact support to keep paid features active.`,
+          body,
           channel: "dashboard"
         }
+      });
+      await sendLifecycleEmail({
+        subscription,
+        subject: "Your Photaaz package is in grace period",
+        title: "Renewal grace period",
+        body
       });
     }
   }

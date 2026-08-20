@@ -22,7 +22,7 @@ type MarketingHeaderProps = {
   brandFontSize?: BrandFontSize;
 };
 
-export function MarketingHeader({ locale = "en", messages = getMessages(locale), variant = "overlay", hasAnnouncement = false, enabledLocales, stacked = false, brandName = "Photaaz", brandFontSize = "md" }: MarketingHeaderProps) {
+export function MarketingHeader({ locale = "en", messages = getMessages(locale), variant = "overlay", hasAnnouncement = false, enabledLocales, stacked = false, brandName = "Photaaz", brandFontSize = "sm" }: MarketingHeaderProps) {
   const copy = messages.nav;
   const isSolid = variant === "solid";
   const homePath = localizePath(locale, "/");
@@ -74,8 +74,8 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
         shouldUseSolidStyle ? "bg-[rgba(247,248,246,0.86)] shadow-[0_12px_40px_rgba(16,20,24,0.08)]" : "bg-[rgba(16,20,24,0.82)] sm:bg-[rgba(16,20,24,0.72)]"
       }`}
     >
-      <MarketingContainer className="flex h-16 items-center justify-between gap-3 md:grid md:h-[76px] md:grid-cols-[1fr_auto_1fr]">
-        <nav className={`hidden items-center gap-6 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:flex lg:gap-8 ${navTone}`}>
+      <MarketingContainer className="flex h-14 items-center justify-between gap-3 md:grid md:h-[68px] md:grid-cols-[1fr_auto_1fr]">
+        <nav className={`hidden items-center gap-5 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] lg:flex lg:gap-6 ${navTone}`}>
           {navItems.map((item) => (
             <Link key={item.href} className={hoverTone} href={item.href as Route}>
               {item.label}
@@ -92,7 +92,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
           <button
             type="button"
             onClick={() => setIsMenuOpen((value) => !value)}
-            className={`inline-flex size-10 items-center justify-center border transition lg:hidden ${
+            className={`inline-flex size-9 items-center justify-center border transition lg:hidden ${
               shouldUseSolidStyle ? "border-[#101418]/18 text-[#101418] hover:bg-[#101418]/6" : "border-white/32 text-white hover:bg-white/10"
             }`}
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
@@ -104,7 +104,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
             asChild
             variant="ghost"
             size="sm"
-            className={`hidden h-10 rounded-none px-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:inline-flex ${
+            className={`hidden h-9 rounded-none px-3 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] lg:inline-flex ${
               shouldUseSolidStyle ? "text-[#101418] hover:bg-[#101418]/6 [&_svg]:text-[#101418]" : "text-white hover:bg-white/12 [&_svg]:text-white"
             }`}
           >
@@ -116,7 +116,7 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
           <Button
             asChild
             size="sm"
-            className={`hidden h-10 rounded-none px-5 font-nav text-xs font-semibold uppercase tracking-[0.22em] lg:inline-flex ${
+            className={`hidden h-9 rounded-none px-4 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] lg:inline-flex ${
               shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-primary/90" : "bg-white text-[#101418] hover:bg-white/90"
             }`}
           >
@@ -131,14 +131,14 @@ export function MarketingHeader({ locale = "en", messages = getMessages(locale),
         <div className={`mx-4 mb-4 border p-2 shadow-[0_18px_60px_rgba(16,20,24,0.18)] backdrop-blur lg:hidden ${mobileMenuTone}`}>
           <nav className="grid">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href as Route} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition last:border-b-0 ${mobileLinkTone}`}>
+              <Link key={item.href} href={item.href as Route} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-2.5 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] transition last:border-b-0 ${mobileLinkTone}`}>
                 {item.label}
               </Link>
             ))}
-            <Link href={localizePath(locale, signInPath())} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${mobileLinkTone}`}>
+            <Link href={localizePath(locale, signInPath())} onClick={() => setIsMenuOpen(false)} className={`border-b px-4 py-2.5 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] transition ${mobileLinkTone}`}>
               {copy.signIn}
             </Link>
-            <Link href={localizePath(locale, onboardingPath())} onClick={() => setIsMenuOpen(false)} className={`mt-2 inline-flex items-center justify-center gap-2 px-4 py-3 font-nav text-xs font-semibold uppercase tracking-[0.22em] transition ${shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-primary/90" : "bg-white text-[#101418] hover:bg-white/90"}`}>
+            <Link href={localizePath(locale, onboardingPath())} onClick={() => setIsMenuOpen(false)} className={`mt-2 inline-flex items-center justify-center gap-2 px-4 py-2.5 font-nav text-[0.68rem] font-semibold uppercase tracking-[0.18em] transition ${shouldUseSolidStyle ? "bg-[#101418] text-white hover:bg-primary/90" : "bg-white text-[#101418] hover:bg-white/90"}`}>
               {copy.start}
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>

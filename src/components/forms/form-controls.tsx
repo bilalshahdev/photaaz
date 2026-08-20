@@ -142,6 +142,9 @@ type ImageDropFieldProps = {
   disabled?: boolean;
   multiple?: boolean;
   shellClassName?: string;
+  uploadArea?: "photos" | "categories" | "blogs" | "others";
+  uploadFolder?: string;
+  uploadLabel?: string;
 };
 
 export function ImageDropField({
@@ -155,7 +158,10 @@ export function ImageDropField({
   required = false,
   disabled = false,
   multiple = false,
-  shellClassName
+  shellClassName,
+  uploadArea = "others",
+  uploadFolder,
+  uploadLabel
 }: ImageDropFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -319,6 +325,9 @@ export function ImageDropField({
           required={required}
           disabled={disabled}
           multiple={multiple}
+          data-upload-area={uploadArea}
+          data-upload-folder={uploadFolder}
+          data-upload-label={uploadLabel}
           className="sr-only"
           onChange={(event) => {
             const files = event.target.files;

@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db/prisma";
 import { revalidateTenantDashboard, revalidateTenantPublic } from "@/lib/cache";
 import { saveTenantImageUpload } from "@/services/storage/local-upload";
 import { assertBlogCreateLimit } from "@/services/subscription/plan-limits";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
+import { readUploadedCloudinaryAsset } from "@/services/storage/direct-cloudinary-upload";
 
 const blogSchema = z.object({
   tenantSlug: z.string().min(1),
@@ -53,18 +55,7 @@ export async function createCustomerBlogPost(formData: FormData) {
   });
   const featuredImageFile = formData.get("featuredImageFile");
 
-  const tenant = await prisma.tenant.findUnique({
-    where: {
-      slug: parsed.tenantSlug
-    },
-    select: {
-      id: true
-    }
-  });
-
-  if (!tenant) {
-    throw new Error("Tenant not found.");
-  }
+  const tenant = await requireTenantOwner(parsed.tenantSlug);
 
   await assertBlogCreateLimit(parsed.tenantSlug);
 
@@ -73,7 +64,8 @@ export async function createCustomerBlogPost(formData: FormData) {
     tenantId: tenant.id,
     tenantSlug: parsed.tenantSlug,
     featuredPhotoId: parsed.featuredPhotoId,
-    featuredImageFile
+    featuredImageFile,
+    formData
   });
   const tags = parseTags(parsed.tags);
 
@@ -119,18 +111,7 @@ export async function updateCustomerBlogPost(formData: FormData) {
   });
   const featuredImageFile = formData.get("featuredImageFile");
 
-  const tenant = await prisma.tenant.findUnique({
-    where: {
-      slug: parsed.tenantSlug
-    },
-    select: {
-      id: true
-    }
-  });
-
-  if (!tenant) {
-    throw new Error("Tenant not found.");
-  }
+  const tenant = await requireTenantOwner(parsed.tenantSlug);
 
   const existingBlog = await prisma.blogPost.findFirst({
     where: {
@@ -151,7 +132,8 @@ export async function updateCustomerBlogPost(formData: FormData) {
     tenantId: tenant.id,
     tenantSlug: parsed.tenantSlug,
     featuredPhotoId: parsed.featuredPhotoId,
-    featuredImageFile
+    featuredImageFile,
+    formData
   });
 
   await prisma.blogPost.update({
@@ -259,20 +241,7 @@ export async function deleteCustomerBlogCategory(formData: FormData) {
 }
 
 async function getTenantForBlogAction(tenantSlug: string) {
-  const tenant = await prisma.tenant.findUnique({
-    where: {
-      slug: tenantSlug
-    },
-    select: {
-      id: true
-    }
-  });
-
-  if (!tenant) {
-    throw new Error("Tenant not found.");
-  }
-
-  return tenant;
+  return requireTenantOwner(tenantSlug);
 }
 
 export async function deleteCustomerBlogPost(formData: FormData) {
@@ -281,18 +250,7 @@ export async function deleteCustomerBlogPost(formData: FormData) {
     blogId: String(formData.get("blogId") ?? "")
   });
 
-  const tenant = await prisma.tenant.findUnique({
-    where: {
-      slug: parsed.tenantSlug
-    },
-    select: {
-      id: true
-    }
-  });
-
-  if (!tenant) {
-    throw new Error("Tenant not found.");
-  }
+  const tenant = await requireTenantOwner(parsed.tenantSlug);
 
   await prisma.blogPost.deleteMany({
     where: {
@@ -310,13 +268,17 @@ async function resolveFeaturedImage({
   tenantId,
   tenantSlug,
   featuredPhotoId,
-  featuredImageFile
+  featuredImageFile,
+  formData
 }: {
   tenantId: string;
   tenantSlug: string;
   featuredPhotoId?: string;
   featuredImageFile: FormDataEntryValue | null;
+  formData: FormData;
 }) {
+  const directUpload = readUploadedCloudinaryAsset(formData, "featuredImageFile", tenantSlug);
+  if (directUpload) return directUpload.publicPath;
   if (featuredImageFile instanceof File && featuredImageFile.size > 0) {
     const upload = await saveTenantImageUpload(featuredImageFile, tenantSlug, { area: "blogs", fileLabel: "featured" });
     return upload.publicPath;

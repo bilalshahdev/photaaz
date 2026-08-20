@@ -8,6 +8,7 @@ import { SelectField, TextareaField, TextField } from "@/components/forms/form-c
 import { Button } from "@/components/ui/button";
 import { extendTenantPackage, resetTenantThemeSwitchCooldown, sendClientNotification, updateTenantPlan, updateTenantStatus } from "@/app/admin/actions";
 import { getAdminCustomerById, getAdminPlans } from "@/services/admin/admin-data";
+import type { LocalizedString } from "@/services/platform/platform-data";
 import { formatSubscriptionDate, getSubscriptionLifecycle, getSubscriptionTextClass } from "@/services/subscription/lifecycle";
 
 type AdminCustomerDetailPageProps = {
@@ -40,7 +41,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
       {/* ── Overview strip ── */}
       <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 shadow-sm lg:grid-cols-4">
         <InfoCell label="Galleries" value={`${customer._count.albums} galleries`} sub={`${customer._count.photos} photos`} />
-        <InfoCell label="Package" value={customer.subscription?.plan.name ?? "No plan"} sub={customer.subscription ? `${customer.subscription.status} · ${packageState.label}` : "No subscription"} tone={packageState.tone === "success" ? "green" : undefined} />
+        <InfoCell label="Package" value={customer.subscription?.plan ? displayLocalized(customer.subscription.plan.name) : "No plan"} sub={customer.subscription ? `${customer.subscription.status} · ${packageState.label}` : "No subscription"} tone={packageState.tone === "success" ? "green" : undefined} />
         <InfoCell label="Domain" value={customer.domains[0]?.hostname ?? `/${customer.slug}`} sub={customer.domains[0] ? `Free slug: /${customer.slug}` : "Free address"} />
         <InfoCell label="Theme" value={customer.settings?.themeKey ?? "minimal"} sub={`Locale: ${customer.defaultLocale}`} />
       </div>
@@ -88,7 +89,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
             <div className="mb-4 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-slate-200 bg-slate-200">
               <div className="bg-slate-50 p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Plan</p>
-                <p className="mt-1 text-sm font-semibold text-slate-950">{customer.subscription?.plan.name ?? "None"}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">{customer.subscription?.plan ? displayLocalized(customer.subscription.plan.name) : "None"}</p>
               </div>
               <div className="bg-slate-50 p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Ends</p>
@@ -112,7 +113,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
               }}
               className="grid gap-3 md:grid-cols-2"
             >
-              <SelectField name="planId" defaultValue={customer.subscription?.planId ?? plans[0]?.id} triggerClassName="h-10" options={plans.map((p) => ({ label: p.name, value: p.id }))} />
+              <SelectField name="planId" defaultValue={customer.subscription?.planId ?? plans[0]?.id} triggerClassName="h-10" options={plans.map((p) => ({ label: displayLocalized(p.name), value: p.id }))} />
               <SelectField
                 name="subscriptionStatus"
                 defaultValue={customer.subscription?.status ?? "TRIALING"}
@@ -203,7 +204,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
                     <div key={access.id} className={`flex items-start gap-2.5 rounded-md border p-3 text-sm ${access.enabled ? "border-primary/10 bg-primary/5" : "border-slate-200 bg-slate-50"}`}>
                       {access.enabled ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-primary" /> : <XCircle className="mt-0.5 size-3.5 shrink-0 text-slate-400" />}
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-900">{access.feature.name}</p>
+                        <p className="font-semibold text-slate-900">{displayLocalized(access.feature.name)}</p>
                         <p className="text-[10px] text-slate-500">
                           {!access.enabled ? "Disabled" : isBool ? "Enabled" : access.limit == null ? "Unlimited" : `Limit: ${access.limit}`}
                         </p>
@@ -302,4 +303,9 @@ function Detail({ label, value }: { label: string; value: string }) {
       <p className="mt-0.5 font-medium text-slate-900">{value}</p>
     </div>
   );
+}
+
+function displayLocalized(value: LocalizedString) {
+  if (typeof value === "string") return value;
+  return value.en || Object.values(value).find(Boolean) || "";
 }

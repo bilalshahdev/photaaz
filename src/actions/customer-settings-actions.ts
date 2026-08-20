@@ -4,13 +4,42 @@ import { z } from "zod";
 import { revalidateTenantDashboard, revalidateTenantPublic } from "@/lib/cache";
 import { prisma } from "@/lib/db/prisma";
 import { canPlanUseThemeWithLimit, themes, themeKeys } from "@/config/themes";
-import { defaultPlatformAppConfig, type PlatformAppConfig } from "@/services/admin/admin-data";
+import {
+  defaultPlatformAppConfig,
+  type PlatformAppConfig,
+} from "@/services/admin/admin-data";
 import { saveTenantImageUpload } from "@/services/storage/local-upload";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
+import {
+  readUploadedCloudinaryAsset,
+  readUploadedCloudinaryAssets,
+} from "@/services/storage/direct-cloudinary-upload";
 import { normalizeTenantWatermark } from "@/services/platform/media-policy";
-import { getTenantPlanAccess, hasFeatureInAccess, planLimitKeys } from "@/services/subscription/plan-limits";
+import {
+  getTenantPlanAccess,
+  hasFeatureInAccess,
+  planLimitKeys,
+} from "@/services/subscription/plan-limits";
+import { getPlatformTheme } from "@/services/platform/platform-data";
 
-const sectionKeys = ["hero", "featuredPhotos", "categories", "galleries", "contact", "footer"] as const;
-const socialLinkKeys = ["instagram", "facebook", "youtube", "linkedin", "snapchat", "pinterest", "behance", "tiktok"] as const;
+const sectionKeys = [
+  "hero",
+  "featuredPhotos",
+  "categories",
+  "galleries",
+  "contact",
+  "footer",
+] as const;
+const socialLinkKeys = [
+  "instagram",
+  "facebook",
+  "youtube",
+  "linkedin",
+  "snapchat",
+  "pinterest",
+  "behance",
+  "tiktok",
+] as const;
 const pageHeaderKeys = ["gallery", "categories", "blog", "about"] as const;
 
 const customerSiteSettingsSchema = z.object({
@@ -24,8 +53,8 @@ const customerSiteSettingsSchema = z.object({
     z.enum(pageHeaderKeys),
     z.object({
       image: z.string().trim().max(2048).optional(),
-      description: z.string().trim().max(220).optional()
-    })
+      description: z.string().trim().max(220).optional(),
+    }),
   ),
   featuredPhotos: z.boolean(),
   categories: z.boolean(),
@@ -33,36 +62,60 @@ const customerSiteSettingsSchema = z.object({
   hero: z.boolean(),
   contact: z.boolean(),
   footer: z.boolean(),
-  featuredSource: z.enum(["selected", "all", "category", "subcategory", "gallery"]),
+  featuredSource: z.enum([
+    "selected",
+    "all",
+    "category",
+    "subcategory",
+    "gallery",
+  ]),
   featuredSourceId: z.string().trim().max(120).optional(),
   featuredPhotoIds: z.array(z.string().trim().min(1)).default([]),
   featuredLimit: z.coerce.number().int().min(3).max(60),
   featuredColumns: z.enum(["1", "2", "3", "4", "masonry"]),
-  featuredGridStyle: z.enum(["square", "portrait", "landscape", "tiles", "mixed"]),
+  featuredGridStyle: z.enum([
+    "square",
+    "portrait",
+    "landscape",
+    "tiles",
+    "mixed",
+  ]),
+  homepageCopy: z.object({
+    welcomeTitle: z.string().trim().min(2).max(140),
+    featuredTitle: z.string().trim().min(2).max(100),
+    galleriesTitle: z.string().trim().min(2).max(100),
+    contactTitle: z.string().trim().min(2).max(140),
+    contactBody: z.string().trim().min(2).max(400),
+  }),
   watermark: z.object({
     enabled: z.boolean(),
     text: z.string().trim().max(40).optional(),
-    position: z.enum(["bottom-left", "bottom-center", "bottom-right", "center"]),
+    position: z.enum([
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+      "center",
+    ]),
     size: z.enum(["small", "medium", "large"]),
     opacity: z.coerce.number().min(0.1).max(1),
     backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
     backgroundOpacity: z.coerce.number().min(0).max(1),
     textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
     borderColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-    borderOpacity: z.coerce.number().min(0).max(1)
+    borderOpacity: z.coerce.number().min(0).max(1),
   }),
   socialLinks: z.record(
     z.enum(socialLinkKeys),
     z.object({
       href: z.string().trim().max(2048).optional(),
-      enabled: z.boolean()
-    })
-  )
+      enabled: z.boolean(),
+    }),
+  ),
 });
 
 const customerThemeSchema = z.object({
   tenantSlug: z.string().min(1),
-  themeKey: z.enum(themeKeys)
+  themeKey: z.enum(themeKeys),
 });
 
 const customerProfileSchema = z.object({
@@ -72,7 +125,7 @@ const customerProfileSchema = z.object({
   email: z.string().trim().email(),
   phone: z.string().trim().max(40).optional(),
   location: z.string().trim().min(2).max(100),
-  bio: z.string().trim().max(1800).optional()
+  bio: z.string().trim().max(1800).optional(),
 });
 
 export type CustomerSettingsActionState = {
@@ -80,18 +133,24 @@ export type CustomerSettingsActionState = {
   message: string;
 };
 
-export async function updateCustomerSiteSettingsWithFeedback(_state: CustomerSettingsActionState, formData: FormData): Promise<CustomerSettingsActionState> {
+export async function updateCustomerSiteSettingsWithFeedback(
+  _state: CustomerSettingsActionState,
+  formData: FormData,
+): Promise<CustomerSettingsActionState> {
   try {
     await updateCustomerSiteSettings(formData);
 
     return {
       status: "success",
-      message: "Site settings saved successfully."
+      message: "Site settings saved successfully.",
     };
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Site settings could not be saved."
+      message:
+        error instanceof Error
+          ? error.message
+          : "Site settings could not be saved.",
     };
   }
 }
@@ -99,19 +158,20 @@ export async function updateCustomerSiteSettingsWithFeedback(_state: CustomerSet
 export async function applyCustomerTheme(formData: FormData) {
   const parsed = customerThemeSchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
-    themeKey: String(formData.get("themeKey") ?? "")
+    themeKey: String(formData.get("themeKey") ?? ""),
   });
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug: parsed.tenantSlug },
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: authorizedTenant.id, slug: parsed.tenantSlug },
     include: {
       settings: true,
       subscription: {
         include: {
-          plan: true
-        }
-      }
-    }
+          plan: true,
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -126,7 +186,13 @@ export async function applyCustomerTheme(formData: FormData) {
 
   const planAccess = await getTenantPlanAccess(parsed.tenantSlug);
 
-  if (!canPlanUseThemeWithLimit(planAccess?.planKey ?? "free", theme, planAccess?.limits[planLimitKeys.premiumThemesLimit])) {
+  if (
+    !canPlanUseThemeWithLimit(
+      planAccess?.planKey ?? "free",
+      theme,
+      planAccess?.limits[planLimitKeys.premiumThemesLimit],
+    )
+  ) {
     throw new Error("This theme is not available on the current plan.");
   }
 
@@ -134,11 +200,21 @@ export async function applyCustomerTheme(formData: FormData) {
   const currentThemeKey = tenant.settings?.themeKey ?? "minimal";
   const isSwitchingTheme = currentThemeKey !== parsed.themeKey;
 
+  if (isSwitchingTheme) {
+    const platformTheme = await getPlatformTheme(parsed.themeKey);
+
+    if (!platformTheme?.enabled) {
+      throw new Error("This theme is no longer available for selection.");
+    }
+  }
+
   if (isSwitchingTheme && cooldownDays > 0 && tenant.settings?.themeChangedAt) {
     const nextAllowedAt = addDays(tenant.settings.themeChangedAt, cooldownDays);
 
     if (nextAllowedAt.getTime() > Date.now()) {
-      throw new Error(`You can switch themes again on ${formatDate(nextAllowedAt)}.`);
+      throw new Error(
+        `You can switch themes again on ${formatDate(nextAllowedAt)}.`,
+      );
     }
   }
 
@@ -147,13 +223,15 @@ export async function applyCustomerTheme(formData: FormData) {
     create: {
       tenantId: tenant.id,
       themeKey: parsed.themeKey,
-      themeChangedAt: isSwitchingTheme ? new Date() : tenant.settings?.themeChangedAt ?? null,
-      businessDetails: {}
+      themeChangedAt: isSwitchingTheme
+        ? new Date()
+        : (tenant.settings?.themeChangedAt ?? null),
+      businessDetails: {},
     },
     update: {
       themeKey: parsed.themeKey,
-      ...(isSwitchingTheme ? { themeChangedAt: new Date() } : {})
-    }
+      ...(isSwitchingTheme ? { themeChangedAt: new Date() } : {}),
+    },
   });
 
   revalidateTenantPublic(parsed.tenantSlug);
@@ -163,12 +241,17 @@ export async function applyCustomerTheme(formData: FormData) {
 async function getThemeSwitchCooldownDays() {
   const setting = await prisma.platformSetting.findUnique({
     where: { key: "app_config" },
-    select: { value: true }
+    select: { value: true },
   });
-  const savedConfig = setting?.value && typeof setting.value === "object" ? (setting.value as Partial<PlatformAppConfig>) : {};
+  const savedConfig =
+    setting?.value && typeof setting.value === "object"
+      ? (setting.value as Partial<PlatformAppConfig>)
+      : {};
   const value = savedConfig.themeSwitchCooldownDays;
 
-  return typeof value === "number" && Number.isFinite(value) ? value : defaultPlatformAppConfig.themeSwitchCooldownDays;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : defaultPlatformAppConfig.themeSwitchCooldownDays;
 }
 
 function addDays(date: Date, days: number) {
@@ -179,7 +262,7 @@ function addDays(date: Date, days: number) {
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium"
+    dateStyle: "medium",
   }).format(date);
 }
 
@@ -193,63 +276,88 @@ export async function updateCustomerSiteSettings(formData: FormData) {
     currentHeroImages: String(formData.get("currentHeroImages") ?? ""),
     featuredSource: String(formData.get("featuredSource") ?? "selected"),
     featuredSourceId: String(formData.get("featuredSourceId") ?? ""),
-    featuredPhotoIds: parseDelimitedList(String(formData.get("featuredPhotoIds") ?? "")),
+    featuredPhotoIds: parseDelimitedList(
+      String(formData.get("featuredPhotoIds") ?? ""),
+    ),
     featuredLimit: String(formData.get("featuredLimit") ?? "12"),
     featuredColumns: String(formData.get("featuredColumns") ?? "3"),
     featuredGridStyle: String(formData.get("featuredGridStyle") ?? "mixed"),
+    homepageCopy: {
+      welcomeTitle: String(formData.get("homepageWelcomeTitle") ?? ""),
+      featuredTitle: String(formData.get("homepageFeaturedTitle") ?? ""),
+      galleriesTitle: String(formData.get("homepageGalleriesTitle") ?? ""),
+      contactTitle: String(formData.get("homepageContactTitle") ?? ""),
+      contactBody: String(formData.get("homepageContactBody") ?? ""),
+    },
     watermark: {
       enabled: formData.get("watermarkEnabled") === "on",
       text: String(formData.get("watermarkText") ?? ""),
       position: String(formData.get("watermarkPosition") ?? "bottom-right"),
       size: String(formData.get("watermarkSize") ?? "small"),
       opacity: String(formData.get("watermarkOpacity") ?? "0.9"),
-      backgroundColor: String(formData.get("watermarkBackgroundColor") ?? "#000000"),
-      backgroundOpacity: String(formData.get("watermarkBackgroundOpacity") ?? "0.35"),
+      backgroundColor: String(
+        formData.get("watermarkBackgroundColor") ?? "#000000",
+      ),
+      backgroundOpacity: String(
+        formData.get("watermarkBackgroundOpacity") ?? "0.35",
+      ),
       textColor: String(formData.get("watermarkTextColor") ?? "#ffffff"),
       borderColor: String(formData.get("watermarkBorderColor") ?? "#ffffff"),
-      borderOpacity: String(formData.get("watermarkBorderOpacity") ?? "0.18")
+      borderOpacity: String(formData.get("watermarkBorderOpacity") ?? "0.18"),
     },
     socialLinks: Object.fromEntries(
       socialLinkKeys.map((key) => [
         key,
         {
           href: String(formData.get(`${key}Href`) ?? ""),
-          enabled: formData.get(`${key}Enabled`) === "on"
-        }
-      ])
+          enabled: formData.get(`${key}Enabled`) === "on",
+        },
+      ]),
     ),
     pageHeaders: Object.fromEntries(
       pageHeaderKeys.map((key) => [
         key,
         {
           image: String(formData.get(`${key}HeaderImage`) ?? ""),
-          description: String(formData.get(`${key}HeaderDescription`) ?? "")
-        }
-      ])
+          description: String(formData.get(`${key}HeaderDescription`) ?? ""),
+        },
+      ]),
     ),
-    ...Object.fromEntries(sectionKeys.map((key) => [key, readFormBoolean(formData, `${key}Enabled`, formData.get(key) === "on")]))
+    ...Object.fromEntries(
+      sectionKeys.map((key) => [
+        key,
+        readFormBoolean(formData, `${key}Enabled`, formData.get(key) === "on"),
+      ]),
+    ),
   });
 
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
   const tenant = await prisma.tenant.findUnique({
-    where: { slug: parsed.tenantSlug },
+    where: { id: authorizedTenant.id },
     include: {
       settings: true,
       subscription: {
         include: {
-          plan: true
-        }
-      }
-    }
+          plan: true,
+        },
+      },
+    },
   });
 
   if (!tenant) {
     throw new Error("Tenant not found.");
   }
 
-  const currentBusinessDetails = normalizeRecord(tenant.settings?.businessDetails);
+  const currentBusinessDetails = normalizeRecord(
+    tenant.settings?.businessDetails,
+  );
   const currentHero = normalizeRecord(currentBusinessDetails.hero);
-  const currentPageHeaders = normalizeRecord(currentBusinessDetails.pageHeaders);
-  const currentWatermark = normalizeTenantWatermark(currentBusinessDetails.watermark);
+  const currentPageHeaders = normalizeRecord(
+    currentBusinessDetails.pageHeaders,
+  );
+  const currentWatermark = normalizeTenantWatermark(
+    currentBusinessDetails.watermark,
+  );
   const planAccess = await getTenantPlanAccess(parsed.tenantSlug);
   const planKey = planAccess?.planKey ?? "free";
   const canHideFooter = !["basic", "free", "plus"].includes(planKey);
@@ -258,48 +366,120 @@ export async function updateCustomerSiteSettings(formData: FormData) {
     ? {
         ...currentWatermark,
         ...parsed.watermark,
-        text: parsed.watermark.text ?? ""
+        text: parsed.watermark.text ?? "",
       }
     : currentWatermark;
   const heroImageLimit = planAccess?.limits[planLimitKeys.heroImagesTotal] ?? 1;
-  const heroImageFiles = formData.getAll("heroImageFiles").filter((file): file is File => file instanceof File && file.size > 0);
-  const existingHeroImages = trimToLimit(parseHeroImages(parsed.currentHeroImages, parsed.currentHeroImage, currentHero), heroImageLimit);
+  const heroImageFiles = formData
+    .getAll("heroImageFiles")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+  const directHeroImages = readUploadedCloudinaryAssets(
+    formData,
+    "heroImageFiles",
+    parsed.tenantSlug,
+  );
+  const existingHeroImages = parseHeroImages(
+    parsed.currentHeroImages,
+    parsed.currentHeroImage,
+    currentHero,
+  );
 
-  if (heroImageLimit !== null && existingHeroImages.length + heroImageFiles.length > heroImageLimit) {
-    throw new Error(`Your plan allows ${heroImageLimit} hero image${heroImageLimit === 1 ? "" : "s"}. Remove one before uploading more.`);
+  if (
+    heroImageLimit !== null &&
+    heroImageFiles.length + directHeroImages.length > 0 &&
+    existingHeroImages.length + heroImageFiles.length + directHeroImages.length >
+      heroImageLimit
+  ) {
+    throw new Error(
+      `Your plan allows ${heroImageLimit} hero image${heroImageLimit === 1 ? "" : "s"}. Remove one before uploading more.`,
+    );
   }
 
   const uploadedHeroImages = await Promise.all(
-    heroImageFiles.map((file) => saveTenantImageUpload(file, parsed.tenantSlug, { area: "others", folder: "hero" }))
+    heroImageFiles.map((file) =>
+      saveTenantImageUpload(file, parsed.tenantSlug, {
+        area: "others",
+        folder: "hero",
+      }),
+    ),
   );
-  const heroImages = [...existingHeroImages, ...uploadedHeroImages.map((upload) => upload.publicPath)];
+  const heroImages = [
+    ...existingHeroImages,
+    ...directHeroImages.map((upload) => upload.publicPath),
+    ...uploadedHeroImages.map((upload) => upload.publicPath),
+  ];
   const heroImage = heroImages[0] ?? "";
   const pageHeaderFiles = Object.fromEntries(
     pageHeaderKeys.map((key) => {
       const file = formData.get(`${key}HeaderFile`);
       return [key, file instanceof File && file.size > 0 ? file : null];
-    })
+    }),
   ) as Record<(typeof pageHeaderKeys)[number], File | null>;
-  const canUsePageHeaderImages = hasFeatureInAccess(planAccess, "pageHeaderImages");
+  const canUsePageHeaderImages = hasFeatureInAccess(
+    planAccess,
+    "pageHeaderImages",
+  );
   const uploadedPageHeaders = canUsePageHeaderImages
     ? Object.fromEntries(
         await Promise.all(
           pageHeaderKeys.map(async (key) => {
             const file = pageHeaderFiles[key];
+            const directUpload = readUploadedCloudinaryAsset(
+              formData,
+              `${key}HeaderFile`,
+              parsed.tenantSlug,
+            );
             const currentHeader = normalizePageHeader(currentPageHeaders[key]);
-            const existingImage = parsed.pageHeaders[key]?.image || currentHeader.image || "";
-            const description = parsed.pageHeaders[key]?.description || currentHeader.description || "";
+            const existingImage =
+              parsed.pageHeaders[key]?.image || currentHeader.image || "";
+            const description =
+              parsed.pageHeaders[key]?.description ||
+              currentHeader.description ||
+              "";
 
+            if (directUpload) {
+              return [
+                key,
+                {
+                  image: directUpload.publicPath,
+                  title: currentHeader.title || "",
+                  description,
+                },
+              ];
+            }
             if (!file) {
-              return [key, { image: existingImage, title: currentHeader.title || "", description }];
+              return [
+                key,
+                {
+                  image: existingImage,
+                  title: currentHeader.title || "",
+                  description,
+                },
+              ];
             }
 
-            const upload = await saveTenantImageUpload(file, parsed.tenantSlug, { area: "others", folder: "page-headers", fileLabel: key });
-            return [key, { image: upload.publicPath, title: currentHeader.title || "", description }];
-          })
-        )
+            const upload = await saveTenantImageUpload(
+              file,
+              parsed.tenantSlug,
+              { area: "others", folder: "page-headers", fileLabel: key },
+            );
+            return [
+              key,
+              {
+                image: upload.publicPath,
+                title: currentHeader.title || "",
+                description,
+              },
+            ];
+          }),
+        ),
       )
-    : Object.fromEntries(pageHeaderKeys.map((key) => [key, normalizePageHeader(currentPageHeaders[key])]));
+    : Object.fromEntries(
+        pageHeaderKeys.map((key) => [
+          key,
+          normalizePageHeader(currentPageHeaders[key]),
+        ]),
+      );
 
   if (!heroImage) {
     throw new Error("Upload a hero image before saving settings.");
@@ -316,15 +496,16 @@ export async function updateCustomerSiteSettings(formData: FormData) {
           specialty: parsed.specialty,
           tagline: parsed.tagline,
           image: heroImage,
-          images: heroImages
+          images: heroImages,
         },
         pageHeaders: uploadedPageHeaders,
         socialLinks: parsed.socialLinks,
         watermark: nextWatermark,
         sections: buildHomeSections(formData, parsed, {
-          footer: canHideFooter ? parsed.footer : true
+          footer: canHideFooter ? parsed.footer : true,
         }),
         homepage: {
+          copy: parsed.homepageCopy,
           featuredPhotos: {
             source: parsed.featuredSource,
             sourceId: parsed.featuredSourceId,
@@ -332,10 +513,10 @@ export async function updateCustomerSiteSettings(formData: FormData) {
             limit: parsed.featuredLimit,
             columns: parsed.featuredColumns,
             gridStyle: parsed.featuredGridStyle,
-            pagination: "infinite"
-          }
-        }
-      }
+            pagination: "infinite",
+          },
+        },
+      },
     },
     update: {
       businessDetails: {
@@ -345,15 +526,16 @@ export async function updateCustomerSiteSettings(formData: FormData) {
           specialty: parsed.specialty,
           tagline: parsed.tagline,
           image: heroImage,
-          images: heroImages
+          images: heroImages,
         },
         pageHeaders: uploadedPageHeaders,
         socialLinks: parsed.socialLinks,
         watermark: nextWatermark,
         sections: buildHomeSections(formData, parsed, {
-          footer: canHideFooter ? parsed.footer : true
+          footer: canHideFooter ? parsed.footer : true,
         }),
         homepage: {
+          copy: parsed.homepageCopy,
           featuredPhotos: {
             source: parsed.featuredSource,
             sourceId: parsed.featuredSourceId,
@@ -361,11 +543,11 @@ export async function updateCustomerSiteSettings(formData: FormData) {
             limit: parsed.featuredLimit,
             columns: parsed.featuredColumns,
             gridStyle: parsed.featuredGridStyle,
-            pagination: "infinite"
-          }
-        }
-      }
-    }
+            pagination: "infinite",
+          },
+        },
+      },
+    },
   });
 
   revalidateTenantPublic(parsed.tenantSlug);
@@ -380,25 +562,39 @@ export async function updateCustomerProfile(formData: FormData) {
     email: String(formData.get("email") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     location: String(formData.get("location") ?? ""),
-    bio: String(formData.get("bio") ?? "")
+    bio: String(formData.get("bio") ?? ""),
   });
 
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
   const tenant = await prisma.tenant.findUnique({
-    where: { slug: parsed.tenantSlug },
-    include: { settings: true }
+    where: { id: authorizedTenant.id },
+    include: { settings: true },
   });
 
   if (!tenant) {
     throw new Error("Tenant not found.");
   }
 
-  const currentBusinessDetails = normalizeRecord(tenant.settings?.businessDetails);
+  const currentBusinessDetails = normalizeRecord(
+    tenant.settings?.businessDetails,
+  );
   const currentProfile = normalizeRecord(currentBusinessDetails.profile);
   const avatarFile = formData.get("avatarFile");
   let avatarUrl = readString(currentProfile.avatarUrl) ?? "";
+  const directAvatar = readUploadedCloudinaryAsset(
+    formData,
+    "avatarFile",
+    parsed.tenantSlug,
+  );
 
-  if (avatarFile instanceof File && avatarFile.size > 0) {
-    const upload = await saveTenantImageUpload(avatarFile, parsed.tenantSlug, { area: "others", folder: "profile", fileLabel: "avatar" });
+  if (directAvatar) avatarUrl = directAvatar.publicPath;
+
+  if (!directAvatar && avatarFile instanceof File && avatarFile.size > 0) {
+    const upload = await saveTenantImageUpload(avatarFile, parsed.tenantSlug, {
+      area: "others",
+      folder: "profile",
+      fileLabel: "avatar",
+    });
     avatarUrl = upload.publicPath;
   }
 
@@ -415,9 +611,9 @@ export async function updateCustomerProfile(formData: FormData) {
           email: parsed.email,
           phone: parsed.phone,
           location: parsed.location,
-          bio: parsed.bio
-        }
-      }
+          bio: parsed.bio,
+        },
+      },
     },
     update: {
       businessDetails: {
@@ -429,10 +625,10 @@ export async function updateCustomerProfile(formData: FormData) {
           email: parsed.email,
           phone: parsed.phone,
           location: parsed.location,
-          bio: parsed.bio
-        }
-      }
-    }
+          bio: parsed.bio,
+        },
+      },
+    },
   });
 
   revalidateTenantPublic(parsed.tenantSlug);
@@ -440,7 +636,9 @@ export async function updateCustomerProfile(formData: FormData) {
 }
 
 function normalizeRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function readFormBoolean(formData: FormData, key: string, fallback: boolean) {
@@ -457,7 +655,11 @@ function readFormBoolean(formData: FormData, key: string, fallback: boolean) {
   return fallback;
 }
 
-function readSectionOrder(formData: FormData, key: (typeof sectionKeys)[number], fallback: number) {
+function readSectionOrder(
+  formData: FormData,
+  key: (typeof sectionKeys)[number],
+  fallback: number,
+) {
   const value = Number(formData.get(`${key}Order`));
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
@@ -465,16 +667,16 @@ function readSectionOrder(formData: FormData, key: (typeof sectionKeys)[number],
 function buildHomeSections(
   formData: FormData,
   parsed: z.infer<typeof customerSiteSettingsSchema>,
-  overrides: Partial<Record<(typeof sectionKeys)[number], boolean>> = {}
+  overrides: Partial<Record<(typeof sectionKeys)[number], boolean>> = {},
 ) {
   return Object.fromEntries(
     sectionKeys.map((key, index) => [
       key,
       {
         enabled: overrides[key] ?? parsed[key],
-        displayOrder: readSectionOrder(formData, key, index + 1)
-      }
-    ])
+        displayOrder: readSectionOrder(formData, key, index + 1),
+      },
+    ]),
   );
 }
 
@@ -487,7 +689,7 @@ function normalizePageHeader(value: unknown) {
     return {
       image: readString(value) ?? "",
       title: "",
-      description: ""
+      description: "",
     };
   }
 
@@ -496,18 +698,38 @@ function normalizePageHeader(value: unknown) {
   return {
     image: readString(header.image) ?? "",
     title: readString(header.title) ?? "",
-    description: readString(header.description) ?? ""
+    description: readString(header.description) ?? "",
   };
 }
 
-function parseHeroImages(currentHeroImages: string | undefined, currentHeroImage: string | undefined, currentHero: Record<string, unknown>) {
+function parseHeroImages(
+  currentHeroImages: string | undefined,
+  currentHeroImage: string | undefined,
+  currentHero: Record<string, unknown>,
+) {
   const parsedImages = safeJsonArray(currentHeroImages);
-  const submittedCurrentImages = typeof currentHeroImages === "string" && currentHeroImages.trim().startsWith("[");
-  const storedImages = Array.isArray(currentHero.images) ? currentHero.images.filter((value): value is string => typeof value === "string" && Boolean(value.trim())) : [];
-  const fallbackImage = readString(currentHeroImage) ?? readString(currentHero.image);
-  const images = submittedCurrentImages ? parsedImages : storedImages.length ? storedImages : fallbackImage ? [fallbackImage] : [];
+  const submittedCurrentImages =
+    typeof currentHeroImages === "string" &&
+    currentHeroImages.trim().startsWith("[");
+  const storedImages = Array.isArray(currentHero.images)
+    ? currentHero.images.filter(
+        (value): value is string =>
+          typeof value === "string" && Boolean(value.trim()),
+      )
+    : [];
+  const fallbackImage =
+    readString(currentHeroImage) ?? readString(currentHero.image);
+  const images = submittedCurrentImages
+    ? parsedImages
+    : storedImages.length
+      ? storedImages
+      : fallbackImage
+        ? [fallbackImage]
+        : [];
 
-  return Array.from(new Set(images.map((image) => image.trim()).filter(Boolean)));
+  return Array.from(
+    new Set(images.map((image) => image.trim()).filter(Boolean)),
+  );
 }
 
 function safeJsonArray(value: string | undefined) {
@@ -517,14 +739,15 @@ function safeJsonArray(value: string | undefined) {
 
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item): item is string =>
+            typeof item === "string" && Boolean(item.trim()),
+        )
+      : [];
   } catch {
     return [];
   }
-}
-
-function trimToLimit(values: string[], limit: number | null | undefined) {
-  return limit == null ? values : values.slice(0, limit);
 }
 
 function parseDelimitedList(value: string) {
@@ -533,7 +756,7 @@ function parseDelimitedList(value: string) {
       value
         .split(",")
         .map((item) => item.trim())
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   );
 }

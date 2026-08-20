@@ -6,6 +6,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/services/email/email-service";
 import { isEmailTriggerEnabled } from "@/services/email/email-triggers";
+import { requireTenantOwner } from "@/services/auth/tenant-authorization";
+import { enforceServerActionRateLimit } from "@/services/security/rate-limit";
 
 const visitorInquirySchema = z.object({
   tenantSlug: z.string().min(1),
@@ -13,23 +15,24 @@ const visitorInquirySchema = z.object({
   email: z.string().trim().email().max(160),
   phone: z.string().trim().max(40).optional(),
   subject: z.string().trim().max(140).optional(),
-  message: z.string().trim().min(5).max(2500)
+  message: z.string().trim().min(5).max(2500),
 });
 
 const inquiryStatusSchema = z.object({
   tenantSlug: z.string().min(1),
   inquiryId: z.string().min(1),
-  status: z.enum(["Open", "Replied", "Closed"])
+  status: z.enum(["Open", "Replied", "Closed"]),
 });
 
 export async function createTenantVisitorInquiry(formData: FormData) {
+  await enforceServerActionRateLimit("tenant-inquiry", 5, 10 * 60);
   const parsed = visitorInquirySchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
     name: String(formData.get("name") ?? ""),
     email: String(formData.get("email") ?? ""),
     phone: optionalString(formData.get("phone")),
     subject: optionalString(formData.get("subject")),
-    message: String(formData.get("message") ?? "")
+    message: String(formData.get("message") ?? ""),
   });
 
   const tenant = await prisma.tenant.findUnique({
@@ -40,15 +43,15 @@ export async function createTenantVisitorInquiry(formData: FormData) {
       name: true,
       settings: {
         select: {
-          businessDetails: true
-        }
+          businessDetails: true,
+        },
       },
       owner: {
         select: {
-          email: true
-        }
-      }
-    }
+          email: true,
+        },
+      },
+    },
   });
 
   if (!tenant) {
@@ -62,8 +65,8 @@ export async function createTenantVisitorInquiry(formData: FormData) {
       email: parsed.email,
       phone: parsed.phone,
       subject: parsed.subject,
-      message: parsed.message
-    }
+      message: parsed.message,
+    },
   });
 
   const recipient = getTenantInquiryRecipient(tenant);
@@ -80,7 +83,7 @@ export async function createTenantVisitorInquiry(formData: FormData) {
         ${parsed.phone ? `<p><strong>Phone:</strong> ${escapeHtml(parsed.phone)}</p>` : ""}
         ${parsed.subject ? `<p><strong>Subject:</strong> ${escapeHtml(parsed.subject)}</p>` : ""}
         <p>${escapeHtml(parsed.message).replace(/\n/g, "<br />")}</p>
-      `
+      `,
     }).catch((error) => {
       console.error("Tenant inquiry email failed", error);
     });
@@ -96,12 +99,13 @@ export async function updateTenantInquiryStatus(formData: FormData) {
   const parsed = inquiryStatusSchema.parse({
     tenantSlug: String(formData.get("tenantSlug") ?? ""),
     inquiryId: String(formData.get("inquiryId") ?? ""),
-    status: String(formData.get("status") ?? "")
+    status: String(formData.get("status") ?? ""),
   });
+  const authorizedTenant = await requireTenantOwner(parsed.tenantSlug);
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug: parsed.tenantSlug },
-    select: { id: true, slug: true }
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: authorizedTenant.id, slug: parsed.tenantSlug },
+    select: { id: true, slug: true },
   });
 
   if (!tenant) {
@@ -111,11 +115,11 @@ export async function updateTenantInquiryStatus(formData: FormData) {
   await prisma.tenantInquiry.update({
     where: {
       id: parsed.inquiryId,
-      tenantId: tenant.id
+      tenantId: tenant.id,
     },
     data: {
-      status: parsed.status
-    }
+      status: parsed.status,
+    },
   });
 
   revalidatePath(`/site/${tenant.slug}/dashboard/support`);
@@ -137,11 +141,18 @@ function getTenantInquiryRecipient(tenant: {
   const profile = normalizeRecord(businessDetails.profile);
   const contact = normalizeRecord(businessDetails.contact);
 
-  return readString(profile.email) ?? readString(contact.email) ?? tenant.owner?.email ?? null;
+  return (
+    readString(profile.email) ??
+    readString(contact.email) ??
+    tenant.owner?.email ??
+    null
+  );
 }
 
 function normalizeRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function readString(value: unknown) {

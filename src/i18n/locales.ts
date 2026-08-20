@@ -6,14 +6,15 @@ import hiMessages from "../../messages/hi.json";
 import ptMessages from "../../messages/pt.json";
 import deMessages from "../../messages/de.json";
 import frMessages from "../../messages/fr.json";
+import urMessages from "../../messages/ur.json";
 import type { Route } from "next";
 
-export const locales = ["en", "es", "ar", "tr", "hi", "pt", "de", "fr"] as const;
+export const locales = ["en", "ur", "es", "ar", "tr", "hi", "pt", "de", "fr"] as const;
 export type AppLocale = (typeof locales)[number];
 
 export const defaultLocale: AppLocale = "en";
 
-const rtlLocales: ReadonlySet<string> = new Set(["ar"]);
+const rtlLocales: ReadonlySet<string> = new Set(["ar", "ur"]);
 
 export const messages = {
   en: enMessages,
@@ -23,7 +24,8 @@ export const messages = {
   hi: hiMessages,
   pt: ptMessages,
   de: deMessages,
-  fr: frMessages
+  fr: frMessages,
+  ur: urMessages
 } as const;
 
 export type MarketingMessages = (typeof messages)["en"];

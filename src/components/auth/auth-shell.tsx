@@ -43,7 +43,7 @@ export async function AuthShell({ mode }: AuthShellProps) {
             {mode === "sign-up" ? "Already have an account? Sign in" : "New studio? Create an account"}
           </Link>
         </section>
-        <AuthPanel mode={mode} />
+        <AuthPanel mode={mode} locale={locale} />
       </div>
     </main>
   );

@@ -8,10 +8,12 @@ type CustomerDashboardShellProps = {
   children: React.ReactNode;
   slug: string;
   name?: string;
+  planName?: string;
 };
 
-export function CustomerDashboardShell({ children, slug, name = "Studio" }: CustomerDashboardShellProps) {
+export function CustomerDashboardShell({ children, slug, name = "Studio", planName }: CustomerDashboardShellProps) {
   const rootHref = customerDashboardPath(slug);
+  const dashboardBadge = planName ? `${planName} plan` : "Customer Dashboard";
   const nav: DashboardNavItem[] = [
     { label: "Overview", href: rootHref, icon: LayoutDashboard },
     { label: "Categories", href: customerDashboardPath(slug, "/categories"), icon: FolderTree },
@@ -39,7 +41,7 @@ export function CustomerDashboardShell({ children, slug, name = "Studio" }: Cust
       nav={nav}
       storageKey={`photaaz:customer-sidebar:${slug}`}
       activeRootHref={rootHref}
-      badge="Customer Dashboard"
+      badge={dashboardBadge}
       profile={{
         href: customerDashboardPath(slug, "/profile"),
         label: "Profile",

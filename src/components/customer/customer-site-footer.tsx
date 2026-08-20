@@ -1,11 +1,12 @@
 import Link from "next/link";
-import type { Route } from "next";
 import { Facebook, Images, Instagram, Linkedin, Mail, MapPin, MessageCircle, Music2, Palette, Phone, Youtube } from "lucide-react";
 import { customerPath } from "@/config/routes";
 import { customerSiteContainerClass } from "@/components/customer/customer-site-container";
 import { localizePath, type AppLocale } from "@/i18n/locales";
+import { translatePlatformLiteral } from "@/i18n/platform-literals";
 import { type CustomerSiteThemeVariant } from "@/lib/customer-theme";
 import { cn } from "@/lib/utils";
+import { CustomerContactControl } from "@/components/customer/customer-contact-control";
 
 type CustomerSiteFooterProps = {
   slug: string;
@@ -24,13 +25,11 @@ type CustomerSiteFooterProps = {
 export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSiteFooterProps) {
   const tone = getFooterTone(variant);
   const isDark = variant === "cinematic" || variant === "luxury" || variant === "monochrome";
-  const homeHref = localizePath(locale, customerPath(slug));
   const links = [
-    { label: "Gallery", href: localizePath(locale, customerPath(slug, "/gallery")) },
-    { label: "Categories", href: localizePath(locale, customerPath(slug, "/categories")) },
-    { label: "Blog", href: localizePath(locale, customerPath(slug, "/blog")) },
-    { label: "About", href: localizePath(locale, customerPath(slug, "/about")) },
-    { label: "Contact", href: `${homeHref}#contact` as Route }
+    { label: translatePlatformLiteral("Gallery", locale), href: localizePath(locale, customerPath(slug, "/gallery")) },
+    { label: translatePlatformLiteral("Categories", locale), href: localizePath(locale, customerPath(slug, "/categories")) },
+    { label: translatePlatformLiteral("Blog", locale), href: localizePath(locale, customerPath(slug, "/blog")) },
+    { label: translatePlatformLiteral("About", locale), href: localizePath(locale, customerPath(slug, "/about")) },
   ];
   const socialLinks = [
     { key: "instagram", label: "Instagram", icon: Instagram },
@@ -77,23 +76,29 @@ export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSite
             </span>
             <span className="inline-flex items-center gap-2">
               <Phone className="size-4" aria-hidden="true" />
-              {site.contactPhone ?? "Available on request"}
+              {site.contactPhone ?? translatePlatformLiteral("Available on request", locale)}
             </span>
           </div>
         </div>
         <div>
-          <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>Pages</p>
+          <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>{translatePlatformLiteral("Pages", locale)}</p>
           <nav className={cn("mt-4 grid font-nav text-[10px] font-semibold uppercase tracking-[0.2em]", variant === "luxury" ? "gap-3" : "gap-2", variant === "masonry" && "grid-cols-2", variant === "cinematic" && "gap-3")}>
             {links.map((link) => (
               <Link key={link.label} href={link.href} className={cn("transition hover:opacity-60", tone.accent)}>
                 {link.label}
               </Link>
             ))}
+            <CustomerContactControl
+              slug={slug}
+              variant={variant}
+              triggerLabel={translatePlatformLiteral("Contact", locale)}
+              triggerClassName={cn("text-left transition hover:opacity-60", tone.accent)}
+            />
           </nav>
         </div>
         {variant !== "masonry" && (
           <div>
-            <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>Social</p>
+            <p className={cn("font-nav text-xs font-semibold uppercase tracking-[0.24em]", tone.accent)}>{translatePlatformLiteral("Social", locale)}</p>
             {socialLinks.length ? (
               <div className={cn("mt-4 flex flex-wrap gap-2", variant === "luxury" && "justify-center lg:justify-start", variant === "cinematic" && "justify-center lg:justify-start")}>
                 {socialLinks.map((social) => {
@@ -107,21 +112,19 @@ export function CustomerSiteFooter({ slug, locale, site, variant }: CustomerSite
                 })}
               </div>
             ) : (
-              <p className={cn("mt-4 text-sm", tone.muted)}>Social links can be added from Settings.</p>
+              <p className={cn("mt-4 text-sm", tone.muted)}>{translatePlatformLiteral("Social links can be added from Settings.", locale)}</p>
             )}
           </div>
         )}
       </div>
       <div className={cn("mt-8 border-t pt-5 text-center text-xs", isDark ? "border-white/10" : "border-current/10", tone.muted)}>
-        <p>Published with Photaaz</p>
+        <p>{translatePlatformLiteral("Published with Photaaz", locale)}</p>
       </div>
     </footer>
   );
 }
 
 function getFooterTone(variant: CustomerSiteThemeVariant) {
-  const isDark = variant === "cinematic" || variant === "luxury" || variant === "monochrome";
-
   if (variant === "cinematic") {
     return {
       section: cn(customerSiteContainerClass, "pb-16"),

@@ -1,17 +1,34 @@
 import { z } from "zod";
 
-const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.string().url().optional());
-const optionalString = z.preprocess((value) => (value === "" ? undefined : value), z.string().optional());
+const optionalUrl = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().url().optional(),
+);
+const optionalString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().optional(),
+);
 const envBoolean = z
-  .preprocess((value) => (value === undefined || value === "" ? "false" : String(value).toLowerCase()), z.enum(["true", "false", "1", "0"]))
+  .preprocess(
+    (value) =>
+      value === undefined || value === ""
+        ? "false"
+        : String(value).toLowerCase(),
+    z.enum(["true", "false", "1", "0"]),
+  )
   .transform((value) => value === "true" || value === "1");
 
 const envSchema = z.object({
+  PHOTAAZ_ENVIRONMENT: z
+    .enum(["development", "staging", "production"])
+    .default("development"),
   DATABASE_URL: optionalUrl,
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_ROOT_DOMAIN: z.string().default("localhost:3000"),
   BETTER_AUTH_SECRET: z.string().min(16).optional(),
   BETTER_AUTH_URL: optionalUrl,
+  SUPER_ADMIN_EMAIL: z.string().email().optional(),
+  SUPER_ADMIN_PASSWORD: z.string().min(12).optional(),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
@@ -21,7 +38,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalString,
   SUPABASE_SERVICE_ROLE_KEY: optionalString,
   NEXT_PUBLIC_SUPABASE_REALTIME_ENABLED: envBoolean,
+  PADDLE_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   PADDLE_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: z.string().optional(),
   PADDLE_WEBHOOK_SECRET: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_PROVIDER: z.enum(["disabled", "resend", "smtp"]).default("disabled"),
@@ -32,10 +51,39 @@ const envSchema = z.object({
   SMTP_USERNAME: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_ENCRYPTION: z.enum(["none", "starttls", "ssl"]).default("starttls"),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development")
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
 });
 
 export const env = envSchema.parse(process.env);
+
+assertSafeDeploymentEnvironment(env);
+
+function assertSafeDeploymentEnvironment(config: z.infer<typeof envSchema>) {
+  if (config.PHOTAAZ_ENVIRONMENT !== "staging") return;
+
+  const errors: string[] = [];
+  if (config.PADDLE_ENVIRONMENT !== "sandbox") {
+    errors.push("Paddle must use sandbox mode.");
+  }
+  if (config.CLOUDINARY_ENVIRONMENT_FOLDER !== "staging") {
+    errors.push("Cloudinary must use the staging environment folder.");
+  }
+  if (!config.NEXT_PUBLIC_APP_URL.startsWith("https://")) {
+    errors.push("NEXT_PUBLIC_APP_URL must use HTTPS.");
+  }
+  if (config.BETTER_AUTH_URL && !config.BETTER_AUTH_URL.startsWith("https://")) {
+    errors.push("BETTER_AUTH_URL must use HTTPS.");
+  }
+  if ((config.BETTER_AUTH_SECRET?.length ?? 0) < 32) {
+    errors.push("BETTER_AUTH_SECRET must contain at least 32 characters.");
+  }
+
+  if (errors.length) {
+    throw new Error(`Unsafe Photaaz staging configuration: ${errors.join(" ")}`);
+  }
+}
 
 export function requireEnv<Key extends keyof typeof env>(key: Key) {
   const value = env[key];

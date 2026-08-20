@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/db/prisma";
 import { defaultPlanFeatures, type FeatureKey } from "@/config/features";
 import { getEffectivePlanKey, syncSubscriptionLifecycle } from "@/services/subscription/lifecycle";
+import {
+  assertCanCreateWithinLimit,
+  assertResultingCountWithinLimit,
+} from "@/services/subscription/limit-policy";
 
 export const planLimitKeys = {
   blogsTotal: "blogs",
@@ -25,7 +29,7 @@ export type TenantFeatureAccess = {
   limit: number | null;
 };
 
-const fallbackPlanLimits: Record<string, Partial<Record<PlanLimitKey, number | null>>> = {
+export const fallbackPlanLimits: Readonly<Record<string, Partial<Record<PlanLimitKey, number | null>>>> = {
   free: {
     [planLimitKeys.blogsTotal]: 3,
     [planLimitKeys.photosTotal]: 50,
@@ -173,8 +177,29 @@ export async function assertPhotoUploadLimits(tenantSlug: string, categoryId: st
     prisma.photo.count({ where: { tenantId: access.tenantId, categoryId } })
   ]);
 
-  assertBelowLimit(totalPhotos, access.limits[planLimitKeys.photosTotal], "overall photo");
-  assertBelowLimit(categoryPhotos, access.limits[planLimitKeys.photosPerCategory], "category photo");
+  assertCanCreateWithinLimit(totalPhotos, access.limits[planLimitKeys.photosTotal], "overall photo");
+  assertCanCreateWithinLimit(categoryPhotos, access.limits[planLimitKeys.photosPerCategory], "category photo");
+}
+
+export async function assertPhotoCategoryLimit(
+  tenantSlug: string,
+  categoryId: string,
+  currentPhotoId?: string,
+) {
+  const access = await getTenantPlanAccess(tenantSlug);
+  if (!access) throw new Error("Tenant not found.");
+  const categoryPhotos = await prisma.photo.count({
+    where: {
+      tenantId: access.tenantId,
+      categoryId,
+      ...(currentPhotoId ? { id: { not: currentPhotoId } } : {}),
+    },
+  });
+  assertCanCreateWithinLimit(
+    categoryPhotos,
+    access.limits[planLimitKeys.photosPerCategory],
+    "category photo",
+  );
 }
 
 export async function assertGalleryCreateLimit(tenantSlug: string) {
@@ -190,7 +215,7 @@ export async function assertGalleryCreateLimit(tenantSlug: string) {
     }
   });
 
-  assertBelowLimit(galleryCount, access.limits[planLimitKeys.galleriesTotal], "gallery");
+  assertCanCreateWithinLimit(galleryCount, access.limits[planLimitKeys.galleriesTotal], "gallery");
 }
 
 export async function assertGalleryPhotoLimit(tenantSlug: string, albumId: string, currentPhotoId?: string) {
@@ -214,7 +239,7 @@ export async function assertGalleryPhotoLimit(tenantSlug: string, albumId: strin
     }
   });
 
-  assertBelowLimit(galleryPhotoCount, access.limits[planLimitKeys.photosPerGallery], "gallery photo");
+  assertCanCreateWithinLimit(galleryPhotoCount, access.limits[planLimitKeys.photosPerGallery], "gallery photo");
 }
 
 export async function assertCategoryRequestLimit(tenantSlug: string) {
@@ -240,7 +265,7 @@ export async function assertCategoryRequestLimit(tenantSlug: string) {
     }
   });
 
-  assertBelowLimit(submittedRequests, limit, "category request");
+  assertCanCreateWithinLimit(submittedRequests, limit, "category request");
 }
 
 export async function assertCategoryLinkLimit(tenantSlug: string, platformSlug: string) {
@@ -303,7 +328,7 @@ export async function assertCategoryLinkLimit(tenantSlug: string, platformSlug: 
     })
   ]);
 
-  assertWithinLimit(
+  assertResultingCountWithinLimit(
     parentCategoryCount + (existingParent ? 0 : 1),
     access.limits[planLimitKeys.categoriesTotal],
     "category"
@@ -313,7 +338,7 @@ export async function assertCategoryLinkLimit(tenantSlug: string, platformSlug: 
   const childSlugsToAdd = platformType.parent ? [platformType.slug] : platformType.children.map((child) => child.slug);
   const missingChildCount = childSlugsToAdd.filter((slug) => !existingChildSlugs.has(slug)).length;
 
-  assertWithinLimit(
+  assertResultingCountWithinLimit(
     existingChildren.length + missingChildCount,
     access.limits[planLimitKeys.subcategoriesPerCategory],
     "subcategory"
@@ -337,27 +362,7 @@ export async function assertBlogCreateLimit(tenantSlug: string) {
     }
   });
 
-  assertBelowLimit(blogCount, access.limits[planLimitKeys.blogsTotal], "blog post");
-}
-
-function assertBelowLimit(currentCount: number, limit: number | null | undefined, label: string) {
-  if (limit == null) {
-    return;
-  }
-
-  if (currentCount >= limit) {
-    throw new Error(`Your plan allows ${limit} ${label}${limit === 1 ? "" : "s"}. Upgrade or contact support to increase this limit.`);
-  }
-}
-
-function assertWithinLimit(nextCount: number, limit: number | null | undefined, label: string) {
-  if (limit == null) {
-    return;
-  }
-
-  if (nextCount > limit) {
-    throw new Error(`Your plan allows ${limit} ${label}${limit === 1 ? "" : "s"}. Upgrade or contact support to increase this limit.`);
-  }
+  assertCanCreateWithinLimit(blogCount, access.limits[planLimitKeys.blogsTotal], "blog post");
 }
 
 function isPlanLimitKey(value: string): value is PlanLimitKey {

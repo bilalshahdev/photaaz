@@ -7,6 +7,7 @@ import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/admin
 import { SelectField, TextField } from "@/components/forms/form-controls";
 import { Button } from "@/components/ui/button";
 import { getAdminPlans } from "@/services/admin/admin-data";
+import type { LocalizedString } from "@/services/platform/platform-data";
 
 export default async function AdminNewCustomerPage() {
   const plans = await getAdminPlans();
@@ -43,7 +44,7 @@ export default async function AdminNewCustomerPage() {
             <TextField name="studioName" required label="Customer name" placeholder="Bilal Photography" className="h-11" />
             <TextField name="slug" required label="Public slug" placeholder="bilal" className="h-11 font-mono" />
             <TextField name="email" required label="Owner email" type="email" placeholder="client@example.com" className="h-11" />
-            <SelectField name="planId" label="Starting package" defaultValue={plans[0]?.id} triggerClassName="h-11" options={plans.map((plan) => ({ label: plan.name, value: plan.id }))} />
+            <SelectField name="planId" label="Starting package" defaultValue={plans[0]?.id} triggerClassName="h-11" options={plans.map((plan) => ({ label: displayLocalized(plan.name), value: plan.id }))} />
             <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-5">
               <Button type="submit" className="bg-slate-950 text-white hover:bg-primary/90">
                 <UserPlus className="size-4" aria-hidden="true" />
@@ -57,4 +58,9 @@ export default async function AdminNewCustomerPage() {
         </AdminPanel>
     </AdminPage>
   );
+}
+
+function displayLocalized(value: LocalizedString) {
+  if (typeof value === "string") return value;
+  return value.en || Object.values(value).find(Boolean) || "";
 }
